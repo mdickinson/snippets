@@ -1,7 +1,7 @@
 """
 Integer square root
 ===================
-There are many applications that call for  an integer square root: a function
+There are many applications that call for an integer square root: a function
 which, given a nonnegative integer ``n``, returns the integer part of the
 square root of ``n``. To take just one example, when testing a small integer
 ``n`` for primality using trial division, it suffices to check divisors up to
@@ -42,6 +42,9 @@ However, this suffers from a number of drawbacks:
         >>> isqrt(10**16 - 1)
         100000000
 
+   Assuming IEEE 754 binary64 format floating-point, the implicit conversion
+   will be exact for all values up to ``n = 2**53``.
+
 2. The above affects larger values of ``n``. But even for small ``n``, if
    the ``sqrt`` function is not correctly rounded, then the value returned
    by ``sqrt(k*k)`` could potentially be smaller than ``k``. If that happens,
@@ -65,7 +68,127 @@ potential issue. We can mitigate the risk from a non-correctly-rounded
     def isqrt(n):
         return int(sqrt(n + 0.5))
 
-On a typical machine that uses the IEEE 754 binary64 format for ``float``,
+How much safety from a badly-rounded square root does this give us? Let's
+assume that we're working with IEEE 754 binary64 format (precision 53).
+
+Proposition. Suppose n is a positive integer and 2**(k-1) <= √n < 2**k for an
+integer k. Then if sqrt(n+0.5) is computed with an error not exceeding
+2**(51-2k) ulps, floor(sqrt(n+0.5)) == floor(√n).
+
+Proof of the proposition. Write ``s`` for the value ``sqrt(n + 0.5)``, and
+``e`` for the absolute error involved in computing ``s``, so::
+
+    s = √(n+1/2) + e
+
+We have 2**(k-1) < √(n+1/2) < 2**k, and in this interval, 1ulp is 2**(k-53),
+so our assumption on the error translates to::
+
+    |e| <= 2**(-k-2)
+
+Now √(n+1) <= 2**k, so it follows that::
+
+    2**(-k-2) <= 1 / 4√(n+1)
+
+and hence that
+
+    |e| <= 1 / 4√(n+1)
+
+But it's also easily checked that:
+
+    1 / 4√(n+1) < √(n+1) - √(n+1/2) < √(n+1/2) - √n
+
+and hence that e < √(n+1) - √(n+1/2) and -e < √(n+1/2) - √n, so
+
+    √n < s < √(n+1)
+
+So floor(√n) <= floor(s), and floor(s) < √(n+1). Hence floor(s)**2 < n + 1,
+so floor(s)**2 <= n, and floor(s) <= √n, so floor(s) <= floor(√n). Hence the
+result.
+
+Corollary. If n < 2**50 and ``sqrt`` is accurate to within <= 2 ulps, then
+floor(sqrt(n + 0.5)) == floor(√n).
+
+Proof. Apply the proposition with ``k = 25``.
+
+Corollary. If n < 2**52 and ``sqrt`` is correctly rounded, then
+floor(sqrt(n+0.5)) == floor(√n).
+
+Proof. If ``sqrt`` is correctly rounded, then ``sqrt(n+0.5)`` is computed
+with an error not exceeding 0.5 ulps. Now apply the proposition with
+``k = 26``.
+
+The result of the corollary is tight. Given ``n = (2**26 + 1)**2 - 1``,
+under IEEE 754 binary64 arithmetic and correctly-rounded square root, we
+have ``sqrt(n) = 2**26 + 1``, so ``int(sqrt(n))`` gives the wrong answer,
+as does ``int(sqrt(n + 0.5))``.
+
+Proposition. Suppose we're using IEEE 754 binary64 arithmetic and sqrt is
+correctly rounded. Then if 0 < n < 2**106, and m is the closest representable
+IEEE 754 binary64 float to n, |sqrt(m) - √n| < 1.
+
+Proof (Sketch). Show that |√m - √n| < 1/2 and |sqrt(m) - √m| <= 1/2.
+
+As a corollary, if we know in advance that ``n`` is a perfect square, then
+``sqrt(m)`` will exactly recover its square root.
+
+So we can use this as a starting-point for the recursive algorithm.
+
+Recursive square root
+---------------------
+The Newton method for computing an integer square root is wasteful,
+in that the initial steps are needlessly performed with full precision.
+Instead, it should be possible to increase the precision gradually,
+only reaching full precision for the last one or two iteration.
+
+Investigating this leads to a recursive implementation based on
+the Newton iteration. Here's the necessary statement that makes
+the recursion work.
+
+Proposition. Let n and k be positive integers satisfying
+
+    4**(2k-2) <= n < 4**(2k+2)
+
+Suppose that a is an approximation to 2√(n//4**k) satisfying
+
+    |a - 2√(n//4**k)| < 1
+
+Let b = 2**(k-1)a + n // 2**(k-1)a. Then b is an approximation to 2√n
+satisfying
+
+    |b - 2√n| < 1
+
+Proof. First note that we can replace the integer division in the assumption
+with true division: |a - 2√(n//4**k)| < 1 implies |a - 2√(n/4**k)| < 1.
+
+
+
+
+
+
+
+
+Suppose that 4**(2k-2) <= n < 4**(2k+2), for some positive integer k.
+And suppose that we have an integer a satisfying
+
+   | a - √(n//4**k) | < 1
+
+It's easy to show that this implies
+
+   | a - √(n/4**k) | < 1
+
+or equivalently
+
+   | 2**k a - √n | < 2**k
+
+and from there deduce that
+
+   0 < (2**k a + n / (2**k a))/2 - √n < 1
+
+and hence that
+
+   -1 < floor(2**k a + n / (2**k a)) - √n < 1
+
+
 
 
 
@@ -225,10 +348,85 @@ On a typical machine that uses the IEEE 754 binary64 format for ``float``,
 #
 #    divisions <= 2 + ceil(log2(log3(2*sqrt(n) + 1)))
 
+import math
+
+
+def _isqrt_approx(n):
+    """
+    Integer approximation to the integer square root of n.
+
+    For a positive integer ``n``, use ``math.sqrt`` to compute an approximation
+    to the integer square root of ``n``.
+
+    This function makes no assumptions about the accuracy of ``math.sqrt``. For
+    ``n`` smaller than ``2**52``, the returned approximation is *likely* to be
+    exact on a typical machines, and for ``n`` larger than ``2**52``, it's
+    *likely* to be accurate to at least 52 significant bits, but neither of
+    these properties is guaranteed. The only guarantee made by this function is
+    that the return value will be a positive integer.
+    """
+    try:
+        s = int(math.sqrt(n))
+    except OverflowError:
+        shift = n.bit_length() // 2 - 53
+        s = int(math.sqrt(n >> 2 * shift)) << shift
+    return max(s, 1)
+
+
+def _isqrt_newton(n, s):
+    """
+    Integer square root via Newton's method.
+
+    Compute the integer square root of ``n``, using Newton's method with
+    an initial guess of ``s``. Assumes that ``n`` and ``s`` are both
+    positive integers.
+    """
+    # Ensure that a is an upper bound for isqrt(n), and do an early return
+    # that covers most cases where a is exactly equal to isqrt(n).
+    d = n // s
+    a = (s + d) // 2
+    if a == s:
+        return a
+
+    while True:
+        # Invariant: a >= isqrt(n)
+        d = n // a
+        if d >= a:
+            return a
+        a = (a + d) // 2
+
 
 def isqrt(n):
     """
-    Integer square root.
+    Integer square root, via Newton's method.
+
+    Parameters
+    ----------
+    n : int
+        Input to find the square root of.
+
+    Returns
+    -------
+    a : int
+        Largest integer satisfying a * a <= n. Equivalently, the floor of
+        the square root of n.
+
+    Raises
+    ------
+    ValueError
+        If n is negative.
+    """
+    if n < 0:
+        raise ValueError("Square root of negative number")
+    elif n == 0:
+        return 0
+    else:
+        return _isqrt_newton(n, _isqrt_approx(n))
+
+
+def isqrt_pure(n):
+    """
+    Integer square root, computed without any use of floating-point arithmetic.
 
     Parameters
     ----------
@@ -256,7 +454,69 @@ def isqrt(n):
         d = n // a
         if d >= a:
             return a
-        a = (a + d) // 2
+        a = a + d >> 1
+
+
+def _isqrt_recursive_pure(n):
+    """
+    Given a positive integer n, return an integer a
+    such that (a - 1)**2 < n < (a + 1)**2.
+
+    This function avoids any use of floating-point arithmetic.
+    """
+    b = n.bit_length() - 3
+    if b < 0:
+        return 1
+    else:
+        k = b >> 2
+        m = n >> k + 2
+        a = _isqrt_recursive_pure(m >> k)
+        return (a << k) + m // a
+
+
+def _isqrt_recursive(n):
+    """
+    Given a positive integer n, return an integer a
+    such that (a - 1)**2 < n < (a + 1)**2.
+    """
+    b = n.bit_length()
+    if b <= 106:
+        a = int(math.sqrt(n))
+        # If we knew that math.sqrt is correctly rounded and that the
+        # floating-point format is IEEE 754 binary 64, we could simply
+        # return a here. As it is, we have to check.
+        return a if abs(n - a*a - 1) < 2*a else _isqrt_recursive_pure(a)
+    else:
+        k = b - 3 >> 2
+        m = n >> k + 2
+        a = _isqrt_recursive(m >> k)
+        return (a << k) + m // a
+
+
+def isqrt_recursive(n):
+    """
+    Integer square root via recursive method.
+    """
+    if n < 0:
+        raise ValueError("Square root of negative number")
+    elif n == 0:
+        return 0
+
+    a = _isqrt_recursive(n)
+    return a - (n < a*a)
+
+
+def isqrt_recursive_pure(n):
+    """
+    Integer square root via recursive method, with no use of floating-point.
+    """
+    if n < 0:
+        raise ValueError("Square root of negative number")
+    elif n == 0:
+        return 0
+
+    a = _isqrt_recursive_pure(n)
+    return a - (n < a*a)
 
 
 # Table of integer square roots with remainder up to 255 (inclusive).
@@ -289,168 +549,3 @@ def isqrt_bytes(n):
         a = (a << 4) + d
 
     return a >> shift
-
-
-def icbrt(n):
-    """
-    Integer cube root.
-
-    Given a nonnegative integer n, return the largest integer a satisfying
-    a**3 <= n.
-
-    Parameters
-    ----------
-    n : nonnegative int
-
-    Returns
-    -------
-    a : int
-        Largest integer satisfying a**3 <= n. Equivalently, the floor of the
-        cube root of n.
-
-    Raises
-    ------
-    ValueError
-        If n is negative.
-    """
-    # Implementation is entirely analogous to that of isqrt; the key inequality
-    # comes from the AM-GM inequality applied to a, a and n/a.
-    if n < 0:
-        raise ValueError("Cube root of negative number")
-    elif n == 0:
-        return 0
-
-    a = 1 << -(-n.bit_length() // 3)
-    while True:
-        d = n // (a * a)
-        if d >= a:
-            return a
-        a += (d - a) // 3
-
-
-def iroot(n, k):
-    """
-    Return the integer part of the kth root of n.
-
-    Parameters
-    ----------
-    n, k : int
-
-    Returns
-    -------
-    a : int
-        Largest integer satisfying a**k <= n < (a + 1)**k
-
-    Raises
-    ------
-    ValueError
-        If n is negative or k is not positive.
-    """
-    if n < 0 or k < 1:
-        raise ValueError("n should be nonnegative and k should be positive")
-    elif n == 0:
-        return 0
-
-    a = 1 << -(-n.bit_length() // k)
-    while True:
-        d = n // a ** (k - 1)
-        if d >= a:
-            return a
-        a += (d - a) // k
-
-
-# Tests
-
-import unittest
-
-
-class TestIsqrt(unittest.TestCase):
-    def test_negative(self):
-        with self.assertRaises(ValueError):
-            isqrt(-3)
-        with self.assertRaises(ValueError):
-            isqrt(-1)
-
-    def test_nonnegative(self):
-        for n in range(256):
-            a = isqrt(n)
-            self.assertIsInstance(a, int)
-            self.assertLessEqual(a**2, n)
-            self.assertLess(n, (a + 1)**2)
-
-    def test_large_n(self):
-        for n in range(10**100 - 100, 10**100 + 100):
-            a = isqrt(n)
-            self.assertIsInstance(a, int)
-            self.assertLessEqual(a**2, n)
-            self.assertLess(n, (a + 1)**2)
-
-    def test_type(self):
-        self.assertIsInstance(isqrt(False), int)
-        self.assertIsInstance(isqrt(True), int)
-
-
-class TestIcbrt(unittest.TestCase):
-    def test_negative(self):
-        with self.assertRaises(ValueError):
-            icbrt(-3)
-        with self.assertRaises(ValueError):
-            icbrt(-1)
-
-    def test_nonnegative(self):
-        for n in range(1000):
-            a = icbrt(n)
-            self.assertIsInstance(a, int)
-            self.assertLessEqual(a**3, n)
-            self.assertLess(n, (a + 1)**3)
-
-    def test_huge(self):
-        for n in range(10**102 - 100, 10**102 + 100):
-            a = icbrt(n)
-            self.assertIsInstance(a, int)
-            self.assertLessEqual(a**3, n)
-            self.assertLess(n, (a + 1)**3)
-
-    def test_type(self):
-        self.assertIsInstance(icbrt(False), int)
-        self.assertIsInstance(icbrt(True), int)
-
-
-class TestIroot(unittest.TestCase):
-    def test_invalid_inputs(self):
-        with self.assertRaises(ValueError):
-            iroot(-1, 5)
-        with self.assertRaises(ValueError):
-            iroot(4, 0)
-        with self.assertRaises(ValueError):
-            iroot(-27, -3)
-        with self.assertRaises(ValueError):
-            iroot(0, 0)
-
-    def test_first_root(self):
-        for n in range(1000):
-            self.assertEqual(iroot(n, 1), n)
-
-    def test_matches_isqrt(self):
-        for n in range(1000):
-            self.assertEqual(iroot(n, 2), isqrt(n))
-
-    def test_matches_icbrt(self):
-        for n in range(1000):
-            self.assertEqual(iroot(n, 3), icbrt(n))
-
-    def test_fourth_root(self):
-        for n in range(1000):
-            k = iroot(n, 4)
-            self.assertLessEqual(k**4, n)
-            self.assertLess(n, (k + 1)**4)
-
-    def test_large_root(self):
-        self.assertEqual(iroot(2**10000, 10000), 2)
-        self.assertEqual(iroot(2**10000 - 1, 10000), 1)
-
-
-class TestIsqrtBytes(unittest.TestCase):
-    def test_matches_isqrt(self):
-        for n in range(10**7, 10**7 + 10**6):
-            self.assertEqual(isqrt_bytes(n), isqrt(n))
