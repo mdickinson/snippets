@@ -122,231 +122,259 @@ under IEEE 754 binary64 arithmetic and correctly-rounded square root, we
 have ``sqrt(n) = 2**26 + 1``, so ``int(sqrt(n))`` gives the wrong answer,
 as does ``int(sqrt(n + 0.5))``.
 
-Proposition. Suppose we're using IEEE 754 binary64 arithmetic and sqrt is
+The following proposition is useful in the recursive method described below.
+
+Proposition. Suppose we're using IEEE 754 binary64 arithmetic and that sqrt is
 correctly rounded. Then if 0 < n < 2**106, and m is the closest representable
-IEEE 754 binary64 float to n, |sqrt(m) - √n| < 1.
+IEEE 754 binary64 float to n, |floor(sqrt(m)) - √n| < 1.
 
-Proof (Sketch). Show that |√m - √n| < 1/2 and |sqrt(m) - √m| <= 1/2.
+Proof. Suppose that 4**(k-1) <= n < 4**k, with 0 < k <= 53. We show that:
 
-As a corollary, if we know in advance that ``n`` is a perfect square, then
-``sqrt(m)`` will exactly recover its square root.
+   (1) |√m - √n| < 2**(k-54)
+   (2) |sqrt(m) - √m| <= 2**(k-54)
+   (3) |floor(sqrt(m)) - sqrt(m)| <= 1 - 2**(k-53)
 
-So we can use this as a starting-point for the recursive algorithm.
+For the first part, our assumptions imply 4**(k-1) <= m <= 4**k, 2**(k-1) <= √n
+and 2**(k-1) <= √m. In the range [4**(k-1), 4**k), 1 ulp is at most 4**k /
+2**53, and |m - n| is at most 1/2 a ulp, so
+
+       |m - n| <= 4**k * 2**-54
+
+Now
+
+      |√m - √n| = |m - n| / |√m + √n| <= 4**k * 2**-54 / 2**k = 2**(k-54).
+
+Equality is impossible, since it can only occur if √m = √n = 2**(k-1), but
+in that case |√m - √n| = 0. So (1) follows.
+
+The statement (2) follows directly from correct rounding: we have
+2**(k-1) <= √m <= 2**k, 1 ulp in that region is 2**(k-53), and under
+the assumption of correct rounding, sqrt(m) is at most 1/2 a ulp away
+from √m.
+
+For (3), we have that 0 <= sqrt(m) - floor(sqrt(m)) < 1, from the definition
+of floor. But both sqrt(m) and floor(sqrt(m)) are exactly representable, so
+the difference between them is an integer multiple of 1 ulp, so is an
+integer multiple of 2**(k-53). So sqrt(m) - floor(sqrt(m)) is at most
+1 - 2**(k-53).
+
+As a corollary, if we know in advance that ``n < 2**106`` is a perfect square,
+then under the assumptions of the proposition (IEEE 754, correct rounding),
+``int(sqrt(m))`` will exactly recover its square root.
+
+Newton's method
+---------------
+Assume that n is a nonnegative integer. We want to find the integer square
+root of n. We use the following method based on Newton-Raphson.
+
+Notation. Write isqrt(n) for the floor of the sqrt of n, and x // y for the
+floor of x divided by y.
+
+Suppose that a is any integer satisfying isqrt(n) <= a. Then the following
+are true:
+
+(1) If n // a >= a, then isqrt(n) = a.
+(2) If n // a < a, then isqrt(n) <= (a + n // a) // 2 < a.
+
+This gives a simple algorithm: compute n // a. If it's greater than or equal
+to a, we have the result; otherwise, we have a new estimate that's closer to
+isqrt(n) than a was. Repeat with that new estimate.
+
+Proof of (1): n // a >= a if and only if n / a >= a, which is equivalent
+to sqrt(n) >= a, which in turn is equivalent to isqrt(n) >= a. Since we're
+assuming that a >= isqrt(n), the result follows.
+
+Proof of (2): the second inequality is clear; we only need to justify the
+first. But the AM-GM inequality applied to a and n / a gives:
+
+    sqrt(n) <= (a + n / a) / 2
+
+Now taking floors of both sides of the inequality gives the result.
+
+For the algorithm below to work, we also need a starting guess that's
+greater than or equal to floor(sqrt(n)). There are a few ways to do this.
+We could simply pick n, but that leads to a lot of wasted iterations for
+large n. A value that's easy to compute and doesn't require floating-point
+arithmetic is the largest power of 2 exceeding the square root of n. We have:
+
+     sqrt(n) < 2**k iff
+     n < 2**2k iff
+     n.bit_length() <= 2k iff
+     ceil(n.bit_length() / 2) <= k
+
+So we can use 1 << -(-n.bit_length() // 2) as our starting guess. Technically
+we could replace n with n - 1 here, but this will only make a difference for
+powers of 4, so it doesn't seem worth the extra operation.
+
+We can also easily satisfy the condition that a >= floor(sqrt(n)) by
+making sure that we perform at least one iteration. So we could pick _any_
+positive integer b (preferably one close to the actual square root) and then
+use a = (b + n // b) // 2 as our starting value.
+
+Improved termination condition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From the above analysis, the obvious termination condition to use is:
+
+  n // a >= a
+
+However, it's quite common (depending on the size of n) for the
+penultimate division to give a value n // a satisfying
+
+  n // a == a - 1
+
+In that case, we can avoid an extra iteration and an expensive division:
+if n // a == a - 1 then:
+
+  a - 1 <= n / a < a
+
+so
+
+  a*a - a <= n < a * a
+
+and assuming a is positive, this implies that
+
+  (a-1) ** 2 <= n < a**2
+
+hence that isqrt(n) == a - 1.
+
+However, it's not immediately clear whether this is a win overall. As n
+increases, the chance of hitting the early termination condition decreases,
+and we're paying the price of the extra test on every call. The choice of
+whether to implement this or not probably depends on likely call patterns.
+
+We choose not to implement this improved
+termination condition in the code below, to keep things simple.
+
+Complexity analysis
+~~~~~~~~~~~~~~~~~~~
+As with the usual Newton-Raphson algorithm, convergence is quadratic (at
+least up to the final step). Here we try to get a concrete bound on the
+number of steps involved.
+
+What's a step? Well, for large n, the most time-consuming step in the
+algorithm is the division n // a. Everything else is at worst linear time. So
+let's count the number of divisions n // a performed by algorithm.
+Equivalently, we're counting iterations of the ``while`` loop, including
+the final part-iteration.
+
+In the usual Newton iteration with a_next = (a_current + n/a_current)/2,
+the relative error r = (a - sqrt(n)) / sqrt(n) follows the rule:
+
+    r_next = r_current**2 / (2 + 2*r_current)
+
+So for example if the initial relative error is exactly 1, the relative error
+on the next step is exactly 1/4, and on the step after that it's 1/40, then
+1/3280, etc. The sequence of denominators here is https://oeis.org/A059918.
+Let's write Q(n) for the nth denominator. So Q(0) = 1, Q(1) = 4,
+Q(2) = 40, Q(3) = 3280, etc.
+
+In our integer version of the algorithm, the relative error will decrease at
+least this fast, and possibly slightly faster, thanks to the floor
+operations. Our initial estimate based on a power of two always gives us a
+starting relative error that's at most 1.
+
+Now suppose that (for example) n <= 3280**2 == 10758400. Then after three
+iterations we have a value a with relative error at most 1/3280. Hence
+a - sqrt(n) <= 1/3280 sqrt(n) <= 1, so after three steps we're guaranteed
+to be within 1 of the target value, and we're guaranteed to hit isqrt(n)
+within four steps (since each step decreases the value of a). It may
+then take a fifth division to verify the stopping condition. So we need
+at most 5 divisions for any n <= 10758400.
+
+Conversely, there are plenty of examples of values n <= 10758400 which do
+need the full 5 divisions. The first such is n = 4224. The sequence of
+estimates, along with their relative errors, goes:
+
+  a = 128, r =  0.969464
+  a =  80, r =  0.230915
+  a =  66, r =  0.015505
+  a =  65, r =  0.000118
+  a =  64, r = -0.015268
+
+So for small n, we have the following bounds on the number of divisions
+needed:
+
+         n at most  |  max divisions
+                16  |  3
+              1600  |  4
+          10758400  |  5
+   463255025689600  |  6
+          8.58e+29  |  7
+          2.94e+60  |  8
+
+A brute-force search shows that the first n requiring 3 divisions is 8,
+the first n requiring 4 divisions is 80, the first n requiring 5 divisions
+is 4224, and the first n requiring 6 divisions is 16785408 (=4097**2 - 1).
+
+In general, if sqrt(n) <= Q(k), then we need at most k+2 divisions to
+find isqrt(n). There's an easily-proved closed form for Q(k):
+
+  Q(k) = (3**(2**k) - 1) // 2
+
+We can use this to bound the number of divisions required in terms of n:
+
+   divisions <= 2 + ceil(log2(log3(2*sqrt(n) + 1)))
 
 Recursive square root
 ---------------------
-The Newton method for computing an integer square root is wasteful,
-in that the initial steps are needlessly performed with full precision.
-Instead, it should be possible to increase the precision gradually,
-only reaching full precision for the last one or two iteration.
+The Newton method for computing an integer square root is wasteful: the initial
+steps are needlessly performed with full precision, involving a slow
+full-precision division step. A more careful algorithm would increase the
+precision gradually, only reaching full precision for the last one or two
+iterations.
 
-Investigating this leads to a recursive implementation based on
-the Newton iteration. Here's the necessary statement that makes
-the recursion work.
+This idea leads to a recursive implementation of integer square root based on
+the Newton iteration. Here's the statement that makes the recursion work.
 
 Proposition. Let n and k be positive integers satisfying
 
     4**(2k-2) <= n < 4**(2k+2)
 
-Suppose that a is an approximation to 2√(n//4**k) satisfying
+Suppose that a is an approximation to √(n//4**k) satisfying
 
-    |a - 2√(n//4**k)| < 1
+    |a - √(n//4**k)| < 1
 
-Let b = 2**(k-1)a + n // 2**(k-1)a. Then b is an approximation to 2√n
-satisfying
+Define b by the Newton iteration applied to 2**k a:
 
-    |b - 2√n| < 1
+    b = (2**k a + n // (2**k a)) // 2
 
-Proof. First note that we can replace the integer division in the assumption
-with true division: |a - 2√(n//4**k)| < 1 implies |a - 2√(n/4**k)| < 1.
+Then b is an approximation to √n satisfying:
 
+    |b - √n| < 1.
 
+Proof. First note that
 
+    |a - √(n//4**k)| < 1
 
+implies that
 
-
-
-
-Suppose that 4**(2k-2) <= n < 4**(2k+2), for some positive integer k.
-And suppose that we have an integer a satisfying
-
-   | a - √(n//4**k) | < 1
-
-It's easy to show that this implies
-
-   | a - √(n/4**k) | < 1
-
-or equivalently
-
-   | 2**k a - √n | < 2**k
-
-and from there deduce that
-
-   0 < (2**k a + n / (2**k a))/2 - √n < 1
+    |a - √(n/4**k)| < 1
 
 and hence that
 
-   -1 < floor(2**k a + n / (2**k a)) - √n < 1
+    0 <= |2**k a - √n| < 2**k
 
+Squaring and rearranging gives:
 
+    0 <= (2**k a + n / (2**k a)) / 2 - √n < 2**(k-1) / a <= 1
 
+where the last inequality follows from the fact that n >= 4**(2k-2), so
+√(n//4**k) >= 2**(k-1), and since a is an integer within 1 of √(n//4**k), it
+follows that a >= 2**(k-1).
 
+Now taking the floor gives
 
+   -1 < floor(2**k a + n / (2**k a)) - √n < 1,
 
+which gives us the result.
+
+Note that we can rewrite the expression for b as
+
+    b = 2**(k-1) a + (n // 2**(k+1)) // a
+
+and the multiplications and divisions by powers of 2 can be performed by
+shifting.
 """
-
-# Algorithm notes
-# ---------------
-# Assume that n is a nonnegative integer. We want to find the integer square
-# root of n. We use the following method based on Newton-Raphson.
-#
-# Notation. Write isqrt(n) for the floor of the sqrt of n, and x // y for the
-# floor of x divided by y.
-#
-# Suppose that a is any integer satisfying isqrt(n) <= a. Then the following
-# are true:
-#
-# (1) If n // a >= a, then isqrt(n) = a.
-# (2) If n // a < a, then isqrt(n) <= (a + n // a) // 2 < a.
-#
-# This gives a simple algorithm: compute n // a. If it's greater than or equal
-# to a, we have the result; otherwise, we have a new estimate that's closer to
-# isqrt(n) than a was. Repeat with that new estimate.
-#
-# Proof of (1): n // a >= a if and only if n / a >= a, which is equivalent
-# to sqrt(n) >= a, which in turn is equivalent to isqrt(n) >= a. Since we're
-# assuming that a >= isqrt(n), the result follows.
-#
-# Proof of (2): the second inequality is clear; we only need to justify the
-# first. But the AM-GM inequality applied to a and n / a gives:
-#
-#     sqrt(n) <= (a + n / a) / 2
-#
-# Now taking floors of both sides of the inequality gives the result.
-#
-# For the algorithm below to work, we also need a starting guess that's
-# greater than or equal to floor(sqrt(n)). There are a few ways to do this.
-# We could simply pick n, but that leads to a lot of wasted iterations for
-# large n. A value that's easy to compute and doesn't require floating-point
-# arithmetic is the largest power of 2 exceeding the square root of n. We have:
-#
-#      sqrt(n) < 2**k iff
-#      n < 2**2k iff
-#      n.bit_length() <= 2k iff
-#      ceil(n.bit_length() / 2) <= k
-#
-# So we can use 1 << -(-n.bit_length() // 2) as our starting guess. Technically
-# we could replace n with n - 1 here, but this will only make a difference for
-# powers of 4, so it doesn't seem worth the extra operation.
-#
-# We can also easily satisfy the condition that a >= floor(sqrt(n)) by
-# making sure that we perform at least one iteration. So we could pick _any_
-# positive integer b (preferably one close to the actual square root) and then
-# use a = (b + n // b) // 2 as our starting value.
-#
-# Improved termination condition
-# ------------------------------
-# From the above analysis, the obvious termination condition to use is:
-#
-#   n // a >= a
-#
-# However, it's quite common (depending on the size of n) for the
-# penultimate division to give a value n // a satisfying
-#
-#   n // a == a - 1
-#
-# In that case, we can avoid an extra iteration and an expensive division:
-# if n // a == a - 1 then:
-#
-#   a - 1 <= n / a < a
-#
-# so
-#
-#   a*a - a <= n < a * a
-#
-# and assuming a is positive, this implies that
-#
-#   (a-1) ** 2 <= n < a**2
-#
-# hence that isqrt(n) == a - 1.
-#
-# However, it's not immediately clear whether this is a win overall. As n
-# increases, the chance of hitting the early termination condition decreases,
-# and we're paying the price of the extra test on every call. The choice of
-# whether to implement this or not probably depends on likely call patterns.
-#
-# We choose not to implement this improved
-# termination condition in the code below, to keep things simple.
-#
-# Complexity analysis
-# -------------------
-# As with the usual Newton-Raphson algorithm, convergence is quadratic (at
-# least up to the final step). Here we try to get a concrete bound on the
-# number of steps involved.
-#
-# What's a step? Well, for large n, the most time-consuming step in the
-# algorithm is the division n // a. Everything else is at worst linear time. So
-# let's count the number of divisions n // a performed by algorithm.
-# Equivalently, we're counting iterations of the ``while`` loop, including
-# the final part-iteration.
-#
-# In the usual Newton iteration with a_next = (a_current + n/a_current)/2,
-# the relative error r = (a - sqrt(n)) / sqrt(n) follows the rule:
-#
-#     r_next = r_current**2 / (2 + 2*r_current)
-#
-# So for example if the initial relative error is exactly 1, the relative error
-# on the next step is exactly 1/4, and on the step after that it's 1/40, then
-# 1/3280, etc. The sequence of denominators here is https://oeis.org/A059918.
-# Let's write Q(n) for the nth denominator. So Q(0) = 1, Q(1) = 4,
-# Q(2) = 40, Q(3) = 3280, etc.
-#
-# In our integer version of the algorithm, the relative error will decrease at
-# least this fast, and possibly slightly faster, thanks to the floor
-# operations. Our initial estimate based on a power of two always gives us a
-# starting relative error that's at most 1.
-#
-# Now suppose that (for example) n <= 3280**2 == 10758400. Then after three
-# iterations we have a value a with relative error at most 1/3280. Hence
-# a - sqrt(n) <= 1/3280 sqrt(n) <= 1, so after three steps we're guaranteed
-# to be within 1 of the target value, and we're guaranteed to hit isqrt(n)
-# within four steps (since each step decreases the value of a). It may
-# then take a fifth division to verify the stopping condition. So we need
-# at most 5 divisions for any n <= 10758400.
-#
-# Conversely, there are plenty of examples of values n <= 10758400 which do
-# need the full 5 divisions. The first such is n = 4224. The sequence of
-# estimates, along with their relative errors, goes:
-#
-#   a = 128, r =  0.969464
-#   a =  80, r =  0.230915
-#   a =  66, r =  0.015505
-#   a =  65, r =  0.000118
-#   a =  64, r = -0.015268
-#
-# So for small n, we have the following bounds on the number of divisions
-# needed:
-#
-#          n at most  |  max divisions
-#                 16  |  3
-#               1600  |  4
-#           10758400  |  5
-#    463255025689600  |  6
-#           8.58e+29  |  7
-#           2.94e+60  |  8
-#
-# A brute-force search shows that the first n requiring 3 divisions is 8,
-# the first n requiring 4 divisions is 80, the first n requiring 5 divisions
-# is 4224, and the first n requiring 6 divisions is 16785408 (=4097**2 - 1).
-#
-# In general, if sqrt(n) <= Q(k), then we need at most k+2 divisions to
-# find isqrt(n). There's an easily-proved closed form for Q(k):
-#
-#   Q(k) = (3**(2**k) - 1) // 2
-#
-# We can use this to bound the number of divisions required in terms of n:
-#
-#    divisions <= 2 + ceil(log2(log3(2*sqrt(n) + 1)))
 
 import math
 
@@ -366,7 +394,7 @@ def _isqrt_approx(n):
     that the return value will be a positive integer.
     """
     try:
-        s = int(math.sqrt(n))
+        s = int(math.sqrt(n + 0.5))
     except OverflowError:
         shift = n.bit_length() // 2 - 53
         s = int(math.sqrt(n >> 2 * shift)) << shift
@@ -426,7 +454,7 @@ def isqrt(n):
 
 def isqrt_pure(n):
     """
-    Integer square root, computed without any use of floating-point arithmetic.
+    Integer square root, via Newton's method, avoiding floating-point.
 
     Parameters
     ----------
@@ -457,65 +485,99 @@ def isqrt_pure(n):
         a = a + d >> 1
 
 
-def _isqrt_recursive_pure(n):
+def _isqrt_recursive_pure(n, b):
     """
-    Given a positive integer n, return an integer a
-    such that (a - 1)**2 < n < (a + 1)**2.
+    Given a positive integer n, and the number of base-4 digits of n,
+    return an integer a satisfying (a - 1)**2 < n < (a + 1)**2.
 
     This function avoids any use of floating-point arithmetic.
     """
-    b = n.bit_length() - 3
-    if b < 0:
+    if b <= 1:
         return 1
     else:
-        k = b >> 2
-        m = n >> k + 2
-        a = _isqrt_recursive_pure(m >> k)
-        return (a << k) + m // a
+        k = b >> 1
+        a = _isqrt_recursive_pure(n >> 2*k, b - k)
+        return (a << k - 1) + (n >> k + 1) // a
 
 
-def _isqrt_recursive(n):
+def _isqrt_recursive(n, b):
     """
-    Given a positive integer n, return an integer a
-    such that (a - 1)**2 < n < (a + 1)**2.
+    Given a positive integer n, along with the number of base-4 digits of n,
+    return an integer a satisfying (a - 1)**2 < n < (a + 1)**2.
+
+    This function attempts to use math.sqrt for the base case of the
+    recursion, but falls back to pure integer methods if math.sqrt
+    doesn't give an accurate result. On machines using IEEE 754 binary64
+    floats with a correctly-rounded math.sqrt, that fallback should never
+    be needed.
     """
-    b = n.bit_length()
-    if b <= 106:
+    if b <= 53:
         a = int(math.sqrt(n))
-        # If we knew that math.sqrt is correctly rounded and that the
-        # floating-point format is IEEE 754 binary 64, we could simply
-        # return a here. As it is, we have to check.
-        return a if abs(n - a*a - 1) < 2*a else _isqrt_recursive_pure(a)
+        if abs(n - a*a - 1) < 2*a:
+            return a
+        else:
+            return _isqrt_recursive_pure(n, b)
     else:
-        k = b - 3 >> 2
-        m = n >> k + 2
-        a = _isqrt_recursive(m >> k)
-        return (a << k) + m // a
+        k = b >> 1
+        a = _isqrt_recursive(n >> 2*k, b - k)
+        return (a << k - 1) + (n >> k + 1) // a
+
+
+def isqrt_recursive_pure(n):
+    """
+    Integer square root via recursive method, avoiding floating-point.
+
+    Parameters
+    ----------
+    n : int
+        Input to find the square root of.
+
+    Returns
+    -------
+    a : int
+        Largest integer satisfying a * a <= n. Equivalently, the floor of
+        the square root of n.
+
+    Raises
+    ------
+    ValueError
+        If n is negative.
+    """
+    if n < 0:
+        raise ValueError("Square root of negative number")
+    elif n == 0:
+        return 0
+
+    a = _isqrt_recursive_pure(n, 1 + n.bit_length() >> 1)
+    return a - (n < a*a)
 
 
 def isqrt_recursive(n):
     """
     Integer square root via recursive method.
+
+    Parameters
+    ----------
+    n : int
+        Input to find the square root of.
+
+    Returns
+    -------
+    a : int
+        Largest integer satisfying a * a <= n. Equivalently, the floor of
+        the square root of n.
+
+    Raises
+    ------
+    ValueError
+        If n is negative.
     """
     if n < 0:
         raise ValueError("Square root of negative number")
     elif n == 0:
         return 0
 
-    a = _isqrt_recursive(n)
-    return a - (n < a*a)
-
-
-def isqrt_recursive_pure(n):
-    """
-    Integer square root via recursive method, with no use of floating-point.
-    """
-    if n < 0:
-        raise ValueError("Square root of negative number")
-    elif n == 0:
-        return 0
-
-    a = _isqrt_recursive_pure(n)
+    a = _isqrt_recursive(n, 1 + n.bit_length() >> 1)
     return a - (n < a*a)
 
 
@@ -525,7 +587,23 @@ ISQRTS = [(i, j) for i in range(16) for j in range(2*i+1)]
 
 def isqrt_bytes(n):
     """
-    Byte-by-byte implementation of integer square root.
+    Integer square root via byte-by-byte computation.
+
+    Parameters
+    ----------
+    n : int
+        Input to find the square root of.
+
+    Returns
+    -------
+    a : int
+        Largest integer satisfying a * a <= n. Equivalently, the floor of
+        the square root of n.
+
+    Raises
+    ------
+    ValueError
+        If n is negative.
     """
     if n < 0:
         raise ValueError("Square root of negative number")
