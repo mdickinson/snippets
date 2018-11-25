@@ -1,6 +1,7 @@
-/- Definition of the isqrt function -/
-
-section isqrt
+/-
+  Introduce notation for left and right shifts, so that we
+  can make the Lean code look more like Python code.
+-/
 
 reserve infix ` << `:60
 reserve infix ` >> `:60
@@ -8,91 +9,99 @@ reserve infix ` >> `:60
 notation n >> k := nat.shiftr n k
 notation n << k := nat.shiftl n k
 
+/- Definition of the isqrt function -/
+
+section isqrt
+
+lemma zero_lt_two : 0 < 2 := by repeat {constructor}
+
 lemma isqrt_aux_wf (c : ℕ) : c + 2 - (c + 2 >> 1) < c + 2 :=
 begin
   apply nat.sub_lt,
-  show 0 < c + 2, apply nat.zero_lt_succ,
-  show 0 < nat.shiftr (c + 2) 1,
-    rw [nat.shiftr, nat.shiftr, nat.div2_val],
-    apply (nat.le_div_iff_mul_le 1 (c+2) _).mpr,
-    show 1 * 2 ≤ c + 2, apply nat.le_add_left,
-    show 2 > 0, repeat {constructor},
+  { show 0 < c + 2, apply nat.zero_lt_succ },
+  {
+    rw nat.shiftr_eq_div_pow,
+    change 0 < (c + 2) / 2 ^ 1 with 1 ≤ (c + 2) / 2,
+    rw nat.le_div_iff_mul_le 1 (c + 2) zero_lt_two,
+    apply nat.le_add_left
+  }
 end
 
 def isqrt_aux : ℕ → ℕ → ℕ
-| 0 := λ n, 0
-| 1 := λ n, 1
-| b@(c+2) := λ n,
+| 0 n := 0
+| 1 n := 1
+| b@(c+2) n :=
     let k := b >> 1 in
-    let a := have b - k < b, from isqrt_aux_wf _,
-        isqrt_aux (b - k) (n >> 2 * k) in
+    let a := have b - k < b, from isqrt_aux_wf c,
+             isqrt_aux (b - k) (n >> 2 * k) in
     (a << k - 1) + (n >> k + 1) / a
 
-def size4 (n : ℕ) : ℕ := (1 + nat.size n) / 2
+def size4 (n : ℕ) := (1 + nat.size n) / 2
 
-def isqrt (n : ℕ) : ℕ :=
+def isqrt (n : ℕ) :=
   let a := isqrt_aux (size4 n) n in
   if a * a <= n then a else a - 1
 
+
 /- Random easy-to-prove facts -/
 
-lemma not_zero_lt_zero : ¬(0 < 0) .
+-- it's surprising how often a proof by contradiction below ends
+-- with a proof of 0 < 0.
 
-lemma zero_lt_two : 0 < 2 := begin
-  repeat {constructor},
+lemma zero_lt_zero (P : Prop) (h : 0 < 0) : P := by cases h
+
+
+/- logical negations, used with mt to generate the contrapositive
+   of a statement -/
+
+#check @not_iff_not_of_iff
+
+lemma le_iff_not_lt {m n : ℕ} : m ≤ n ↔ ¬ (n < m) := begin
+  split,
+  {
+    intros m_le_n n_lt_m, apply nat.lt_irrefl n,
+    apply nat.lt_of_lt_of_le n_lt_m m_le_n
+  },
+  {
+    cases nat.lt_or_ge n m with n_lt_m m_le_n; intro,
+    { contradiction }, { exact m_le_n }
+  }
 end
 
-lemma zero_lt_zero (P : Prop) : 0 < 0 → P := begin
-  intro h,
-  exfalso,
-  apply not_zero_lt_zero,
-  exact h,
+lemma lt_iff_not_le {m n : ℕ} : m < n ↔ ¬ (n ≤ m) := begin
+  split,
+  {
+    intros m_lt_n n_le_m, apply nat.lt_irrefl n,
+    apply nat.lt_of_le_of_lt n_le_m m_lt_n
+  },
+  {
+    cases nat.lt_or_ge m n with m_lt_n n_le_m; intro,
+    { exact m_lt_n }, { contradiction }
+  }
 end
 
-lemma eq_zero_of_le_zero (n : ℕ) : n ≤ 0 → n = 0 := begin
-  cases n with n, {intro, refl},
-  { intro h, exfalso, exact (nat.not_succ_le_zero n h) }
+lemma pos_iff_nonzero (n : ℕ) : 0 < n ↔ n ≠ 0 := begin
+  split,
+  { intros n_pos n_zero, apply zero_lt_zero, rw n_zero at n_pos, exact n_pos },
+  { intro n_nonzero, cases nat.eq_zero_or_pos n with n_zero n_pos,
+    { contradiction }, { exact n_pos }
+  }
 end
 
-lemma eq_zero_or_zero_lt (n : ℕ) : n = 0 ∨ 0 < n := begin
-  cases n,
-    left, refl,
-    right, apply nat.zero_lt_succ
-end
-
-lemma plus_one_minus_one (n : ℕ) : n + 1 - 1 = n := rfl
-
-lemma minus_one_plus_one (n : ℕ) : 0 < n → n = n - 1 + 1 := begin
-  cases n,
-  { apply zero_lt_zero },
-  { intro, apply congr_arg, refl}
-end
-
-lemma ne_zero_of_pos (x : ℕ) : 0 < x → x ≠ 0 := begin
-  intros xpos xzero,
-  rw xzero at xpos,
-  revert xpos,
-  apply zero_lt_zero
-end
-
-lemma sub_pos (m n : ℕ) : m < n → 0 < n - m := begin
-  intro h,
-  change 0 < n - m with 1 ≤ n - m,
-  have h2 : 1 = 1 + m - m, {symmetry, apply nat.add_sub_cancel },
-  rewrite h2,
-  apply nat.sub_le_sub_right,
-  rw add_comm,
-  change m + 1 with nat.succ m,
-  exact h
-end
+-- it's sometimes useful to split into cases a <= b and b <= a,
+-- to be able to make use of symmetry
 
 lemma le_or_ge (a b : ℕ) : a ≤ b ∨ b ≤ a :=
 begin
   cases nat.lt_or_ge a b with hlt hge,
-  { left, apply nat.le_of_lt hlt },
+  { left, exact nat.le_of_lt hlt },
   { right, exact hge }
 end
 
+lemma sub_pos (m n : ℕ) : m < n → 0 < n - m := begin
+  rw [pos_iff_nonzero, lt_iff_not_le],
+  apply mt, rw nat.sub_eq_zero_iff_le, exact id,
+end
 
 /- Galois connection for addition and subtraction in nat -/
 
@@ -116,7 +125,7 @@ begin
   }
 end
 
-lemma sub_le_of_le_add (a b c : ℕ) :
+lemma sub_le_of_le_add {a b c : ℕ} :
     a ≤ b + c → a - c ≤ b :=
 begin
   intro h,
@@ -163,50 +172,20 @@ begin
   }
 end
 
-/- le and lt relations for contrapositives -/
-
-lemma not_lt_of_le {m n : ℕ} : n ≤ m → ¬(m < n) := begin
-  intros n_le_m m_lt_n,
-  revert n_le_m,
-  apply (nat.lt_iff_le_not_le.mp m_lt_n).right,
-end
-
-lemma not_le_of_lt {m n : ℕ} : m < n → ¬(n ≤ m) := begin
-  intros hlt hle, apply not_lt_of_le hle, exact hlt
-end
-
-lemma le_of_not_lt {m n : ℕ} : ¬(m < n) → (n ≤ m) := begin
-  cases nat.lt_or_ge m n with hlt hge ; intro, contradiction, exact hge
-end
-
-lemma lt_of_not_le {m n : ℕ} : ¬(m ≤ n) → (n < m) := begin
-  cases nat.lt_or_ge n m with hlt hge ; intro, exact hlt, contradiction
-end
-
-lemma le_iff_not_lt {m n : ℕ} : m ≤ n ↔ ¬ (n < m) := begin
-  split, apply not_lt_of_le, apply le_of_not_lt
-end
-
-lemma lt_iff_not_le {m n : ℕ} : m < n ↔ ¬ (n ≤ m) := begin
-  split, apply not_le_of_lt, apply lt_of_not_le
-end
-
 /- result making use of those contrapositives -/
 
 lemma lt_of_mul_lt_mul (a b c : ℕ) : a * b < a * c → b < c :=
 begin
-  repeat {rw lt_iff_not_le},
-  apply mt,
-  apply nat.mul_le_mul_left
+  repeat {rw lt_iff_not_le}, apply mt, apply nat.mul_le_mul_left
 end
 
 /- Complete induction for natural numbers is a special case of
-   well-founded induction. -/
+   well-founded induction. Also look at nat.strong_induction_on -/
 
 lemma complete_induction (C : ℕ → Prop) :
    (∀ x, (∀ y, y < x → C y) → C x) → ∀ a, C a :=
 begin
-  intros, apply well_founded.induction, apply nat.lt_wf, assumption
+  intros IH a, apply well_founded.induction nat.lt_wf, exact IH
 end
 
 /- Some facts about nat.pow that seem to be missing from the standard library -/
@@ -564,7 +543,7 @@ begin
   intro n_upper_bound,
   intro b_small,
   have b_pos : 0 < b, {
-    cases eq_zero_or_zero_lt b with hzero hpos,
+    cases nat.eq_zero_or_pos b with hzero hpos,
     {
       exfalso,
       rw hzero at n_lower_bound,
@@ -1005,7 +984,7 @@ lemma size_one : nat.size 1 = 1 := begin
   rw [nat_size_unfold, if_neg], refl, trivial
 end
 
-lemma size_pos_of_pos (n : ℕ) : 0 < n → 0 < nat.size n :=
+lemma size_pos_of_pos {n : ℕ} : 0 < n → 0 < nat.size n :=
   @nat.binary_rec (λ n, 0 < n → 0 < nat.size n) (λ h, false.elim (nat.lt_irrefl 0 h))
   (λ b n _, succ_size_bit b n) n
 
@@ -1014,7 +993,7 @@ begin
   cases (nat.eq_zero_or_pos n) with n_zero n_pos,
   { intro, assumption },
   intro size_zero,
-  have size_pos : 0 < nat.size n := size_pos_of_pos n n_pos,
+  have size_pos : 0 < nat.size n := size_pos_of_pos n_pos,
   rewrite size_zero at size_pos,
   revert size_pos,
   apply zero_lt_zero
@@ -1022,16 +1001,17 @@ end
 
 /- defining characteristic of nat.size: n < 2^k iff size n <= k -/
 
-lemma lt_twopow_of_size_le (k n : ℕ) : nat.size n ≤ k → n < 2^k := begin
+lemma lt_exp2_of_size_le (k n : ℕ) : nat.size n ≤ k → n < 2^k := begin
   revert n,
   induction k with k IH,
   all_goals { intro n, cases (nat.eq_zero_or_pos n) with n_zero n_pos },
   -- k = 0, n = 0
   { rw n_zero, intro, simp, constructor },
   -- k = 0, n > 0,
-  { intro size_le_zero, have n_zero : n = 0,
-    apply zero_of_size_zero, exact eq_zero_of_le_zero _ size_le_zero,
-    rw n_zero, simp, constructor },
+  {
+    intro size_le_zero, apply zero_lt_zero,
+    exact nat.lt_of_lt_of_le (size_pos_of_pos n_pos) size_le_zero,
+  },
   -- ind step, n = 0,
   { rw n_zero, intro, apply nat.pos_pow_of_pos, apply zero_lt_two },
   -- ind step, n > 0,
@@ -1046,14 +1026,14 @@ lemma lt_twopow_of_size_le (k n : ℕ) : nat.size n ≤ k → n < 2^k := begin
   }
 end
 
-lemma size_le_of_lt_twopow (k n : ℕ) : n < 2^k → nat.size n ≤ k := begin
+lemma size_le_of_lt_exp2 (k n : ℕ) : n < 2^k → nat.size n ≤ k := begin
   revert n,
   induction k with k IH,
   all_goals { intro n, cases (nat.eq_zero_or_pos n) with n_zero n_pos },
   -- k = 0, n = 0
   { rw n_zero, intro, rw size_zero },
   -- k = 0, n > 0
-  { simp, intro n_lt_1, exfalso, revert n_lt_1, apply not_lt_of_le, exact n_pos },
+  { simp, rw lt_iff_not_ge, intro, contradiction },
   -- induction step, n = 0
   { rw n_zero, intro, rewrite size_zero, apply nat.zero_le },
   -- induction step, n > 0
@@ -1070,34 +1050,24 @@ end
 
 /- contrapositives of the above -/
 
-lemma twopow_le_of_lt_size (k n : ℕ) : k < nat.size n → 2^k ≤ n := begin
-  intro lt_size,
-  apply le_of_not_lt,
-  apply mt (size_le_of_lt_twopow _ _),
-  apply not_le_of_lt,
-  assumption
+lemma exp2_le_of_lt_size (k n : ℕ) : k < nat.size n → 2^k ≤ n := begin
+  rw [le_iff_not_lt, lt_iff_not_le], apply mt, apply size_le_of_lt_exp2
 end
 
-lemma lt_size_of_twopow_le (k n : ℕ) : 2^k ≤ n → k < nat.size n := begin
-  intro pow_le,
-  apply lt_of_not_le,
-  apply mt (lt_twopow_of_size_le _ _),
-  apply not_lt_of_le,
-  assumption
+lemma lt_size_of_exp2_le (k n : ℕ) : 2^k ≤ n → k < nat.size n := begin
+  rw [lt_iff_not_le, le_iff_not_lt], apply mt, apply lt_exp2_of_size_le
 end
 
-
-lemma two_pow_size_le (n : ℕ) : 0 < n → 2 ^ (nat.size n - 1) ≤ n := begin
+lemma exp2_size_le (n : ℕ) : 0 < n → 2 ^ (nat.size n - 1) ≤ n := begin
   intro n_pos,
-  apply twopow_le_of_lt_size,
+  apply exp2_le_of_lt_size,
   change nat.size n - 1 < nat.size n with nat.size n - 1 + 1 ≤ nat.size n,
-  rw ← minus_one_plus_one (nat.size n),
-  apply size_pos_of_pos,
-  exact n_pos
+  rw nat.sub_add_cancel,
+  exact (size_pos_of_pos n_pos)
 end
 
-lemma lt_two_pow_size (n : ℕ) : n < 2 ^ (nat.size n) := begin
-  apply lt_twopow_of_size_le,
+lemma lt_exp2_size (n : ℕ) : n < 2 ^ (nat.size n) := begin
+  apply lt_exp2_of_size_le,
   trivial
 end
 
@@ -1126,7 +1096,7 @@ lemma lt_exp4_of_size4_le (k n : ℕ) : size4 n ≤ k → n < 4^k :=
 begin
   unfold size4, intro h,
   rw base4base2,
-  apply lt_twopow_of_size_le,
+  apply lt_exp2_of_size_le,
   rw mul_comm,
   apply nat.le_mul_of_div_le _ _ zero_lt_two,
   rw add_comm,
@@ -1140,7 +1110,7 @@ begin
   rw add_comm,
   change 1 with 2 - 1,
   apply nat.div_le_of_le_mul2 _ _ zero_lt_two,
-  apply size_le_of_lt_twopow,
+  apply size_le_of_lt_exp2,
   rw mul_comm,
   rw ← base4base2,
   assumption
@@ -1161,7 +1131,7 @@ begin
 end
 
 lemma size4_shift (k n : ℕ) :
-  size4 (nat.shiftr n (2 * k)) = size4 n - k :=
+  size4 (n >> 2 * k) = size4 n - k :=
 begin
   rw nat.shiftr_eq_div_pow,
   rw ← base4base2,
@@ -1189,15 +1159,16 @@ begin
 end
 
 
-lemma isqrt_aux_zero : isqrt_aux 0 0 = 0 := by refl
+/- lemmas to help with unfolding the definition of isqrt_aux -/
 
+lemma isqrt_aux_zero (n : ℕ): isqrt_aux 0 n = 0 := by rw isqrt_aux
 
-/- lemma to help with unfolding the definition of isqrt_aux -/
+lemma isqrt_aux_one (n : ℕ) : isqrt_aux 1 n = 1 := by rw isqrt_aux
 
 lemma isqrt_aux_recurse (b n : ℕ) : 2 ≤ b →
-  isqrt_aux b n = let k := nat.shiftr b 1 in
-                  let d := isqrt_aux (b - k) (nat.shiftr n (2*k)) in
-                  nat.shiftl d (k - 1) + (nat.shiftr n (k + 1)) / d :=
+  isqrt_aux b n = let k := b >> 1 in
+                  let d := isqrt_aux (b - k) (n >> 2 * k) in
+                  (d << k - 1) + (n >> k + 1) / d :=
 begin
   intro two_le_b,
   cases b with b,
@@ -1218,15 +1189,15 @@ lemma random (k) : 0 < k → k + 1 = 2 + (k - 1) := begin
   conv
   begin
     to_lhs,
-    rw minus_one_plus_one k kpos,
-  end,
+    rw ← nat.sub_add_cancel kpos,
+  end
 end
 
 lemma random2 (k) : 0 < k → 1 + (k - 1) * 2 + 1 = k * 2 := begin
   intro kpos,
   let m := k - 1,
   have hk : k = m + 1,
-  apply minus_one_plus_one _ kpos,
+  rw nat.sub_add_cancel kpos,
   change k - 1 with m,
   rw hk,
   generalize : m = n,
@@ -1247,7 +1218,7 @@ lemma random3 (k) : 0 < k → 2 + (k - 1) * 2 = 2 * k := begin
   intro kpos,
   let m := k - 1,
   have hk : k = m + 1,
-  apply minus_one_plus_one _ kpos,
+  rw nat.sub_add_cancel kpos,
   change k - 1 with m,
   rw hk,
   generalize : m = n,
@@ -1285,7 +1256,8 @@ cases b,
   {
     /- case b = 1 -/
     intros IH n len1 npos a,
-    change a with 1,  -- unfolding definition
+    have a_eq_1 : a = 1, by apply isqrt_aux_one,
+    rw a_eq_1,
     simp,
     change 0^2 with 0,
     change (1+1)^2 with 4,
@@ -1320,10 +1292,10 @@ cases b,
     have b_def : b = size4 n, assumption,
     clear npos,
     rw isqrt_aux_recurse b n two_le_b at a_def,
-    let k := nat.shiftr b 1,
-    let m := nat.shiftr n (2 * k),
+    let k := b >> 1,
+    let m := n >> 2 * k,
     let d := isqrt_aux (b - k) m,
-    have a_def2 : a = nat.shiftl d (k - 1) + nat.shiftr n (k + 1) / d,
+    have a_def2 : a = (d << k - 1) + (n >> k + 1) / d,
     rw a_def,
     clear a_def,
     have size4_m : size4 m = b - k, { rw b_def, apply size4_shift},
@@ -1333,7 +1305,7 @@ cases b,
     apply nat.sub_lt,
     apply nat.lt_of_lt_of_le zero_lt_two,
     exact two_le_b,
-    change k with nat.shiftr b 1,
+    change k with b >> 1,
     rw nat.shiftr_eq_div_pow,
     change 2^1 with 2,
     change 0 < b / 2 with 1 ≤ b / 2,
@@ -1348,7 +1320,7 @@ cases b,
       apply exp4_le_of_lt_size4,
       rw size4_m,
       apply sub_pos,
-      change k with nat.shiftr b 1,
+      change k with b >> 1,
       rw nat.shiftr_eq_div_pow,
       change 2^1 with 2,
       apply nat.div_lt_of_lt_mul,
@@ -1363,15 +1335,15 @@ cases b,
       let M := 2^(k-1),
       have a_def3 : a = M * d + n / (4 * M * d),
       rewrite a_def2,
-      have h4 : nat.shiftl d (k - 1) = M * d,
+      have h4 : d << k - 1 = M * d,
       rewrite nat.shiftl_eq_mul_pow,
       apply mul_comm,
-      have h5 : nat.shiftr n (k + 1) / d = n / (4 * M * d),
+      have h5 : (n >> k + 1) / d = n / (4 * M * d),
       rw nat.shiftr_eq_div_pow,
       have h6 : 2^(k+1) = 4 * M,
       have h7 : k + 1 = 2 + (k - 1),
       have kpos : 0 < k,
-      change k with nat.shiftr b 1,
+      change k with b >> 1,
       rw nat.shiftr_eq_div_pow,
       change 0 < b / 2^1 with 1 ≤ b / 2,
       apply nat.le_div_of_mul_le,
@@ -1408,7 +1380,7 @@ cases b,
       change 1 + (k - 1) * 2 < b with 1 + (k - 1) * 2 + 1 ≤ b,
       have h9 : 1 + (k - 1) * 2 + 1 = k * 2,
       apply random2,
-      change 0 < k with 1 ≤ nat.shiftr b 1,
+      change 0 < k with 1 ≤ b >> 1,
       rw nat.shiftr_eq_div_pow,
       apply nat.le_div_of_mul_le,
       apply zero_lt_two,
@@ -1416,11 +1388,11 @@ cases b,
       rw h9,
       apply nat.mul_le_of_le_div,
       apply zero_lt_two,
-      change k with nat.shiftr b 1,
+      change k with b >> 1,
       rw nat.shiftr_eq_div_pow,
       apply le_refl,
       have h10: n / (4 * M ^ 2) = m,
-      change m with nat.shiftr n (2*k),
+      change m with n >> 2 * k,
       rw nat.shiftr_eq_div_pow,
       have h11 : 4 * M^2 = 2 ^ (2 * k),
       change M with 2^(k-1),
@@ -1428,7 +1400,7 @@ cases b,
       rw pow_assoc,
       rw ← pow_mul_pow,
       rw random3,
-      change 0 < k with 1 ≤ nat.shiftr b 1,
+      change 0 < k with 1 ≤ b >> 1,
       rw nat.shiftr_eq_div_pow,
       apply nat.le_div_of_mul_le,
       apply zero_lt_two,
@@ -1477,7 +1449,7 @@ end
 theorem isqrt_correct (n : ℕ) :
   let b := isqrt n in b * b ≤ n ∧ n < (b + 1) * (b + 1) :=
 begin
-  cases eq_zero_or_zero_lt n,
+  cases nat.eq_zero_or_pos n,
   { -- case n = 0
     rw h,
     rw isqrt_zero,
@@ -1507,8 +1479,8 @@ begin
       apply abounds.left,
       have h4 : a - 1 + 1 = a,
       symmetry,
-      apply minus_one_plus_one,
-      cases eq_zero_or_zero_lt a with h4 h4,
+      rw nat.sub_add_cancel,
+      cases nat.eq_zero_or_pos a with h4 h4,
       rw h4 at hneg,
       exfalso,
       change 0 * 0 with 0 at hneg,
@@ -1516,7 +1488,7 @@ begin
       apply nat.zero_le,
       apply h4,
       rw h4,
-      apply lt_of_not_le,
+      rw lt_iff_not_le,
       exact hneg,
     },
     {
