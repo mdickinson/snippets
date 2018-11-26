@@ -16,7 +16,6 @@ On a successful verification, this will produce no output.
 
 -/
 
-
 /-
 
 For reference, here's the Python code that we'll translate into Lean.
@@ -53,6 +52,8 @@ For reference, here's the Python code that we'll translate into Lean.
 
 -/
 
+
+
 /-
   Introduce notation for left and right shifts, so that we
   can make the Lean code look more like Python code.
@@ -68,12 +69,11 @@ notation n << k := nat.shiftl n k
 
 section isqrt
 
-/- A goal of 0 < 2 comes up often enough that it's worth encapsulating. -/
+/- A goal of 0 < 2 comes up so often that it's worth encapsulating. -/
 
 lemma zero_lt_two : 0 < 2 := by repeat {constructor}
 
-/- Lemma used to prove that the recursive call in isqrt_aux
-   terminates. -/
+/- Lemma used to show that the recursive call in isqrt_aux terminates. -/
 lemma isqrt_aux_wf (c : ℕ) : c + 2 - (c + 2 >> 1) < c + 2 :=
 begin
   apply nat.sub_lt,
@@ -106,6 +106,115 @@ def size4 (n : ℕ) := (1 + nat.size n) / 2
 def isqrt (n : ℕ) :=
   let a := isqrt_aux (size4 n) n in
   if a * a <= n then a else a - 1
+
+/-
+
+Before we embark on the formal proof, we give some comments and an informal
+proof.
+
+Informal proof
+--------------
+Before launching into the formal proof, we give an informal proof.
+
+Notation. Our informal proof uses a blend of Python notation, Lean notation and
+ordinary mathematical notation. We write // for the floor division operation
+(the floor of the true quotient). This is the same as Lean's "/" operator on ℕ,
+or Python's // on int. We'll write / for normal mathematical division on real
+numbers. * represents multiplication, ^ represents exponentiation, and √
+represents the usual real square root.
+
+We'll show by strong induction on n that for n positive, if d = isqrt_aux
+(size4 n) n then (d - 1)^2 < n < (d + 1)^2. This then implies the correctness
+of isqrt.
+
+For 0 < n < 4, the result can be verified by case-by-case computation.
+For n ≥ 4, the isqrt_aux definition enters the recursive call. Define:
+
+    k = size4 n // 2
+    m = n // 4^k
+    a = isqrt_aux (size4 m) m
+
+then unwinding the definitions in isqrt_aux, the return value of
+isqrt_aux (size4 n) n is
+
+    (1)  d = 2^(k-1) * a + n // 2^(k+1) // a
+
+The induction hypothesis gives:
+
+    (2)  (a - 1)^2 < m < (a + 1)^2
+
+and we must deduce that (d - 1)^2 < n < (d + 1)^2.
+
+Unfolding the definition of m in (2), (a - 1)^2 < floor(n / 4^k) < (a + 1)^2.
+Since (a + 1)^2 is an integer, it follows that n / 4^k < (a + 1)^2, so (2)
+implies the (slightly weaker, but sufficient for our purposes) statement:
+
+    (3)  (a - 1)^2 < n / 4^k < (a + 1)^2
+
+Taking square roots in (3) and rearranging gives
+
+    (4)  abs(√n - 2^k a) < 2^k
+
+Define the real number e by:
+
+    (5)  e = 2^(k-1) * a + n / (2^(k+1) * a)
+
+Then d = floor(e), so
+
+    (6)  d ≤ e < d + 1
+
+Now:
+
+    (7)  e - √n = ( 2^(k-1) * a + n / (2^(k+1) * a) - √n )
+                = ( 2^(2k) * a^2 + n - 2^(k+1) * a * √n ) / (2^(k+1) * a)
+                = ( √n - 2^k * a )^2 / (2^(k+1) * a)
+
+Using the bound on abs(√n - 2^k * a) in (4), and noting that the quantity
+on the right-hand side of (7) is nonnegative, we have
+
+    (8)  0 ≤ e - √n < 2^(2*k) / (2^(k+1) * a)
+
+To complete this we need a lower bound on a. We have 4^(size4 n - 1) ≤ n and
+2*k ≤ size4 n, by the definitions of size4 and k respectively. So:
+
+    (9)  4^(2*k - 1) ≤ 4^(size4 n - 1) ≤ n
+
+Dividing both sizes by 4^k and combining with the right-hand-side of (3),
+
+    (10)  4^(k - 1) < (a + 1)^2
+
+Taking square roots gives 2^(k - 1) < (a + 1), or equivalently, since 2^(k-1)
+is an integer,
+
+    (11)  2^(k - 1) ≤ a
+
+Combining this with (8) gives
+
+    (12)  0 ≤ e - √n < 1
+
+Since d = floor(e), it follows that
+
+    (13)  -1 < d - √n < 1
+
+which gives (d - 1)^2 < n < (d + 1)^2, as required. ∎
+
+
+Notes on the formal proof
+-------------------------
+
+The informal proof would normally be considered to be a proof over the field
+ℝ of real numbers, though it suffices to work in the subfield ℚ[√n], which has
+the advantage (from the point of view of giving a constructive proof) that
+equality is decidable. However, it requires some work to set up the machinery
+to work in ℚ[√n] or ℤ[√n] in Lean, and to pass between the various domains
+as required.
+
+An alternative approach is to work entirely within the domain of the natural
+numbers, and this is what we do below, avoiding even use of ℤ. This necessarily
+complicates some aspects of the proof. For comparison, we may at some point
+construct the more natural proof, working in ℚ[√n].
+
+-/
 
 
 /- Random easy-to-prove facts -/
@@ -159,11 +268,6 @@ begin
   cases nat.lt_or_ge a b with hlt hge,
   { left, exact nat.le_of_lt hlt },
   { right, exact hge }
-end
-
-lemma sub_pos (m n : ℕ) : m < n → 0 < n - m := begin
-  rw [pos_iff_nonzero, lt_iff_not_le],
-  apply mt, rw nat.sub_eq_zero_iff_le, exact id,
 end
 
 /- Galois connection for addition and subtraction in nat -/
@@ -1382,7 +1486,7 @@ cases b,
       change 0 < m with 4^0 ≤ m,
       apply exp4_le_of_lt_size4,
       rw size4_m,
-      apply sub_pos,
+      apply nat.sub_pos_of_lt,
       change k with b >> 1,
       rw nat.shiftr_eq_div_pow,
       change 2^1 with 2,
