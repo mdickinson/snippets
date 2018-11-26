@@ -1,4 +1,59 @@
 /-
+
+This file provides a formal proof of correctness of the recursive integer
+square root algorithm presented in isqrt.py.
+
+We use the "Lean" Theorem Prover, which can be obtained from:
+
+    https://leanprover.github.io
+
+This proof was verified using version 3.4.1 of Lean. After installing Lean,
+you can run the verification yourself from a command line using:
+
+    lean isqrt_lean
+
+On a successful verification, this will produce no output.
+
+-/
+
+
+/-
+
+For reference, here's the Python code that we'll translate into Lean.
+
+    def isqrt_aux(b, n):
+        """
+        Recursive approximate integer sqrt.
+
+        Given a positive integer n, and the number b of base-4 digits of n,
+        return an integer a close to the square root of n.
+
+        It can be proved that for n > 0, (a - 1)**2 < n < (a + 1)**2.
+        """
+        if b < 2:
+            return b
+        else:
+            k = b >> 1
+            a = isqrt_aux(b - k, n >> 2 * k)
+            return (a << k - 1) + (n >> k + 1) // a
+
+
+    def size4(n):
+        """ Number of base-4 digits of n. """
+        return (1 + n.bit_length()) // 2
+
+
+    def isqrt(n):
+        """ Largest a satisfying a * a <= n. """
+        if n < 0:
+            raise ValueError("Square root of negative number")
+
+        a = isqrt_aux(size4(n), n)
+        return a if a * a <= n else a - 1
+
+-/
+
+/-
   Introduce notation for left and right shifts, so that we
   can make the Lean code look more like Python code.
 -/
@@ -13,8 +68,12 @@ notation n << k := nat.shiftl n k
 
 section isqrt
 
+/- A goal of 0 < 2 comes up often enough that it's worth encapsulating. -/
+
 lemma zero_lt_two : 0 < 2 := by repeat {constructor}
 
+/- Lemma used to prove that the recursive call in isqrt_aux
+   terminates. -/
 lemma isqrt_aux_wf (c : ℕ) : c + 2 - (c + 2 >> 1) < c + 2 :=
 begin
   apply nat.sub_lt,
@@ -27,6 +86,9 @@ begin
   }
 end
 
+/- Given a natural number n together with b, the number of base 4
+   digits of n, if n = 0 return 0; otherwise, return
+   a value a satisfying (a - 1)^2 < n < (a + 1)^2 -/
 def isqrt_aux : ℕ → ℕ → ℕ
 | 0 n := 0
 | 1 n := 1
@@ -36,8 +98,11 @@ def isqrt_aux : ℕ → ℕ → ℕ
              isqrt_aux (b - k) (n >> 2 * k) in
     (a << k - 1) + (n >> k + 1) / a
 
+/- Number of base-4 digits of n -/
 def size4 (n : ℕ) := (1 + nat.size n) / 2
 
+/- Given n, return the largest natural number a satisfying
+   a * a <= n. -/
 def isqrt (n : ℕ) :=
   let a := isqrt_aux (size4 n) n in
   if a * a <= n then a else a - 1
@@ -52,9 +117,7 @@ lemma zero_lt_zero (P : Prop) (h : 0 < 0) : P := by cases h
 
 
 /- logical negations, used with mt to generate the contrapositive
-   of a statement -/
-
-#check @not_iff_not_of_iff
+   of a statement. See also not_iff_not_of_iff. -/
 
 lemma le_iff_not_lt {m n : ℕ} : m ≤ n ↔ ¬ (n < m) := begin
   split,
