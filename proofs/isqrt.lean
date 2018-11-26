@@ -114,20 +114,19 @@ proof.
 
 Informal proof
 --------------
-Before launching into the formal proof, we give an informal proof.
 
-Notation. Our informal proof uses a blend of Python notation, Lean notation and
+Notation. Our informal proof uses a blend of Python syntax, Lean syntax, and
 ordinary mathematical notation. We write // for the floor division operation
 (the floor of the true quotient). This is the same as Lean's "/" operator on ℕ,
-or Python's // on int. We'll write / for normal mathematical division on real
-numbers. * represents multiplication, ^ represents exponentiation, and √
-represents the usual real square root.
+or Python's "//" on int. We'll write / for normal mathematical division on
+real numbers. ^ represents exponentiation, and √ is the usual real square root.
 
-We'll show by strong induction on n that for n positive, if d = isqrt_aux
-(size4 n) n then (d - 1)^2 < n < (d + 1)^2. This then implies the correctness
-of isqrt.
+The expression isqrt_aux (size4 n) n gives an approximation to the square root
+of n.  We'll show by strong induction on n that the result of isqrt_aux differs
+from the true root by less than 1. That is, if d = isqrt_aux (size4 n) n then
+assuming 0 < n, (d - 1)^2 < n < (d + 1)^2. The correctness of isqrt follows.
 
-For 0 < n < 4, the result can be verified by case-by-case computation.
+For n < 4, the result can be verified directly by case-by-case computation.
 For n ≥ 4, the isqrt_aux definition enters the recursive call. Define:
 
     k = size4 n // 2
@@ -137,17 +136,19 @@ For n ≥ 4, the isqrt_aux definition enters the recursive call. Define:
 then unwinding the definitions in isqrt_aux, the return value of
 isqrt_aux (size4 n) n is
 
-    (1)  d = 2^(k-1) * a + n // 2^(k+1) // a
+    (1)  d = 2^(k-1) a + n // 2^(k+1) // a
 
-The induction hypothesis gives:
+The induction hypothesis allows us to assume that a is within 1 of the
+square root of m:
 
     (2)  (a - 1)^2 < m < (a + 1)^2
 
 and we must deduce that (d - 1)^2 < n < (d + 1)^2.
 
-Unfolding the definition of m in (2), (a - 1)^2 < floor(n / 4^k) < (a + 1)^2.
-Since (a + 1)^2 is an integer, it follows that n / 4^k < (a + 1)^2, so (2)
-implies the (slightly weaker, but sufficient for our purposes) statement:
+Unfolding the definition of m in (2), (a - 1)^2 < n // 4^k < (a + 1)^2. Since
+(a + 1)^2 is an integer, it follows that n / 4^k < (a + 1)^2, so we can replace
+floor division with true division and (2) implies the (slightly weaker, but
+sufficient for our purposes) statement:
 
     (3)  (a - 1)^2 < n / 4^k < (a + 1)^2
 
@@ -157,34 +158,34 @@ Taking square roots in (3) and rearranging gives
 
 Define the real number e by:
 
-    (5)  e = 2^(k-1) * a + n / (2^(k+1) * a)
+    (5)  e = 2^(k-1) a + n / (2^(k+1) a)
 
-Then d = floor(e), so
+And note for future use that:
 
-    (6)  d ≤ e < d + 1
+    (6)  d = floor(e)
 
 Now:
 
-    (7)  e - √n = ( 2^(k-1) * a + n / (2^(k+1) * a) - √n )
-                = ( 2^(2k) * a^2 + n - 2^(k+1) * a * √n ) / (2^(k+1) * a)
-                = ( √n - 2^k * a )^2 / (2^(k+1) * a)
+    (7)  e - √n = ( 2^(k-1) a + n / (2^(k+1) a) - √n )
+                = ( 2^(2k) a^2 + n - 2^(k+1) a √n ) / (2^(k+1) a)
+                = ( √n - 2^k a )^2 / (2^(k+1) a)
 
-Using the bound on abs(√n - 2^k * a) in (4), and noting that the quantity
+Using the bound on abs(√n - 2^k a) in (4), and noting that the quantity
 on the right-hand side of (7) is nonnegative, we have
 
-    (8)  0 ≤ e - √n < 2^(2*k) / (2^(k+1) * a)
+    (8)  0 ≤ e - √n < 2^(2k) / (2^(k+1) a)
 
-To complete this we need a lower bound on a. We have 4^(size4 n - 1) ≤ n and
-2*k ≤ size4 n, by the definitions of size4 and k respectively. So:
+To complete the proof we need a lower bound on a. We have 4^(size4 n - 1) ≤ n
+and 2k ≤ size4 n, by the definitions of size4 and k respectively. So:
 
-    (9)  4^(2*k - 1) ≤ 4^(size4 n - 1) ≤ n
+    (9)  4^(2k - 1) ≤ 4^(size4 n - 1) ≤ n
 
 Dividing both sizes by 4^k and combining with the right-hand-side of (3),
 
     (10)  4^(k - 1) < (a + 1)^2
 
 Taking square roots gives 2^(k - 1) < (a + 1), or equivalently, since 2^(k-1)
-is an integer,
+and a are both integers,
 
     (11)  2^(k - 1) ≤ a
 
@@ -192,7 +193,7 @@ Combining this with (8) gives
 
     (12)  0 ≤ e - √n < 1
 
-Since d = floor(e), it follows that
+Finally, using that d = floor(e) (from (6)), it follows that
 
     (13)  -1 < d - √n < 1
 
