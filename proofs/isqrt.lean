@@ -25,7 +25,7 @@ For reference, here's the Python code that we'll translate into Lean.
         Recursive approximate integer sqrt.
 
         Given a positive integer n, and the number b of base-4 digits of n,
-        return an integer a close to the square root of n.
+        return an integer close to the square root of n.
 
         It can be proved that for n > 0, (a - 1)**2 < n < (a + 1)**2.
         """
