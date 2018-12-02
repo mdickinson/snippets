@@ -264,11 +264,19 @@ lemma pos_iff_nonzero (n : ℕ) : 0 < n ↔ n ≠ 0 := begin
 end
 
 
+lemma le_zero_iff_eq_zero {n : ℕ} : n ≤ 0 ↔ n = 0 :=
+  ⟨ nat.eq_zero_of_le_zero, nat.le_of_eq ⟩
+
+
 lemma le_iff_succ_lt (x y : ℕ) : x ≤ y ↔ x < y + 1 :=
 begin
   split; intro h,
   apply nat.lt_succ_of_le h,
   apply nat.le_of_lt_succ h,
+end
+
+lemma lt_one_iff_eq_zero {n : ℕ} : n < 1 ↔ n = 0 := begin
+  rw [←le_iff_succ_lt, le_zero_iff_eq_zero]
 end
 
 
@@ -463,43 +471,27 @@ end
 
 lemma lt_of_square_lt_square (a b : ℕ) : a^2 < b^2 → a < b :=
 begin
-  rw lt_iff_not_le,
-  rw lt_iff_not_le,
-  apply mt,
-  apply square_le_square
+  repeat { rw lt_iff_not_le }, apply mt, apply square_le_square
 end
 
-lemma cauchy_schwarz (a b : nat) : 2*a*b ≤ a^2 + b^2 :=
+
+lemma cauchy_schwarz_one_sided {a b : ℕ} : a ≤ b → 2*a*b ≤ a^2 + b^2 :=
 begin
-  repeat {rw pow_two},
+  intro a_le_b, let c := b - a,
+  have subst_b : c + a = b := nat.sub_add_cancel a_le_b, rw ←subst_b,
+  simp [pow_two, two_mul, mul_add, add_mul, mul_comm c a],
+  repeat {apply nat.add_le_add_left},
+  apply nat.le_add_right
+end
+
+
+lemma cauchy_schwarz {a b : ℕ} : 2*a*b ≤ a^2 + b^2 :=
+begin
   cases le_or_ge a b with a_le_b b_le_a,
-  { -- a ≤ b
-    let c := b - a,
-    have hb : a + c = b, by apply nat.add_sub_of_le a_le_b,
-    rw ← hb,
-    rw [mul_add, mul_add, add_mul, add_mul],
-    rw [two_mul, add_mul, add_mul],
-    repeat {rw add_assoc},
-    apply nat.add_le_add_left,
-    apply nat.add_le_add_left,
-    rw mul_comm,
-    apply nat.add_le_add_left,
-    apply nat.le_add_right
-  },
+  { apply cauchy_schwarz_one_sided a_le_b },
   {
-    let c := a - b,
-    have ha : b + c = a, by apply nat.add_sub_of_le b_le_a,
-    rw ← ha,
-    rw two_mul,
-    repeat {rw add_mul},
-    repeat {rw mul_add},
-    repeat {rw add_assoc},
-    apply nat.add_le_add_left,
-    rw mul_comm,
-    apply nat.add_le_add_left,
-    rw add_comm,
-    apply nat.add_le_add_left,
-    apply nat.le_add_left
+    rw [mul_assoc, mul_comm a b, ←mul_assoc, add_comm],
+    apply cauchy_schwarz_one_sided b_le_a
   }
 end
 
@@ -512,20 +504,15 @@ lemma abs_lt_sublemma {a b c : ℕ} : a ≤ b →
   b < a + c → a^2 + b^2 < c^2 + 2*a*b :=
 begin
   /- replace b with a + d throughout -/
-  intro a_le_b,
-  let d := b - a,
-  have bsubst : d + a = b := nat.sub_add_cancel a_le_b,
-  rw ← bsubst, clear bsubst, clear a_le_b,
+  intro a_le_b, let d := b - a,
+  have subst_b : d + a = b := nat.sub_add_cancel a_le_b, rw ←subst_b,
 
   /- now just a matter of simplification -/
-  intro b_low,
-  have lhs : a ^ 2 + (d + a) ^ 2 = d ^ 2 + 2 * a * (d + a), by
-    simp [pow_two, two_mul, add_mul, mul_add, mul_comm d a],
-  rw lhs, clear lhs,
-  apply nat.add_lt_add_right,
-  apply square_lt_square,
-  rw add_comm at b_low,
-  exact lt_of_add_lt_add_left b_low
+  intro b_low, rw add_comm at b_low,
+  simp [pow_two, two_mul, add_mul, mul_add, mul_comm d a ],
+  repeat { apply nat.add_lt_add_left },
+  apply nat.mul_self_lt_mul_self,
+  exact lt_of_add_lt_add_left b_low,
 end
 
 
@@ -934,13 +921,6 @@ lemma size_pos_of_pos {n : ℕ} : 0 < n → 0 < nat.size n := begin
 end
 
 
-lemma size_one : nat.size 1 = 1 := begin
-  rw size_pos zero_lt_one,
-  have h : 1 / 2 = 0, by refl, rw h,
-  rw size_zero
-end
-
-
 lemma zero_of_size_zero (n : ℕ) : nat.size n = 0 → n = 0 :=
 begin
   cases (nat.eq_zero_or_pos n) with n_zero n_pos,
@@ -967,19 +947,13 @@ lemma le_zero_of_size_le_zero {n : ℕ} : nat.size n ≤ 0 → n ≤ 0 := begin
 end
 
 
-lemma le_zero_iff_eq_zero {n : ℕ} : n ≤ 0 ↔ n = 0 :=
-  ⟨ nat.eq_zero_of_le_zero, nat.le_of_eq ⟩
-
-
 /- defining characteristic of nat.size: n < 2^k iff size n <= k -/
 
 lemma size_le_iff_lt_exp2 {k n : ℕ} : nat.size n ≤ k ↔ n < 2^k := begin
   revert n, induction k with k IH,
   { -- case k = 0
-    simp, intro n, rw [le_zero_iff_eq_zero, size_zero_iff_zero],
-    split,
-    { intro n_zero, rw n_zero, apply zero_lt_one },
-    { intro lt_one, rw ← le_zero_iff_eq_zero, apply nat.le_of_lt_succ lt_one }
+    simp, intro n,
+    rw [le_zero_iff_eq_zero, size_zero_iff_zero, lt_one_iff_eq_zero]
   },
   { -- case k > 0
     intro n,
@@ -992,7 +966,6 @@ lemma size_le_iff_lt_exp2 {k n : ℕ} : nat.size n ≤ k ↔ n < 2^k := begin
     { -- case n > 0
       rw [nat.pow_succ, ←nat.div_lt_iff_lt_mul _ _ nat.two_pos,
         size_pos n_pos, ← IH],
-      change nat.size (n / 2) + 1 with nat.succ (nat.size (n / 2)),
       exact ⟨ nat.le_of_succ_le_succ, nat.succ_le_succ ⟩
     }
   }
@@ -1001,27 +974,7 @@ end
 
 /- facts about size4 -/
 
-lemma base4base2 (n : ℕ) : 4^n = 2^(2 * n) := begin
-  change 4 with 2^2,
-  apply pow_assoc,
-end
-
-
-lemma size4_zero : size4 0 = 0 := rfl
-
-
-lemma size4_positive (n : ℕ) : 0 < n → 0 < size4 n := begin
-  intro n_positive,
-  rw size4,
-  apply nat.lt_of_succ_le,
-  rw nat.le_div_iff_mul_le _ _ nat.two_pos,
-  simp,
-  change 2 with 1 + 1,
-  apply add_le_add_right,
-  apply size_pos_of_pos,
-  assumption,
-end
-
+lemma base4base2 (n : ℕ) : 4^n = 2^(2 * n) := pow_assoc 2 2 n
 
 /- defining properties of size4 -/
 
@@ -1046,8 +999,7 @@ end
 lemma size4_shift (k n : ℕ) :
   size4 (n >> 2 * k) = size4 n - k :=
 begin
-  rw nat.shiftr_eq_div_pow,
-  rw ← base4base2,
+  rw [nat.shiftr_eq_div_pow, ←base4base2],
   have fourpow_pos : 0 < 4^k := nat.pos_pow_of_pos _ nat.four_pos,
   apply nat.le_antisymm,
   {
@@ -1148,7 +1100,10 @@ cases b,
   intros IH n n_no_digits n_positive,
   clear IH,
   exfalso,
-  have h2 : 0 < size4 n, from size4_positive n n_positive,
+  have h2 : 0 < size4 n, {
+    rw [lt_size4_iff_exp4_le, nat.pow_zero],
+    exact n_positive
+  },
   rw ←n_no_digits at h2,
   apply nat.lt_irrefl 0,
   assumption,
@@ -1391,165 +1346,3 @@ begin
 end
 
 end isqrt
-
-
-
-/- the harder part is showing that c is not too large: i.e.,
-   (c-1)^2 < n. So let's show that first.
-
-   It suffices to show that:
-
-      (Ma + n/(4Ma) - 1)^2 < n
-
-  (Why? For general a, b, c, need to show that (a//b)^2 < c follows from
-   a < b^2 c.)
-
-   So if we want to stay in ℕ or ℤ, rescale to show:
-
-      (4M^2a^2 + n - 4Ma)^2 < 16M^2a^2 n
-
-   or with d = Ma,
-
-      (n + 4d^2 - 4d)^2 < 16d^2n
-
-   But that follows from:
-
-      (n + 4d^2 - 4M^2)^2 < 16d^2n
-
-   which rearranges to:
-
-      ( n - 4d^2 - 4M^2 )^2 < 64d^2M^2
-
-
--/
-
-
-
-/-
-
-Informal proof:
-
-For ease of notation, we write / for true division and // for floor division
-in what follows.
-
-- It's easy to check that the theorem is true for n = 0, so assume n positive.
-- In calls to isqrt_aux, the arguments b and n always satisfy b >= 1, n >= 1,
-  and
-
-      4^(b-1) <= n < 4^b
-
-  That is, b is the number of digits required to write n in base 4.
-- Now prove by induction that under the above assumption on b and n,
-  isqrt_aux b n differs from √n by strictly less than 1.
-
-  Case b = 1 (base case): then 1 <= n < 4, so 1 <= √n < 2, and the result
-  holds.
-
-  Case b > 1 (induction step): let k = b // 2 and a be
-  isqrt_aux (b - k) (n // 4^k), then by the induction hypothesis we have
-
-      | a - √(n // 4^k) | < 1
-
-  or:
-
-      (a - 1)^2 < (n // 4^k) < (a + 1)^2
-
-  It follows that we can replace // with / above:
-
-      a - 1 < √(n / 4^k) < a + 1,
-
-  or
-
-     | a - √(n / 4^k) | < 1
-
-  or
-
-     | 2^k a - √n | < 2^k
-
-  Now consider c := 2^(k-1) a + n / (2^(k+1) a). Then
-
-      c - √n = 2^(k-1) a + n / (2^(k+1) a) - √n
-             = (2^(2k) a^2 + n - 2 2^k a √n) / (2^(k+1) a)
-             = (2^k a - √n)^2 / (2^(k+1) a)
-
-  So
-
-      0 <= c - √n < 4^k / (2^(k+1) a)
-
-  But n >= 4^(b-1), so √n >= 2^(b-1), so √(n / 4^k) >= 2^(b-1-k),
-  so a >= 2^(b-1-k) and 2^(k+1) a >= 2^b. So
-
-      0 <= c - √n < 4^k / 2^b <= 4^(b/2) / 2^b = 1
-
-  and hence
-
-     -1 < floor(c) - √n < 1
-
-  as required.
-
-- So given a result a from the top-level sqrt_inner call, we have
-
-     (a - 1)^2 < n < (a + 1)^2
-
-  So if a^2 <= n, our desired result is a, else a - 1.
-
-The interesting part of the proof is the induction step; as written, the
-proof is over the real numbers (or at least, over the decidable ring Z[√n]).
-When formalising, we have a choice of making use of Z[√n], or recasting the
-proof to operate entirely in ℤ or ℕ. Here we try to recast over ℕ.
-
-Here's one of the key lemmas that we need, over ℝ:
-
-Lemma: suppose a, M and n are natural numbers, with M positive, satisfying:
-
-1. a >= M
-2. | a - √(n/4M^2) | < 1
-
-Let c = Ma + n / 4Ma. Then c < 1 + √n
-
-The proof over ℝ is direct: c - √n can be rewritten as |2Ma - √n|^2/4Ma, and
-assumption 2 implies that |2Ma - √n| < 2M.
-
-Can we recast that proof over ℕ? First we need to restate the lemma.
-
-Assumption 2 can be restated as 4M^2(a - 1)^2 < n < 4M^2(a + 1)^2.
-Similarly, the conclusion can be stated as: (c - 1)^2 < n.
-
-Simplifying (here d corresponds to Ma in the original):
-
-Lemma: suppose d, M and n are real numbers, 0 <= n, 0 < M, M^2 <= d.
-Let c = 4d^2 + n. If |2d - √n| < 2M, then 0 <= c - 4d√n < 4d.
-
-Proof: Clear from rearranging c - 4d√n as (2d - √n)^2.
-
-We shouldn't need square roots to state or prove this lemma.
-
-If we assume that M <= d, the main hypothesis is equivalent to:
-
-   (2d - 2M)^2 < n < (2d + 2M)^2
-
-which is equivalent to:
-
-    (1)  ( n - 4d^2 - 4M^2 )^2 < 64d^2M^2
-
-which can be rearranged to:
-
-    (2)  ( n + 4d^2 - 4M^2 )^2 < 16d^2n
-
-The < part of the conclusion is equivalent to
-
-    (3)  ( n + 4d^2 - 4d)^2 < 16d^2n,
-
-But now it's clear that (3) follows from (2), provided only that
-
-    (5)  |n + 4d^2 - 4d|^2 <= |n + 4d^2 - 4M^2|^2
-
-i.e., that
-
-        0 <= (4d - 4M^2)(2n + 8d^2 - 4d - 4M^2)
-
-so it's enough that
-
-        2d + 2M^2 <= n + 4d^2
-
--/
