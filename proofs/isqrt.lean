@@ -342,10 +342,21 @@ end
 
 /- result making use of those contrapositives -/
 
-lemma lt_of_mul_lt_mul (a b c : ℕ) : a * b < a * c → b < c :=
+lemma lt_of_mul_lt_mul (a : ℕ) {b c : ℕ} : a * b < a * c → b < c :=
 begin
   repeat {rw lt_iff_not_le}, apply mt, apply nat.mul_le_mul_left
 end
+
+/- can't find this one easily in the standard library, but it's probably
+   there somewhere -/
+
+lemma le_mul_of_pos {a b : ℕ} : 0 < b → a ≤ a * b := begin
+  intro b_pos,
+  have h : a * 1 ≤ a * b := nat.mul_le_mul_left a b_pos,
+  rw mul_one at h, exact h
+end
+
+
 
 /- Complete induction for natural numbers is a special case of
    well-founded induction. Also look at nat.strong_induction_on -/
@@ -440,6 +451,19 @@ lemma nat.lt_mul_of_div_lt {x y k : ℕ} :
 begin
   intro kpos,
   apply (nat.div_lt_iff_lt_mul x y kpos).mp
+end
+
+lemma nat.mul_lt_of_lt_div {x y k : ℕ} :
+  0 < k → x < y / k → x * k < y :=
+begin
+  intros k_pos lt_div,
+  have h2 : (x + 1) * k ≤ y, {
+    rw ← nat.le_div_iff_mul_le _ _ k_pos,
+    exact lt_div,
+  },
+  apply nat.lt_of_lt_of_le _ h2,
+  rw [add_mul, one_mul],
+  exact nat.lt_add_of_pos_right k_pos
 end
 
 lemma nat.le_mul_of_div_le (x y : ℕ) {k : ℕ} :
@@ -795,6 +819,165 @@ section induction_step
 /- This section introduces the main lemma used to show the validity
    of the recursion. -/
 
+parameters {n M d : ℕ}
+parameter M_pos : 0 < M
+parameter n_lower_bound : 4 * M^4 ≤ n
+
+definition m := n / (4 * M^2)
+definition a := M*d + n / (4*M*d)
+
+/- We assume that d gives an accurate approximation to the square root
+   of m, and show that a gives an accurate approximation to the square
+   root of n. -/
+
+parameter d_bounds : (d - 1)^2 < m ∧ m < (d + 1)^2
+
+include M_pos n_lower_bound m a d_bounds
+
+lemma nat.four_pos : 0 < 4 := by repeat { constructor }
+
+lemma m_denom_pos : 0 < 4 * M^2 := begin
+  rw pow_two, exact mul_pos nat.four_pos (mul_pos M_pos M_pos)
+end
+
+/- Result that's useful for simplification. -/
+
+lemma pow_four : M^4 = M^2 * M^2 := pow_mul_pow M 2 2
+
+/- A key inequality in the proof is that M ≤ d. -/
+
+lemma M_le_d : M ≤ d := begin
+  apply nat.le_of_lt_succ, change nat.succ d with d + 1,
+  apply lt_of_square_lt_square,
+  apply lt_of_le_of_lt _ d_bounds.right,
+  rw [m, nat.le_div_iff_mul_le _ _ m_denom_pos],
+  rw [mul_comm, mul_assoc, ← pow_four],
+  exact n_lower_bound
+end
+
+/- We also need to know that 1 ≤ d to be sure that (d - 1)^2 means
+   what we think it means. -/
+
+lemma one_le_d : 1 ≤ d := nat.lt_of_lt_of_le M_pos M_le_d
+
+/- Similarly, we need to know that the denominators in the divisions
+   are positive. -/
+
+lemma d_pos : 0 < d := nat.lt_of_succ_le one_le_d
+
+lemma a_denom_pos : 0 < 4*M*d := mul_pos (mul_pos nat.four_pos M_pos) d_pos
+
+/- Establish lower and upper bounds on n from d_bounds. These come
+   from clearing denominators in d_bounds. -/
+
+lemma n_lower : (2*M*d - 2*M)^2 < n := begin
+  have lhs : 2*M*d - 2*M = 2*M*(d - 1), by simp [nat.mul_sub_left_distrib],
+  rw [lhs, mul_pow, mul_comm, mul_pow],
+  apply nat.mul_lt_of_lt_div m_denom_pos,
+  exact d_bounds.left
+end
+
+lemma n_upper : n < (2*M*d + 2*M)^2 := begin
+  have rhs : 2*M*d + 2*M = 2*M*(d+1), by simp [mul_add],
+  rw [rhs, mul_pow, mul_pow, mul_comm],
+  change 2^2 with 4,
+  rw ← nat.div_lt_iff_lt_mul _ _ m_denom_pos,
+  exact d_bounds.right
+end
+
+/- The following rewrites come up in proving both bounds -/
+
+lemma four_m_d_rewrite : (4*M*d) * (M*d) = (2 * M * d)^2 := begin
+  symmetry, rw [mul_assoc, mul_pow, pow_two, pow_two],
+  change 2 * 2 with 4, simp [mul_assoc],
+end
+
+lemma four_m_d_rewrite2 : (4 * M * d) ^ 2 = 4 * (2 * M * d)^2 := begin
+  repeat {rw mul_pow}, repeat {rw ← mul_assoc}, refl
+end
+
+
+/- Establish the lower bound on a:  √n - 1 < a -/
+
+theorem key_isqrt_lemma_rhs : n < (a + 1)^2 := begin
+  /- clear denominators in definition of a -/
+  apply lt_of_mul_lt_mul ((4*M*d)^2),
+  have lhs : (4 * M * d) ^ 2 * n ≤ ((4*M*d) * (M*d) + n)^2,
+  { rw [four_m_d_rewrite, four_m_d_rewrite2], apply am_gm },
+  apply nat.lt_of_le_of_lt lhs,
+  rw ← mul_pow,
+  apply square_lt_square,
+  change a with M*d + n / (4*M*d),
+  rw [add_assoc, mul_add],
+  apply add_lt_add_left,
+  rw [mul_comm, ← nat.div_lt_iff_lt_mul _ _ a_denom_pos],
+  apply nat.le_refl,
+end
+
+/- Upper bound on a, a < √n + 1 -/
+
+lemma two_M_le_two_M_d : 2 * M ≤ 2 * M * d := le_mul_of_pos d_pos
+
+/- Rewrite of the key bound, in the form that it appears when
+   we're using the main arithmetic sublemma. -/
+
+lemma key_bound_rewrite : (2 * M) ^ 2 ≤ 2 * (2 * M * d) := begin
+  rw [mul_pow, pow_two, pow_two],
+  repeat { rw mul_assoc },
+  repeat {apply nat.mul_le_mul_left},
+  apply M_le_d
+end
+
+
+lemma key_isqrt_lemma_lhs_lhs :
+  (4 * M * d) ^ 2 * (a - 1) ^ 2 ≤ ((4*M*d) * (M*d) + n - 4*M*d)^2 :=
+begin
+  rw ← mul_pow,
+  apply square_le_square,
+  rw [nat.mul_sub_left_distrib, mul_one],
+  apply nat.sub_le_sub_right,
+  change a with M*d + n / (4*M*d),
+  rw mul_add,
+  apply add_le_add_left,
+  rw mul_comm,
+  rw ← nat.le_div_iff_mul_le _ _ a_denom_pos
+end
+
+
+lemma key_isqrt_lemma_lhs_rhs :
+  (4 * M * d * (M * d) + n - 4 * M * d) ^ 2 < (4 * M * d) ^ 2 * n :=
+begin
+  have h : 4 * M * d = 2 * (2 * M * d),
+    { change 4 with 2*2, simp [mul_assoc] },
+  rw [four_m_d_rewrite, four_m_d_rewrite2, h],
+
+  apply main_arithmetic_sublemma two_M_le_two_M_d n_lower n_upper,
+  apply key_bound_rewrite,
+
+  /- Left with: 2 * (2 * M * d) ≤ (2 * M * d) ^ 2 + n -/
+  apply nat.le_trans _ (nat.le_add_right _ _),
+  rw pow_two,
+  apply nat.mul_le_mul_right,
+  rw mul_assoc,
+  apply le_mul_of_pos (mul_pos M_pos d_pos)
+end
+
+
+theorem key_isqrt_lemma_lhs : (a - 1)^2 < n := begin
+  /- clear denominators in definition of a -/
+  apply lt_of_mul_lt_mul ((4*M*d)^2),
+  apply nat.lt_of_le_of_lt key_isqrt_lemma_lhs_lhs key_isqrt_lemma_lhs_rhs
+end
+
+
+theorem key_isqrt_lemma_all : (a - 1)^2 < n ∧ n < (a + 1)^2 :=
+  and.intro key_isqrt_lemma_lhs key_isqrt_lemma_rhs
+
+end induction_step
+
+#check @key_isqrt_lemma_all
+
+
 theorem key_isqrt_lemma {n M d}:
   1 ≤ M → 4 * M^4 ≤ n →
   let m := n / (4 * M^2) in
@@ -1024,8 +1207,6 @@ begin
     }
   }
 end
-
-end induction_step
 
 
 /- Facts about nat.size; there seems to be nothing in the standard library -/
