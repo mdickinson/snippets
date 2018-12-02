@@ -566,74 +566,42 @@ begin
   }
 end
 
-lemma square_sub {a b : ℕ} : b ≤ a → (a - b)^2 = a^2 + b^2 - 2*a*b :=
+
+lemma square_add {a b : ℕ} : (a + b)^2 = a^2 + b^2 + 2*a*b :=
+  by simp [pow_two, two_mul, add_mul, mul_add, mul_comm b a]
+
+
+lemma abs_lt_sublemma {a b c : ℕ} : a ≤ b →
+  b < a + c → a^2 + b^2 < c^2 + 2*a*b :=
 begin
-  intro b_le_a,
-  apply @nat.add_right_cancel _ (2*a*b),
-  rw nat.sub_add_cancel,
-  {
-    let c := a - b,
-    have ha : b + c = a, by apply nat.add_sub_of_le b_le_a,
-    change a - b with c,
-    rw ← ha,
-    repeat {rw pow_two},
-    rw two_mul,
-    repeat {rw add_mul},
-    repeat {rw mul_add},
-    simp,
-    apply congr_arg,
-    apply congr_arg,
-    rw mul_comm
-  },
-  {
-    apply cauchy_schwarz
-  }
+  /- replace b with a + d throughout -/
+  intro a_le_b,
+  let d := b - a,
+  have bsubst : d + a = b := nat.sub_add_cancel a_le_b,
+  rw ← bsubst, clear bsubst, clear a_le_b,
+
+  /- now just a matter of simplification -/
+  intro b_low,
+  have lhs : a ^ 2 + (d + a) ^ 2 = d ^ 2 + 2 * a * (d + a), by
+    simp [pow_two, two_mul, add_mul, mul_add, mul_comm d a],
+  rw lhs, clear lhs,
+  apply nat.add_lt_add_right,
+  apply square_lt_square,
+  rw add_comm at b_low,
+  exact lt_of_add_lt_add_left b_low
 end
 
-lemma abs_lt {a b c : ℕ} : a - b < c → b - a < c →
+
+lemma abs_lt {a b c : ℕ} : a < b + c → b < a + c →
   a^2 + b^2 < c^2 + 2*a*b :=
 begin
-  intros a_sub_b b_sub_a,
+  intros a_low b_low,
   cases le_or_ge a b with a_le_b b_le_a,
-  {
-    let d := b - a,
-    have hd : b = a + d, { symmetry, apply nat.add_sub_of_le a_le_b },
-    rw hd,
-    rw hd at b_sub_a,
-    rw nat.add_sub_cancel_left at b_sub_a,
-    repeat {rw pow_two},
-    rw two_mul,
-    repeat {rw mul_add},
-    repeat {rw add_mul},
-    simp,
-    repeat {apply nat.add_lt_add_left},
-    rw mul_comm,
-    apply nat.add_lt_add_left,
-    repeat {rw ← pow_two},
-    apply square_lt_square,
-    exact b_sub_a
-  },
-  {
-    let d := a - b,
-    have hd : a = b + d, { symmetry, apply nat.add_sub_of_le b_le_a },
-    rw hd,
-    rw hd at a_sub_b,
-    rw nat.add_sub_cancel_left at a_sub_b,
-    repeat {rw pow_two},
-    rw two_mul,
-    repeat {rw mul_add},
-    repeat {rw add_mul},
-    simp,
-    repeat {apply nat.add_lt_add_left},
-    rw mul_comm,
-    have h1 : c * c + (d * b + d * b) = d * b + (d * b + c * c), by simp,
-    rw h1, clear h1,
-    repeat {apply nat.add_lt_add_left},
-    repeat {rw ← pow_two},
-    apply square_lt_square,
-    exact a_sub_b
-  }
+  { exact abs_lt_sublemma a_le_b b_low },
+  { rw [add_comm, mul_assoc, mul_comm a b, ← mul_assoc],
+    exact abs_lt_sublemma b_le_a a_low }
 end
+
 
 lemma am_gm (a b : ℕ) : 4*a*b ≤ (a + b)^2 :=
 begin
@@ -666,6 +634,8 @@ begin
 end
 
 
+/- Conclusion is (c - b)^2 ≤ (c - a)^2, rearranged. -/
+
 lemma squares_diffs {a b c : ℕ} : a ≤ b → b ≤ c →
   2*a*c + b^2 ≤ 2*b*c + a^2 :=
 begin
@@ -697,210 +667,135 @@ begin
 end
 
 
-/- the main arithmetic sublemma -/
-
-theorem key_isqrt_sublemma (n a b : ℕ) :
-  b ≤ a →
-  (a - b) ^ 2 < n →
-  n < (a + b)^2 →
-  b ^ 2 ≤ 2 * a →
-  (a ^ 2 + n - 2 * a) ^ 2 < 4 * a^2 * n :=
+lemma more_squares {a b c : ℕ} :
+  c ≤ a + b →
+  (a + b + c)^2 < 4*a*b + 4*a*c + 4*b*c →
+  (a + b - c)^2 < 4*a*b :=
 begin
-  intro b_le_a,
-  intro n_lower_bound,
-  intro n_upper_bound,
-  intro b_small,
-  have b_pos : 0 < b, {
-    cases nat.eq_zero_or_pos b with hzero hpos,
-    {
-      exfalso,
-      rw hzero at n_lower_bound,
-      rw hzero at n_upper_bound,
-      change a - 0 with a at n_lower_bound,
-      change a + 0 with a at n_upper_bound,
-      apply lt_irrefl n,
-      apply nat.lt_trans n_upper_bound n_lower_bound
-    },
-    {
-      exact hpos
-    }
+  intros c_bound hmain,
+  let d := a + b - c,
+  change a + b - c with d,
+  have ab_cd : a + b = c + d, {
+    symmetry, rw [add_comm, nat.sub_add_cancel c_bound]
   },
-  have a_small : 2 * a ≤ a^2 + n, {
-    apply @nat.le_trans _ (a^2 + 1),
-    {
-      change a^2 + 1 with a^2 + 1^2,
-      have h1 : 2 * a = 2 * a * 1, { symmetry, apply mul_one },
-      rw h1, clear h1,
-      apply cauchy_schwarz
-    },
-    {
-      apply add_le_add_left,
-      apply nat.succ_le_of_lt,
-      apply nat.lt_of_le_of_lt _ n_lower_bound,
-      apply nat.zero_le
-    }
+  have h2 : 4 * a * b + 4 * a * c + 4 * b * c = 4 * a * b + 4 * (c + d) * c,
+  { rw [←ab_cd, mul_add, add_mul], simp },
+  rw h2 at hmain, clear h2,
+  have h2 : (a + b + c)^2 = d^2 + 4*(c + d)*c, {
+    rw [ab_cd, pow_two, pow_two],
+    change 4 with 2 * 2, rw two_mul,
+    repeat {rw add_mul}, rw two_mul,
+    repeat {rw mul_add}, repeat {rw add_mul},
+    repeat {rw (mul_comm d c)},
+    simp,
   },
-  /- the following inequality represents the delta between what we know
-     and what we have to prove -/
-  have delta := squares_diffs b_small a_small,
-  /- now recast what we know as a single inequality -/
-  have wwk1 : n - (a^2 + b^2) < 2*a*b,
-  {
-    apply sub_lt_of_lt_add,
-    apply mul_pos,
-    apply mul_pos,
-    apply zero_lt_two,
-    apply nat.lt_of_lt_of_le b_pos b_le_a,
-    apply b_pos,
-    have h1 : 2 * a * b + (a ^ 2 + b ^ 2) = (a + b)^2, {
-      repeat {rw pow_two},
-      rw two_mul,
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      simp,
-      apply congr_arg,
-      apply congr_arg,
-      rw mul_comm
-    },
-    rw h1, clear h1,
-    exact n_upper_bound
-  },
-  have wwk2 : (a^2 + b^2) - n < 2*a*b,
-  {
-    apply sub_lt_of_lt_add,
-    apply mul_pos,
-    apply mul_pos,
-    apply zero_lt_two,
-    apply nat.lt_of_lt_of_le b_pos b_le_a,
-    apply b_pos,
-    have h1 : 2 * a * b + n = n + 2 * a * b, by rw add_comm,
-    rw h1, clear h1,
-    apply lt_add_of_sub_lt,
-    rw ← square_sub,
-    exact n_lower_bound,
-    exact b_le_a
-  },
-  have wwk := abs_lt wwk2 wwk1, clear wwk1 wwk2,
-
-  /- now rewrite the target to eliminate subtractions -/
-  rw square_sub a_small,
-  apply sub_lt_of_lt_add,
-  apply mul_pos,
-  apply mul_pos,
-  { repeat {constructor} },
-  rw pow_two,
-  apply mul_pos,
-  apply nat.lt_of_lt_of_le b_pos b_le_a,
-  apply nat.lt_of_lt_of_le b_pos b_le_a,
-  apply nat.lt_of_le_of_lt _ n_lower_bound,
-  apply nat.zero_le,
-
-  /- clear out the junk that we no longer need -/
-  clear a_small b_pos b_small n_upper_bound n_lower_bound b_le_a,
-
-  /- now it's just a matter of shifting terms around -/
-  /- first simplify and multiply everything out -/
-  apply @nat.lt_of_add_lt_add_left (b^4 + 2 * a^2 * b^2),
-  apply @nat.lt_of_lt_of_le _ (4*a^2*b^2 + 4*a^2*n + 2*b^2*n + 4*a^2),
-  {
-    have lhs : b ^ 4 + 2 * a ^ 2 * b ^ 2 + ((a ^ 2 + n) ^ 2 + (2 * a) ^ 2) =
-      (a ^ 2 + b ^ 2) ^ 2 + n ^ 2 + (2*a^2*n + 4*a^2),
-    {
-      change 4 with 2 * 2,
-      rw ← pow_assoc,
-      repeat {rw pow_two},
-      repeat {rw two_mul},
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      repeat {rw two_mul},
-      simp,
-      repeat {apply congr_arg},
-      rw mul_comm,
-      repeat {apply congr_arg},
-      rw mul_comm,
-    },
-    rw lhs, clear lhs,
-    have rhs : 4 * a ^ 2 * b ^ 2 + 4 * a ^ 2 * n + 2 * b ^ 2 * n + 4 * a ^ 2 =
-      (2 * a * b) ^ 2 + 2 * (a ^ 2 + b ^ 2) * n + (2*a^2*n + 4*a^2),
-    {
-      change 4 with 2 * 2,
-      repeat {rw pow_two},
-      repeat {rw two_mul},
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      repeat {rw two_mul},
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      simp,
-      repeat {apply congr_arg},
-      have h1 : a * a * (b * b) = a * b * (a * b),
-      {
-        repeat {rw mul_assoc},
-        apply congr_arg,
-        rw mul_comm,
-        repeat {rw mul_assoc},
-        apply congr_arg,
-        apply mul_comm
-      },
-      repeat {rw h1},
-    },
-    rw rhs, clear rhs,
-    apply add_lt_add_right wwk
-  },
-  {
-    have lhs : 4 * a ^ 2 * b ^ 2 + 4 * a ^ 2 * n + 2 * b ^ 2 * n + 4 * a ^ 2 =
-      2 * b ^ 2 * (a ^ 2 + n) + (2 * a) ^ 2 + (2*a^2*b^2 + 4*a^2*n),
-    {
-      change 4 with 2 * 2,
-      repeat {rw pow_two},
-      repeat {rw two_mul},
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      repeat {rw two_mul},
-      repeat {rw add_mul},
-      repeat {rw mul_add},
-      simp,
-      repeat {apply congr_arg},
-      rw mul_comm,
-    },
-    rw lhs, clear lhs,
-    have rhs : b ^ 4 + 2 * a ^ 2 * b ^ 2 + (4 * a ^ 2 * n + 2 * (a ^ 2 + n) * (2 * a)) =
-      2 * (2 * a) * (a ^ 2 + n) + (b ^ 2) ^ 2 + (2*a^2*b^2 + 4*a^2*n),
-    {
-      repeat {rw mul_add},
-      repeat {rw add_mul},
-      change b^4 with b^(2*2),
-      rw pow_assoc,
-      simp,
-      apply congr_arg,
-      have h1 : 2 * n * (2 * a) = 2 * (2 * a) * n,
-      {
-        repeat {rw mul_assoc},
-        apply congr_arg,
-        rw mul_comm,
-        rw mul_assoc
-      },
-      rw h1, clear h1,
-      apply congr_arg,
-      apply congr_arg,
-      have h1 : 2 * a ^ 2 * (2 * a) = 2 * (2 * a) * a ^ 2,
-      {
-        repeat {rw mul_assoc},
-        apply congr_arg,
-        rw mul_comm,
-        rw mul_assoc
-      },
-      rw h1
-    },
-    rw rhs, clear rhs,
-    apply add_le_add_right,
-    exact delta
-  }
+  rw h2 at hmain, clear h2,
+  apply lt_of_add_lt_add_right,
+  exact hmain
 end
 
-/- the main lemma used in the recursion -/
+section main_arithmetic_sublemma
 
-theorem key_isqrt_lemma (n M d : ℕ) :
+/-
+
+In this section we prove the main arithmetic sublemma, which
+in turn will be used to prove the validity of the recursive step.
+
+We'll show, roughly, that if a is an approximation to √n, with error
+smaller than √(2a), then
+
+    (a ^ 2 + n - 2 * a) ^ 2 < 4 * a ^ 2 * n
+
+More precisely, we'll prove:
+
+    main_arithmetic_sublemma : ∀ (n a b : ℕ),
+      b ≤ a →
+      (a - b) ^ 2 < n → n < (a + b) ^ 2 →
+      b ^ 2 ≤ 2 * a → 2 * a ≤ a ^ 2 + n →
+      (a ^ 2 + n - 2 * a) ^ 2 < 4 * a ^ 2 * n
+
+-/
+
+parameters {n a b : ℕ}
+parameter b_le_a : b ≤ a
+parameter n_lower : (a - b)^2 < n
+parameter n_upper : n < (a + b)^2
+parameter b_lower_a : b^2 ≤ 2*a
+parameter a_lower : 2*a ≤ a^2 + n
+
+include b_le_a n_lower n_upper b_lower_a a_lower
+
+lemma b_lower : b^2 ≤ a^2 + n := nat.le_trans b_lower_a a_lower
+
+lemma diff_bound1 : a^2 + b^2 < n + 2*a*b :=
+begin
+  let c := a - b,
+  have a_subst : a = c + b, { symmetry, exact nat.sub_add_cancel b_le_a },
+  change a - b with c at n_lower,
+  rw a_subst,
+  have lhs : (c + b) ^ 2 + b ^ 2 = c^2 + 2 * (c + b) * b, by
+    simp [pow_two, two_mul, add_mul, mul_add, mul_comm c b],
+  rw lhs, apply nat.add_lt_add_right n_lower
+end
+
+lemma diff_bound2 : n < a^2 + b^2 + 2*a*b :=
+begin
+  have rhs : a ^ 2 + b ^ 2 + 2 * a * b = (a + b)^2, by
+    simp [pow_two, two_mul, add_mul, mul_add, mul_comm b a],
+  rw rhs, exact n_upper
+end
+
+/- single inequality that captures the upper and lower bounds on n -/
+
+lemma both_bounds : (a^2 + b^2 + n)^2 < 4*a^2*b^2 + 4*a^2*n + 4*b^2*n :=
+begin
+  have lhs :
+    (a^2 + b^2 + n)^2 = (a ^ 2 + b ^ 2) ^ 2 + n ^ 2 + 2 * (a ^ 2 + b ^ 2) * n,
+      by apply square_add,
+  rw lhs, clear lhs,
+  have rhs :
+    4*a^2*b^2 + 4*a^2*n + 4*b^2*n =
+          (2 * a * b) ^ 2 + 2 * (a ^ 2 + b ^ 2) * n + 2 * (a ^ 2 + b ^ 2) * n,
+    {
+      change 4 with 2 + 2,
+      simp [pow_two, two_mul, add_mul, mul_add, mul_assoc, mul_comm b (a*b)],
+    },
+  rw rhs, clear rhs,
+  apply add_lt_add_right,
+  apply abs_lt,
+  apply diff_bound1,
+  apply diff_bound2
+end
+
+
+lemma main_arithmetic_sublemma_rhs : (a^2 + n - b^2)^2 < 4 * a^2 * n := begin
+  apply more_squares b_lower,
+  have lhs : a^2 + n + b^2 = a^2 + b^2 + n, by simp, rw lhs, clear lhs,
+  have rhs : 4 * n * b ^ 2 = 4 * b^2 * n,
+    by simp [mul_assoc, mul_comm (b^2) n],
+  rw rhs, clear rhs,
+  rw add_comm (4 * a ^ 2 * n) (4 * a^2 * b^2),
+  apply both_bounds
+end
+
+
+lemma main_arithmetic_sublemma_lhs : (a^2 + n - 2*a)^2 ≤ (a^2 + n - b^2)^2 :=
+begin
+  apply square_le_square,
+  apply nat.sub_le_sub_left _ b_lower_a
+end
+
+lemma main_arithmetic_sublemma : (a^2 + n - 2*a)^2 < 4 * a^2 * n :=
+  nat.lt_of_le_of_lt main_arithmetic_sublemma_lhs main_arithmetic_sublemma_rhs
+
+end main_arithmetic_sublemma
+
+section induction_step
+
+/- This section introduces the main lemma used to show the validity
+   of the recursion. -/
+
+theorem key_isqrt_lemma {n M d}:
   1 ≤ M → 4 * M^4 ≤ n →
   let m := n / (4 * M^2) in
   ((d - 1)^2 < m ∧ m < (d + 1)^2) →
@@ -1017,8 +912,26 @@ begin
       apply nat.le_refl
     },
     {
-      clear a d_bounds m n_lower_bound four_m_d_pos,
+      clear a d_bounds m n_lower_bound,
       let a := 2*M*d,
+      have h0 : 2*a ≤ a^2 + n, {
+        have h0_left : 2*a ≤ a^2, {
+          rw pow_two,
+          apply nat.mul_le_mul_right,
+          change a with 2 * M * d,
+          change 2 ≤ 2 * M * d with 2 * 1 ≤ 2 * M * d,
+          rw mul_assoc,
+          apply nat.mul_le_mul_left,
+          apply nat.succ_le_of_lt,
+          apply mul_pos,
+          exact M_positive,
+          apply lt_of_lt_of_le,
+          apply M_positive,
+          apply M_le_d,
+        },
+        apply le_trans h0_left,
+        apply nat.le_add_right
+      },
       have h1 : 4*M*d = 2 * a,
       {
         change a with 2*M*d,
@@ -1070,7 +983,8 @@ begin
         refl
       },
       rw h1, clear h1,
-      apply key_isqrt_sublemma n a b b_le_a m_upper m_lower b_small
+
+      apply main_arithmetic_sublemma b_le_a m_upper m_lower b_small h0,
     }
   },
   {
@@ -1110,6 +1024,8 @@ begin
     }
   }
 end
+
+end induction_step
 
 
 /- Facts about nat.size; there seems to be nothing in the standard library -/
@@ -1582,23 +1498,6 @@ cases b,
 
 end
 
-
-/-
-
-key_isqrt_lemma :
-  ∀ (n M d : ℕ),
-    1 ≤ M →
-    4 * M ^ 4 ≤ n →
-    (let m : ℕ := n / (4 * M ^ 2)
-     in (d - 1) ^ 2 < m ∧ m < (d + 1) ^ 2 →
-        (let a : ℕ := M * d + n / (4 * M * d) in
-          (a - 1) ^ 2 < n ∧ n < (a + 1) ^ 2))
--/
-
-/- def isqrt (n : ℕ) : ℕ :=
-  let a := isqrt_aux (size4 n) n in if a * a <= n then a else a - 1
-
-  -/
 
 lemma isqrt_zero : isqrt 0 = 0 := by refl
 
