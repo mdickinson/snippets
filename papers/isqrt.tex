@@ -1,0 +1,230 @@
+\documentclass[a4paper]{article}
+
+\usepackage{listings}
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclareMathOperator{\length}{length}
+
+\theoremstyle{plain}
+\newtheorem{lemma}{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+
+\title{Python's integer square root algorithm}
+\author{Mark Dickinson}
+
+\begin{document}
+\lstset{language=Python}
+\maketitle
+\begin{abstract}
+TBD
+\end{abstract}
+\section{Introduction}
+
+In this paper we present a simple algorithm to compute the integer square root
+of a nonnegative number. This algorithm has been implemented for Python's
+\lstinline{math} module and is available in Python 3.8 as
+\lstinline{math.isqrt}.
+
+\section{Definitions}
+
+\begin{definition}
+  For a nonnegative integer $n$, the \emph{integer square root} of $n$ is
+  the unique nonnegative integer $a$ satifying $a^2 \le n < (a + 1)^2$.
+\end{definition}
+
+To describe Python's algorithm for computing integer square roots, we introduce
+a slightly weaker notion: that of a "near square root".
+
+\begin{definition}
+  Suppose $n$ is a positive integer. Call a positive integer $a$ a
+  \emph{near square root} of $n$ if $(a - 1)^2 < n < (a + 1)^2$.
+\end{definition}
+
+Equivalently, $a$ is a near square root of $n$ if $a$ is either $\floor{\sqrt
+n}$ or $\ceil{\sqrt n}$. In particular, if $n = a^2$ is a perfect square then
+the only near square root of $n$ is $a$.
+
+Given an algorithm to compute near square roots, it's straightforward to
+compute integer square roots: suppose that $n$ is a positive integer and $a$ is
+a near square root of $n$. If $a^2 \le n$ then $a^2 \le n < (a + 1)^2$ and so
+$a$ is the integer square root of $n$. If not, then $(a - 1)^2 < n < a^2$ and
+so $a - 1$ is the integer square root of $n$. Translating this into code,
+and assuming that \lstinline{nsqrt} is a function that accepts a positive
+integer and returns a near square root for that integer, we have:
+
+\lstinputlisting[firstline=9,lastline=16]{isqrt_recursive.py}
+
+\section{Newton's method}
+
+In this section we describe a well-known approach to finding integer square
+roots, based on a pure integer arithmetic version of Newton's method.
+
+Fix a positive integer $n$. Define a function $f$ on the positive integers
+by
+$$f(a) = \floor*{\frac{a + n/a}2}.$$
+Alternatively, we can define $f$ by
+$$f(a) = \floor*{\frac{a + \floor{n/a}}2}$$
+to make it clear that $f$ can be computed entirely within the domain of the
+integers. The two forms are exactly equivalent (proof left to the reader), but
+the first form is slightly more convenient for the proofs below.
+
+In general, the function $f$ transforms an approximation to the integer square
+root of $n$ into a better approximation. The following two lemmas make this
+precise, and provide the foundation for using $f$ to compute integer square
+roots.
+
+\begin{lemma}
+  For any positive integer $a$, $f(a)$ is greater than or equal to the
+  integer square root of $n$.
+\end{lemma}
+
+\begin{proof}
+  The AM-GM inequality applied to $a$ and $n/a$ gives
+  $$\sqrt n \le \frac{a + n/a}2.$$
+  Taking the floor of both sides gives the result.
+\end{proof}
+
+\begin{lemma}
+  If a positive integer $a$ is strictly greater than the integer square
+  root of $n$, $f(a) < a$.
+\end{lemma}
+
+\begin{proof}
+  We have the following chain of equivalences:
+  \begin{align}
+    \floor{\sqrt n} < a &\iff \sqrt n < a \\
+                        &\iff n < a^2 \\
+                        &\iff n/a < a \\
+                        &\iff a + n/a < 2a \\
+                        &\iff \frac{a + n/a}2 < a \\
+                        &\iff \floor*{\frac{a + n/a}2} < a \\
+                        &\iff f(a) < a
+  \end{align}
+\end{proof}
+
+Now suppose that we're given a starting guess $a$ for the integer square root
+of $n$ that satisfies $\floor{\sqrt n} < a$. Then combining the lemmas, we
+have
+$$\floor{\sqrt n} \le f(a) < a.$$
+If $f(a)$ is again strictly greater than the integer square root of $n$, we
+further have:
+$$\floor{\sqrt n} \le f(f(a)) < f(a) < a$$
+and so on. Applying $f$ repeatedly to our current best guess creates a strictly
+descreasing sequence of integers, bounded below by the integer square root of
+$n$. That sequence must therefore reach the integer square root of $n$ in a
+finite number of steps. The second lemma above also provides us with a
+termination test: if $f(a) \ge a$ then $\floor{\sqrt n} \ge a$. If we also know
+that $\floor{\sqrt n} \le a$, for example because $a$ is itself the result
+of applying $f$ to some previous iterate, then $a$ must be the desired
+integer square root.
+
+The following code implements this idea, taking as starting guess the
+smallest power of two that exceeds $\sqrt n$. The termination condition
+$f(a) \ge a$ is replaced by the equivalent condition $\floor{n/a} \ge a$.
+
+\lstinputlisting[lastline=10]{isqrt_newton.py}
+
+\begin{example}
+  Take $n = 16785408$, which is just a little larger than $2^{24} = 16777216$.
+  Our starting guess for the square root is $2^{13} = 8192$. Successive
+  iterations give $5120$, $4199$, $4098$, $4097$, and finally $4096$, which
+  is the integer square root. Each iteration requires one division, and
+  a final division is needed to establish the termination condition, for
+  a total of six divisions.
+\end{example}
+
+
+\section{Computing near square roots recursively}
+
+Newton's method provides a recursive approach for computing near square roots.
+Suppose that $n$ is a positive integer, and that we wish to find a near square
+root of $n$. Given a near square root $d$ of $\floor{n / k^2}$ for some
+positive integer $k$, $dk$ is then an approximation to $\sqrt n$, although
+possibly not a very good one. A single iteration of Newton's method applied to
+$dk$ gives an improved approximation. Now comes the key point: if we're careful
+not to choose $k$ too large with respect to $n$, we can prove that this
+improved approximation will again be a near square root of $n$.
+
+The following lemma makes this precise. Note that to keep calculations within
+the domain of the integers, it's convenient to restrict $k$ to be even. So in
+the lemma below, $k$ is replaced with $2m$.
+
+\begin{lemma}
+  Suppose that $n \ge 4$, and choose a positive integer $m$
+  satisfying $4m^4 \le n$. Given a near square root $d$ of $\floor{n / 4m^2}$,
+  define $a$ by
+  $$ a = md + \floor*{\frac{n}{4md}}. $$
+  Then $a$
+  is a near square root of $n$.
+\end{lemma}
+
+\begin{proof}
+  By definition of near square root, we have
+  $$ (d - 1)^2 < \floor*{\frac{n}{4m^2}} < (d + 1)^2.$$
+  Since $(d + 1)^2$ is an integer, we can remove the floor brackets to obtain
+  $$ (d - 1)^2 < \frac{n}{4m^2} < (d + 1)^2.$$
+  Taking square roots throughout and multiplying by $2m$ gives
+  $$ 2m(d - 1) < \sqrt n < 2m(d + 1)$$
+  which can be rearranged as
+  $$ \abs{2md - \sqrt n} < 2m. $$
+  Squaring and dividing through by $4md$ gives
+  $$ 0 \le md + \frac{n}{4md} - \sqrt n < \frac md,$$
+  which implies that
+  $$ -1 < md + \floor*{\frac{n}{4md}} - \sqrt n < \frac{m}{d},$$
+  Substituting the definition of $a$ gives
+  $$ -1 < a - \sqrt n < m / d.$$
+  To complete the proof, we need to know that $m \le d$, and so $m / d \le 1$.
+  Indeed, from the assumption that $4m^4 \le n$ we have $m^2 \le n / 4m^2 < (d
+  + 1)^2$, so $m < d + 1$. So now
+  $$ -1 < a - \sqrt n < 1 $$
+  from which $(a - 1)^2 < n < (a + 1)^2$, as required.
+\end{proof}
+
+\section{Implementation}
+
+Like many arbitrary-precision integer implementations, Python's integer
+implementation is based on binary, so multiplications and divisions by powers
+of two can be performed efficiently via shifting. So for maximum efficiency when
+applying the lemma above, we should choose our $m$ to be the largest power of
+two satisfying $4m^4 \le n$. It's convenient to introduce another definition.
+
+\begin{definition}
+  For a nonnegative integer $n$, the \emph{bit length} of $n$, written
+  $\length(n)$, is the least nonnegative integer $e$ for which $n < 2^e$.
+\end{definition}
+
+Equivalently, for positive $n$ the bit length of $n$ is $1 +
+\floor{\log_2(n)}$, while the bit length of $0$ is $0$. For nonnegative
+integers $n$ and $e$, we have $2^e \le n$ if and only if $e < \length(n)$.
+
+When $m = 2^e$ is a power of two, the condition $4m^4 \le n$ of the lemma becomes $2^{2 +
+4e} \le n$. That's equivalent to $2 + 4e < \length(n)$, or $e \le (\length(n) -
+3) / 4$. Taking $e = \floor{(\length(n) - 3) / 4}$ gives the following
+recursive near square root implementation, where the multiplication by $m$ and
+the divisions by $4m$ and $4m^2$ are replaced by the corresponding bit-shift
+operations.
+
+\lstinputlisting[lastline=6]{isqrt_recursive.py}
+
+\section{Iterative version}
+
+We can unwind the recursion in the usual way to obtain the following
+iterative version of the same algorithm, which is closer to the version
+implemented in Python 3.8.
+
+\lstinputlisting[lastline=14]{isqrt_iterative.py}
+
+Here the quantities $c$, $d$, $e$, $k$ and $m$ are all small (machine-size)
+integers. Only $a$ and $n$ are arbitrary-precision integers.
+
+The number of iterations is exactly $\floor{log_2(\floor{log_2(n)})}$.
+
+
+\end{document}
