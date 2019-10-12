@@ -1,7 +1,4 @@
 def isqrt(n):
-    if n == 0:
-        return 0
-
     a = 1 << (n.bit_length() + 1) // 2
     while True:
         d = n // a

@@ -1,12 +1,9 @@
 def isqrt(n):
-    """Integer square root of a nonnegative integer."""
-    if n == 0:
-        return 0
     c = (n.bit_length() - 1) // 2
     m = c.bit_length()
 
     a = 1
-    for s in range(1, m+1):  # s goes from 1 to m, inclusive
+    for s in range(1, m+1):  # s from 1 to m, inclusive
         d = c >> m-s
         e = d >> 1
         a = (a << d-e-1) + (n >> 2*c-d-e+1) // a
@@ -27,5 +24,5 @@ def check_isqrt(n):
     assert a * a <= n < (a + 1) * (a + 1)
 
 
-for n in range(10**6):
+for n in range(1, 10**6):
     check_isqrt(n)
