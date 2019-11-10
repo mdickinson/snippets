@@ -488,8 +488,39 @@ The total number of iterations $m$ of the while loop turns out to be remarkably
 simple: it's exactly $\floor{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and zero
 iterations for $n = 1$). So
 for example, input values $n$ satisfying $2^{32} \le n < 2^{64}$ require exactly
-$5$ iterations, while values in the range $2^{64} \le n < 2^{128}$ require
-exactly $6$.
+five iterations, while values in the range $2^{64} \le n < 2^{128}$ require
+exactly six.
+
+\section{Fixed-precision algorithms}
+
+The iterative algorithm shown in Listing~\ref{new_iterative} specialises easily
+to particular fixed-precision cases, giving an almost branch-free algorithm.
+For example, if $2^{30} \le n < 2^{32}$, then $c = 15$, $s=4$, and we can
+compute in advance the set of $d$ and $e$ values for each of the four
+iterations. For smaller $n$, we can find an $e$ such that $2^{30} \le 4^e n <
+2^{32}$, apply the same algorithm to $4^e n$, then shift the resulting near
+square root right by $e$ bits. This gives the algorithm shown in
+Listing~\ref{isqrt32}. The corresponding 64-bit version is shown in
+Listing~\ref{isqrt64}. While the original iterative algorithm was developed
+for strictly positive $n$, these fixed-precision variants also turn out
+to give the correct answer in the case $n = 0$.
+
+\lstinputlisting[
+  float,
+  frame=single,
+  label=isqrt32,
+  caption={Fixed-precision variant, valid for $0 \le n < 2^{32}$},
+  lastline=10]{isqrt32.py}
+
+
+\lstinputlisting[
+  float,
+  frame=single,
+  label=isqrt64,
+  caption={Fixed-precision variant, valid for $0 \le n < 2^{64}$},
+  lastline=10]{isqrt64.py}
+
+
 
 
 \section{Floating-point quick start}
