@@ -11,6 +11,8 @@
 \DeclareMathOperator{\rnd}{rnd}
 \DeclareMathOperator{\fsqrt}{fsqrt}
 \DeclareMathOperator{\fsqr}{fsqr}
+\DeclareMathOperator{\float}{float}
+\DeclareMathOperator{\rint}{rint}
 
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}
@@ -431,11 +433,11 @@ Listing~\ref{new_iterative}.
   lastline=13]{isqrt_iterative.py}
 
 It may not be immediately obvious that Listing~\ref{new_iterative} is
-equivalent to Listing~\ref{rec}. Instead of describing the equivalence and
+equivalent to Listing~\ref{rec}. Rather than describing the equivalence and
 establishing the correctness of the iterative version via that equivalence,
 it's simpler to give a direct proof of correctness for the iterative version.
 
-We establish two loop invariants on the variables $s$, $d$ and $e$. These
+We establish two loop invariants on the variables $s$, $d$ and $a$. These
 invariants hold just before entering the \lstinline$while$ loop, and at the end
 of every iteration of that loop (and hence also the beginning of any subsequent
 iteration). The first loop invariant is $d = \floor{c/2^s}$; this should be
@@ -465,9 +467,9 @@ $b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
   $\floor{m/4^{d-e}}$ and we can rewrite $a$ as
   $$a = 2^{d-e-1}b + \floor*{\frac{m}{2^{d-e+1}b}}.$$ Now we can apply the main
   theorem: if we can show that $2^{d-e-1}$ is an integer and that
-  $4(2^{d-e-1})^4 \le m$, it follows that $a$ is a near square root of $m$. But
-  from the definitions of $d$ and $e$, $1 \le d$ and $e
-  = \floor{d/2}$, so it follows that $0 \le d - e - 1 \le e$, and
+  $4(2^{d-e-1})^4 \le m$, it follows from Theorem~\ref{main_theorem} that $a$
+  is a near square root of $m$. But from the definitions of $d$ and $e$, $1 \le
+  d$ and $e = \floor{d/2}$, so it follows that $0 \le d - e - 1 \le e$, and
   \begin{align*}
     4(2^{d-e-1})^4 &= 4(4^{d-e-1})^2 \\
                   &= 4\cdot 4^{d-e-1}\cdot 4^{d-e-1} \\
@@ -479,14 +481,14 @@ $b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
   $4(2^{d-e-1})^4 \le m$, as required.
 \end{proof}
 
-Note that the quantities $c$, $d$, $e$, and $s$ are all small (machine-size)
+The quantities $c$, $d$, $e$, and $s$ are all small (machine-size)
 integers; only $a$ and $n$ are big integers. So the algorithm consists of
 two big-integer shifts, one big-integer addition and one big-integer division per
 iteration, along with a handful of operations with small integers.
 
 The total number of iterations $m$ of the while loop turns out to be remarkably
-simple: it's exactly $\floor{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and zero
-iterations for $n = 1$). So
+simple: it's exactly $\floor*{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and zero
+iterations are required for $n = 1$). So
 for example, input values $n$ satisfying $2^{32} \le n < 2^{64}$ require exactly
 five iterations, while values in the range $2^{64} \le n < 2^{128}$ require
 exactly six.
@@ -497,12 +499,12 @@ The iterative algorithm shown in Listing~\ref{new_iterative} specialises easily
 to particular fixed-precision cases, giving an almost branch-free algorithm.
 For example, if $2^{30} \le n < 2^{32}$, then $c = 15$, $s=4$, and we can
 compute in advance the set of $d$ and $e$ values for each of the four
-iterations. For smaller $n$, we can find an $e$ such that $2^{30} \le 4^e n <
-2^{32}$, apply the same algorithm to $4^e n$, then shift the resulting near
-square root right by $e$ bits. This gives the algorithm shown in
+iterations. For smaller $n$, we can find an $f$ such that $2^{30} \le 4^f n <
+2^{32}$, apply the same algorithm to $4^f n$, then shift the resulting near
+square root right by~$f$ bits. This gives the algorithm shown in
 Listing~\ref{isqrt32}. The corresponding 64-bit version is shown in
 Listing~\ref{isqrt64}. While the original iterative algorithm was developed
-for strictly positive $n$, these fixed-precision variants also turn out
+for positive $n$, these fixed-precision variants also turn out
 to give the correct answer in the case $n = 0$.
 
 \lstinputlisting[
@@ -512,7 +514,6 @@ to give the correct answer in the case $n = 0$.
   caption={Fixed-precision variant, valid for $0 \le n < 2^{32}$},
   lastline=10]{isqrt32.py}
 
-
 \lstinputlisting[
   float,
   frame=single,
@@ -521,33 +522,121 @@ to give the correct answer in the case $n = 0$.
   lastline=10]{isqrt64.py}
 
 
+\section{Using floating-point}
 
+If we have access to a floating-point type that provides IEEE 754-2008
+floating-point format and semantics, we can use floating-point arithmetic to
+compute integer square roots directly for small~$n$, and to accelerate the
+computation of integer square roots for larger~$n$. Note that Python does not
+currently require IEEE 754 format or semantics, but that in practice use of
+IEEE 754 floating-point is almost ubiquitous on platforms that support Python,
+and Python's \lstinline{float} type is highly likely to map to the IEEE
+754-2008 binary64 ``double precision'' format.
 
-\section{Floating-point quick start}
+In this section, we assume that Python's \lstinline{float} type does use
+the binary64 format, and that basic arithmetic operations and the standard
+library \lstinline{math.sqrt} function are all correctly rounded, using the
+default IEEE 754 round-ties-to-even rounding mode.
 
-If we can assume IEEE 754 floating-point and semantics, we can use
-floating-point for low precision. In this section we assume IEEE 754
-binary64 (``double precision") floating-point, and correctly-rounded
-arithmetic operations including square root.
+First some definitions: given a real number~$x$, write $\float(x)$ for the
+nearest binary64 floating-point number to~$x$, following the IEEE 754 rules
+with the default ``roundTiesToEven" rounding rule. (If $x$ has magnitude
+$2^{1024} - 2^{970}$ or greater, $\float(x)$ is the appropriately-signed
+infinity.) If $x$ is already a finite floating-point number, we implicitly
+regard it as a real number when necessary. Given a finite nonnegative
+binary64 floating-point number $x$, write $\fsqrt(x)$ for the correctly-rounded
+square root of~$x$, and $\fsqr(x)$ for the correctly-rounded square of $x$. In
+other words, $\fsqrt(x) = \float(\sqrt x)$ and $\fsqr(x) = \float(x^2)$.
 
-Write $\fsqrt(x)$ for the correctly-rounded square root of an IEEE 754 binary64
-floating-point value $x$, and $\fsqr(x)$ for the correctly-rounded square
-of $x$.
+We first prove the statement givenn in the introduction, that if $n$ is
+not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
 
 \begin{lemma}
-  Suppose $x$ is a positive finite binary64 floating-point number, satisfying
+  Suppose that $n$ is an integer satisfying $1 \le n < 2^{52}$. Then
+  $\floor{\fsqrt(n)}$ is the integer square root of~$n$.
+\end{lemma}
+
+\begin{proof}
+  Write $a$ for the integer square root of $n$. Then $a^2 \le n < (a + 1)^2$,
+  so $a \le \sqrt n < a + 1$, and since both $a$ and $a + 1$ are easily small
+  enough to be exactly representable as floats, it follows that
+  $$a \le \float(\sqrt n) \le a + 1.$$
+  Note that we have a $\le$ in the right-hand inequality, because there's a
+  possibility that $\float$ rounded $\sqrt n$ up to the next integer. To prove
+  the lemma, we need to eliminate this possibility.
+
+  Choose an integer $k$ such that $2^k \le a < 2^{k + 1}$. Floats in
+  the interval $[2^k, 2^{k+1}]$ are spaced by $2^{k-52}$, so the next
+  float down from $a + 1$ is $a + 1 - 2^{k - 52}$, and it's enough for
+  us to show that
+  $$\sqrt n < a + 1 - 2^{k-53}$$
+  or equivalently that
+  $$a + 1 - \sqrt n > 2^{k - 53}.$$
+  But we have
+  $$a + 1 - \sqrt n = \frac{(a + 1)^2 - n}{a + 1 + \sqrt n}.$$
+  The numerator is at least~$1$, and since $\sqrt n < a + 1$, the denominator is less
+  than $2(a+1)$, which is in turn less than or equal to $2^{k+2}$. So
+  $$a + 1 - \sqrt n > 2^{-k-2}.$$
+  So we only need to show that $2^{-k-2} \ge 2^{k-53}$. But that's equivalent
+  to $2k \le 51$, and from our assumptions, $a^2 \le n < 2^{52}$, so
+  $2^k \le a < 2^{26}$, hence $k < 26$.
+\end{proof}
+
+
+\begin{lemma}
+  \label{float-scale}
+  Suppose that $x$ and $y$ are positive real numbers such that $x = 2^e y$ for
+  some integer $e$, and that both $x$ and $y$ lie in the half-open interval
+  $[2^{-1022} - 2^{-1076}, 2^{1024} - 2^{970})$. Then $\float(x) = 2^e \float(y)$.
+\end{lemma}
+
+\begin{proof}
+  The bounds on $x$ and~$y$ ensure that $\float(x) = 2^f \rint(x / 2^f)$, where
+  $f = \floor{\log_2 x} - 52$, and similarly for~$y$. Here $\rint(x)$ is the
+  operation that rounds a real number to the nearest integer, rounding halfway
+  cases to the even integer. The result follows directly from this.
+\end{proof}
+
+The following fact is well known, but we state and prove it here for convenience.
+
+\begin{lemma}
+  Suppose $x$ is an IEEE 754 binary64 floating-point number satisfying
   $2^{-511} \le x < 2^{512}$. Then $\fsqrt(\fsqr(x)) = x$.
 \end{lemma}
 
 \begin{proof}
-  The bounds on $x$ ensure that overflow and underflow are avoided, so
-  that $\fsqr(x)$ is again positive and normal.
+  We first use the previous lemma to reduce to the case where $1/2 < x \le 1$.
+  Choose an integer $e$ and floating-point number $y$ such that $1/2 < y \le 1$
+  and
+  $$x = 2^e y.$$
+  Then
+  $$x^2 = 2^{2e}y^2$$
+  so applying Lemma~\ref{float-scale},
+  $$\float(x^2) = 2^{2e}\float(y^2).$$
+  By definition of $\fsqr$, this can be rewritten as
+  $$\fsqr(x) = 2^{2e}\fsqr(y).$$
+  Now taking square roots of both sides,
+  $$\sqrt{\fsqr(x)} = 2^e \sqrt{\fsqr(y)}.$$
+  Applying Lemma~\ref{float-scale} again,
+  $$\float(\sqrt{\fsqr(x)}) = 2^e \float(\sqrt{\fsqr(y)}),$$
+  or in other words
+  $$\fsqrt(\fsqr(x)) = 2^e \fsqrt(\fsqr(y)).$$
+  So to prove that $\fsqrt(\fsqr(x)) = x$, it's enough to prove that
+  $\fsqrt(\fsqr(y)) = y$, since we then have
+  $$\fsqrt(\fsqr(x)) = 2^e \fsqrt(\fsqr(y)) = 2^e y = x.$$
+  Or in other words, it's enough to prove the original statement in the special case that
+  $1/2 < x \le 1$. So from this point on, we assume that $1/2 < x \le 1$.
 
-  Provided that underflow and overflow are avoided, we have $\fsqrt(4^e x) =
-  2^e \fsqrt(x)$ and $\fsqr(2^e x) = 4^e \fsqr(x)$. Using this, we can
-  assume that $\frac 12 \le x < 1$.
-
-
+  Let $z = \fsqr(x)$ be the closest float to $x^2$. Then $1/4 \le z \le 1$ and
+  since floats are spaced at most $2^{-53}$ apart within the interval $[1/4,
+  1]$,
+  $$\abs{z - x^2} \le 2^{-54}.$$ Now we have
+  $$\sqrt z - x = \frac{(\sqrt z - x)(\sqrt z + x)}{\sqrt z + x} = \frac{z -
+  x^2}{\sqrt z + x}$$ and since $1/2 < x$ and $1/2 \le \sqrt z $, $\sqrt z + x
+  > 1$. It follows that
+  $$\abs{\sqrt z - x} < 2^{-54}$$ and so since floats in the interval $[1/2,
+  1]$ are spaced exactly $2^{-53}$ apart, it follows that $x$ is the unique
+  closest float to $\sqrt z$, so $x = \fsqrt(z)$ as required.
 \end{proof}
 
 The next corollary follows immediately from the lemma, together with the
