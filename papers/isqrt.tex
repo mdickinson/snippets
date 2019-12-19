@@ -46,8 +46,8 @@ We start with a simple definition.
   the unique nonnegative integer $a$ satifying $a^2 \le n < (a + 1)^2$.
 \end{definition}
 
-Equivalently, the integer square root of $n$ is simply the integer part
-of the exact square root of $n$, or $\floor{\sqrt n}$.
+Equivalently, the integer square root of~$n$ is the integer part of the exact
+square root of~$n$, or $\floor{\sqrt n}$.
 
 The integer square root is a basic building block of any arbitrary-precision
 arithmetic toolkit. Many number-theoretic and cryptographic algorithms require
@@ -83,43 +83,46 @@ section~\ref{new_method}.
 \label{old_method}
 
 In this section we describe a well-known approach to computing integer square
-roots, based on an integer-arithmetic version of Heron's method (also known
-as the Babylonian method, and expressible as a special case of the
-Newton--Raphson root-finding method). This is the approach
-used for example by Java's \lstinline$BigInteger$ class.
+roots, based on an adaptation of Heron's method to the domain of positive
+integers.
 
-Heron's method is based on the observation that if $x$ is a real approximation
-to the square root of a positive real number $n$, then
-$$\frac{x + n/x}2$$ is an improved approximation. Iterating then allows the
-square root to be computed to any desired accuracy. It can be shown that the
-method converges towards the square root from any positive starting
-approximation $x$, and that once $x$ gets close to the true square root the
-convergence is quadratic, so that the number of correct decimal places roughly
-doubles with each iteration.
+Heron's method, also known as the Babylonian method, is a method for
+approximating square roots of positive real numbers. It's based on the idea
+that if $x$ is a positive real approximation to the square root of a positive
+real number $n$, then
+$$h(x) = \frac{x + n/x}2$$ is an improved approximation. Iterating then
+allows the square root of~$n$ to be computed to any desired accuracy. It can be
+shown that the sequence of iterates of $h$ converges towards the square root
+from any positive starting value, and that once $x$ gets close to
+the true square root convergence is quadratic, so that the number of
+correct decimal places roughly doubles with each iteration.
 
 \begin{example}
-  Given an approximation $x = 7/5 = 1.4$ to the square root $1.414213562\dots$
-  of $2$, a single iteration of Heron's method produces a new approximation
-  $(7/5 + 2/(7/5))/2 = 99/70 = 1.414285714\dots$. Applying a second iteration
-  with $99/70$ as input gives $19601/13860 = 1.414213564\dots$, which is
-  accurate to $8$ decimal places. A third iteration gives a value accurate to
-  $17$ decimal places.
+  Suppose $n=2$. Given an approximation $7/5 = 1.4$ to the square root
+  $1.414213562\dots$ of $n$, a single iteration of Heron's method produces a
+  new approximation, accurate to $4$ decimal places after the point:
+  $$h(7/5) = \frac{7/5 + 2/(7/5)}2 = 99/70 = 1.414285714\dots.$$ Applying a
+  second iteration with $99/70$ as input gives
+  $$h(h(7/5)) = h(99/70) = 19601/13860 =
+  1.414213564\dots,$$ which is accurate to $8$ decimal places. A third
+  iteration gives a value accurate to $17$ decimal places.
 \end{example}
 
-Heron's method can be adapted to the domain of positive integers. For a fixed
-positive integer $n$, define a function $f$ on the positive integers by
-$$f(a) = \floor*{\frac{a + \floor{n/a}}2}.$$
+Heron's method can be adapted to the domain of positive integers. For the
+remainder of this section we assume that $n$ is a fixed positive integer, and
+we define a function $g$ on the positive integers by
+$$g(a) = \floor*{\frac{a + \floor{n/a}}2}.$$
 
-The idea is that---just like its real counterpart---the function $f$ should
-transform a poor approximation to the integer square root of $n$ into a better
-one, and so by applying $f$ repeatedly we should eventually reach the integer
-square root. This works, but we have to be a little careful with the details.
-In particular, deciding when to stop iterating is delicate. The lemmas below
-make this precise.
+The idea is that just like its real counterpart~$h$, the function $g$ should
+transform a poor approximation to the integer square root of $n$ into an
+improved approximation, and so by applying $g$ repeatedly we hope to eventually
+reach the integer square root of~$n$. This works, but we have to be a little
+careful with the details, and in particular the termination condition. The
+lemmas below make this precise.
 
 \begin{lemma}
   \label{heron_high}
-  For any positive integer $a$, $f(a)$ is greater than or equal to the
+  For any positive integer $a$, $g(a)$ is no smaller than
   integer square root of $n$.
 \end{lemma}
 
@@ -129,13 +132,13 @@ make this precise.
   Hence
   $$\floor{\sqrt n} \le \floor*{\frac{a + n/a}2}
   = \floor*{\frac{\floor{a + n/a}}2}
-  = \floor*{\frac{a + \floor{n/a}}2} = f(a).$$
+  = \floor*{\frac{a + \floor{n/a}}2} = g(a).$$
 \end{proof}
 
 \begin{lemma}
   \label{heron_decreases}
   Given a positive integer $a$ greater than the integer square
-  root of $n$, $f(a)$ is smaller than $a$.
+  root of $n$, $g(a)$ is smaller than $a$.
 \end{lemma}
 
 \begin{proof}
@@ -148,40 +151,47 @@ make this precise.
                         &\iff a + \floor{n/a} < 2a \\
                         &\iff \frac{a + \floor{n/a}}2 < a \\
                         &\iff \floor*{\frac{a + \floor{n/a}}2} < a \\
-                        &\iff f(a) < a.
+                        &\iff g(a) < a.
   \end{align*}
   This completes the proof.
 \end{proof}
 
-Now suppose that we're given a starting guess $a$ that exceeds the integer
-square root of $n$: $\floor{\sqrt n} < a$. Combining the above lemmas,
+Now suppose that we're given a starting approximation $a$ that exceeds the
+integer square root of $n$: $\floor{\sqrt n} < a$. Combining the above lemmas,
 we have
-$$\floor{\sqrt n} \le f(a) < a.$$ If $f(a)$ is again greater than the integer
-square root of $n$, we have:
-$$\floor{\sqrt n} \le f(f(a)) < f(a) < a$$ and so on. So the sequence
-$$a, f(a), f(f(a)), f(f(f(a))), \dots$$
-must eventually reach the integer square root. If not, we'd have an infinite
-strictly decreasing sequence of positive integers, violating the well-ordering
-principle.
+$$\floor{\sqrt n} \le g(a) < a.$$ Now either $g(a)$ is equal to the integer
+square root of $n$, or it's strictly greater. In the latter case, applying the
+lemmas again, we have
+$$\floor{\sqrt n} \le g(g(a)) < g(a) < a.$$ And again, either $g(g(a))$ is the
+desired integer square root, or it's still too big, in which case we apply $g$
+again. In general, the sequence
+$$a, g(a), g(g(a)), g(g(g(a))), \dots$$ of iterates of $g$ on $a$ must
+eventually reach the integer square root of~$n$: if it didn't, we'd have an
+infinite strictly decreasing sequence of positive integers, violating the
+well-ordering principle.
 
-Lemma \ref{heron_decreases} also provides a way to detect \emph{when}
-we've reached the integer square root: if $\floor{\sqrt n} \le a$ but the
-inequality $f(a) < a$ fails, then $a$ cannot be greater than the integer square
-root, so it must \emph{be} the integer square root. However, we need to be
-careful. While it's true that the sequence $a, f(a), f(f(a)), \dots$ must
-eventually reach the square root, it would be a mistake to claim that it
-\emph{converges} to the square root: we don't necessarily always reach a point
-where $f(a) = a$. For example, if $n=15$, the sequence of iterates of $f$ will
-eventually alternate between $3$ and $4$, and more generally this sort of
-alternation will occur for any $n$ of the form $a^2 - 1$ for some $a \ge 2$.
+So the sequence of iterates is guaranteed to hit the integer square root
+eventually, but to turn this observation into an algorithm we also need a
+practical way to detect when that happens. Lemma~\ref{heron_decreases} provides
+us with the desired termination condition: if $\floor{\sqrt n} \le a$ but $a \le
+g(a)$, then by Lemma~\ref{heron_decreases}, $a \le \floor{\sqrt n}$, so
+combining the two inequalities gives $a = \floor{\sqrt n}$.
+
+However, we need to be careful with our language. While it's
+true that the sequence $a, g(a), g(g(a)), \dots$ must eventually reach the
+square root, it would be a mistake to claim that it \emph{converges} to the
+square root: we don't necessarily always reach a point where $g(a) = a$. For
+example, if $n=15$, the sequence of iterates of $g$ will eventually alternate
+between $3$ and $4$, and more generally this sort of alternation will occur for
+any $n$ of the form $a^2 - 1$ for some $a \ge 2$.
 
 Listing~\ref{direct_heron} expresses the algorithm described above in Python. A
-linguistic note: Python's \lstinline$//$ operator does ``floor division'':
-\lstinline$n//a$ represents $\floor{n / a}$. Indeed, from a computational
-perspective, an expression like $\floor{n / a}$ is misleading: it resembles a
-composition of two operations, while most programming languages or
-arbitrary-precision integer-arithmetic packages will provide some form of
-integer division as an integer-to-integer primitive.
+linguistic note for readers unfamiliar with Python: the \lstinline$//$ operator
+does ``floor division'': \lstinline$n//a$ represents $\floor{n / a}$. Indeed,
+from a computational perspective, an expression like $\floor{n / a}$ is
+misleading: it resembles a composition of two operations, while most
+programming languages or arbitrary-precision integer-arithmetic packages will
+provide some form of integer division as an integer-to-integer primitive.
 
 \lstinputlisting[
   float,
@@ -191,30 +201,29 @@ integer division as an integer-to-integer primitive.
   lastline=12]{isqrt_newton_direct.py}
 
 The code in Listing~\ref{direct_heron} uses $n$ as the initial estimate. That's
-highly inefficient for large $n$: the initial iterations will roughly halve the
+inefficient for large~$n$: the initial iterations will roughly halve the
 estimate each time, and many iterations will be needed to get into the general
-neighborhood of the square root. We can do better: \emph{any} positive integer
-$a \ge \floor{\sqrt n}$ can be used as a starting value. Alternatively, if we
-have a starting guess $a$ that we know is close to the square root, but we
-don't know for sure that $a \ge \floor{\sqrt n}$, we can apply a single
-iteration to replace $a$ with $f(a)$ before running the main algorithm; by
-Lemma~\ref{heron_high}, $f(a)$ is guaranteed to be no smaller than the integer
-square root.
+neighborhood of the square root. We can do better: \emph{any} integer $a \ge
+\floor{\sqrt n}$ can be used as a starting approximation. Alternatively, if we
+have a starting approximation $a$ that we know is close to the square root, but
+we don't know for sure that $a \ge \floor{\sqrt n}$, we can apply a single
+iteration to replace $a$ with $f(a)$ before running the main algorithm: by
+Lemma~\ref{heron_high}, $f(a)$ is guaranteed to satisfy $f(a) \ge \floor{\sqrt
+n}$.
 
 One simple, easy-to-compute possibility that's not too inefficient is to take
 $a$ to be the smallest power of two exceeding $\floor{\sqrt n}$. Before giving
 the code, we make a definition.
 
 \begin{definition}
-  For a nonnegative integer $n$, the \emph{bit length} of $n$, written
-  $\length(n)$, is the least nonnegative integer $e$ for which $n < 2^e$.
+  For a nonnegative integer $n$, the \emph{bit length} of $n$, which we'll
+  write simply as $\length(n)$, is the least nonnegative integer $e$ for which
+  $n < 2^e$.
 \end{definition}
 
-For positive $n$ the bit length of $n$ is $1 + \floor{\log_2(n)}$, while the
-bit length of $0$ is $0$. For nonnegative integers $n$ and $e$, we have $2^e
-\le n$ if and only if $e < \length(n)$, and $\length(n) \le e$ if and only if $n
-< 2^e$. In Python, the bit length of a nonnegative integer \lstinline$n$ can be
-computed as \lstinline$n.bit_length()$.
+For positive $n$, the bit length of $n$ is $1 + \floor{\log_2(n)}$, while the
+bit length of zero is zero. In Python, the bit length of a nonnegative integer
+\lstinline$n$ can be computed as \lstinline$n.bit_length()$.
 
 Given nonnegative integers $n$ and $e$, we have the following chain
 of equivalences:
@@ -241,21 +250,30 @@ condition $\floor{n/a} \ge a$.
   caption={Integer square root via Heron's method, streamlined},
   lastline=7]{isqrt_newton.py}
 
-Note: since we actually only need $\floor{\sqrt n} \le 2^e$ rather than
-$\floor{\sqrt n} < 2^e$, we could tighten our initial bound slightly by using
-$\length(n-1)$ instead of $\length(n)$. But that costs an extra operation for
-all inputs $n$, for a benefit only in the rare case that $n$ is an exact power
-of four. As such, the change is probably not worth it.
+We chose $e$ to satisfy $\floor{\sqrt n} < 2^e$. For correctness, we only need
+to satisfy the weaker condition $\floor{\sqrt n} \le 2^e$. Given that, we could
+tighten our initial bound slightly by using $\length(n-1)$ in place of
+$\length(n)$. But that costs an extra operation for all inputs $n$, for a
+benefit only in the rare case that $n$ is an exact power of four. As such, the
+change is probably not valuable.
 
-The algorithm above is well-known and well-used. It has the virtue of
-simplicity, and is reasonably efficient for inputs that aren't too large.
-Nevertheless, there's room for improvement. With the current initial guess, for
-large inputs (say a few thousand bits or more), the first few iterations of the
-algorithm are performing expensive full-precision divisions to obtain only a
-handful of new correct bits at each iteration. The initial guess could perhaps
-be improved at the expense of some additional complexity. There's potential
-inefficiency towards the end of the algorithm, too. To demonstrate this last
-point, consider the following example.
+The algorithm shown in Listing~\ref{heron_improved} is well-known and
+well-used. It has the virtues of simplicity and easy-to-establish correctness,
+and is reasonably efficient for inputs that aren't too large. Nevertheless,
+there are at least three areas in which there's room for improvement. First,
+for large inputs (say a few thousand bits or more), the first few iterations of
+the algorithm are performing expensive full-precision divisions to obtain only
+a handful of new correct bits at each iteration. Second, our particular choice
+of initial guess is somewhat ad hoc, and could probably be improved, possibly
+at the expense of some additional complexity: in that sense, the algorithm
+feels incomplete, or at least unsatisfyingly inelegant---it's really the
+combination of two separate algorithms: one to find an initial guess, and a
+second to improve that guess until we hit the integer square root. Finally,
+there's potential inefficiency towards the end of the algorithm, and in
+particular the fact that the termination condition requires that we perform an
+extra division \emph{after} we've reached the desired result seems like an
+unnecessary inefficiency. To illustrate the last point, consider the following
+example.
 
 \begin{example}
   Take $n = 16785408$, which is just a little larger than $2^{24} = 16777216$.
@@ -268,11 +286,12 @@ point, consider the following example.
 
 So even starting from $4098$, just a distance of two away from the true integer
 square root, three more divisions are required before the correct integer
-square root can be returned. (Note that this example is representative of the
-worst-case behaviour rather than the typical behaviour of the algorithm.)
+square root can be returned. Note that this example is not typical: it was
+deliberately chosen to show worst-case behaviour.
 
-The algorithm introduced in the next section addresses these deficiencies,
-while retaining much of the simplicity of the algorithm in this section.
+The algorithm introduced in the next section addresses all three of these
+deficiencies, while retaining much of the simplicity of the algorithm in this
+section.
 
 \section{Variable-precision Heron's method}
 \label{new_method}
