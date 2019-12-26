@@ -9,13 +9,3 @@ def isqrt(n):
         if a <= ga:
             return a
         a = ga
-
-
-# Testing
-def check_isqrt(n):
-    a = isqrt(n)
-    assert a * a <= n < (a + 1) * (a + 1)
-
-
-for n in range(1, 10**6):
-    check_isqrt(n)

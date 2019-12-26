@@ -214,11 +214,11 @@ programming languages or arbitrary-precision integer-arithmetic packages will
 provide some form of integer division as an integer-to-integer primitive.
 
 \lstinputlisting[
-  float,
   label=isqrt_heron_direct,
+  float,
   frame=single,
-  caption={Integer square root via Heron's method, version 1},
-  lastline=12]{isqrt_heron_direct.py}
+  caption={Integer square root via Heron's method, version 1}]
+  {isqrt_heron_direct.py}
 
 The use of~$n$ as an initial estimate is inefficient for large~$n$: the initial
 iterations will roughly halve the estimate each time, and many iterations will
@@ -261,11 +261,11 @@ which the termination condition $a \le g(a)$ has been replaced with the
 equivalent condition $a \le \floor{n/a}$.
 
 \lstinputlisting[
-  float,
   label=isqrt_heron_improved,
+  float,
   frame=single,
-  caption={Integer square root via Heron's method, streamlined},
-  lastline=7]{isqrt_heron_improved.py}
+  caption={Integer square root via Heron's method, streamlined}]
+  {isqrt_heron_improved.py}
 
 We chose $e$ to satisfy $\floor{\sqrt n} < 2^e$. For correctness, we only need
 to satisfy the weaker condition $\floor{\sqrt n} \le 2^e$. Given that, we could
@@ -440,11 +440,11 @@ divisions by $4k$ and $4k^2$ are replaced by the corresponding bit-shift
 operations.
 
 \lstinputlisting[
+  label=isqrt_recursive,
   float,
   frame=single,
-  label=isqrt_recursive,
-  caption={Adaptive precision Heron's method, recursive},
-  lastline=11]{isqrt_recursive.py}
+  caption={Adaptive-precision Heron's method, recursive}]
+  {isqrt_recursive.py}
 
 Each step of the algorithm involves three big-integer shifts, one
 big-integer addition, one bit-length computation, and one big-integer division,
@@ -463,11 +463,11 @@ the recursion to obtain an iterative version of the algorithm. This version is
 presented in Listing~\ref{isqrt_iterative}.
 
 \lstinputlisting[
+  label=isqrt_iterative,
   float,
   frame=single,
-  label=isqrt_iterative,
-  caption={Adaptive precision Heron's method, iterative},
-  lastline=13]{isqrt_iterative.py}
+  caption={Adaptive-precision Heron's method, iterative}]
+  {isqrt_iterative.py}
 
 It may not be immediately obvious that Listing~\ref{isqrt_iterative} is
 equivalent to Listing~\ref{isqrt_recursive}. Rather than describing the
@@ -547,18 +547,18 @@ positive~$n$, these fixed-precision variants also turn out to give the correct
 answer in the case~$n = 0$.
 
 \lstinputlisting[
+  label=isqrt_32bit,
   float,
   frame=single,
-  label=isqrt_32bit,
-  caption={Fixed-precision variant, valid for $0 \le n < 2^{32}$},
-  lastline=10]{isqrt_32bit.py}
+  caption={Fixed-precision variant, valid for $0 \le n < 2^{32}$}]
+  {isqrt_32bit.py}
 
 \lstinputlisting[
+  label=isqrt_64bit,
   float,
   frame=single,
-  label=isqrt_64bit,
-  caption={Fixed-precision variant, valid for $0 \le n < 2^{64}$},
-  lastline=10]{isqrt_64bit.py}
+  caption={Fixed-precision variant, valid for $0 \le n < 2^{64}$}]
+  {isqrt_64bit.py}
 
 
 \section{Using floating-point}
@@ -735,14 +735,12 @@ $a$ is already a near square root of~$n$ and the \lstinline$while$ loop is
 executed zero times. More generally, the number of iterations required
 is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 
-
 \lstinputlisting[
+  label=isqrt_accelerated,
   float,
   frame=single,
-  label=isqrt_accelerated,
   caption={Integer square root using floating-point quick start}]
   {isqrt_accelerated.py}
-
 
 % \section{To do}
 

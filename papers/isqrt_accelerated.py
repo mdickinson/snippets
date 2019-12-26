@@ -1,5 +1,6 @@
 import math
 
+
 def isqrt(n):
     c = (n.bit_length() - 1) // 2
     s = (c//53).bit_length()

@@ -8,16 +8,3 @@ def isqrt(n):
     a = (a << 15) + (m >> 17) // a
     a = a >> e
     return a if a*a <= n else a - 1
-
-
-def check_isqrt(n):
-    a = isqrt(n)
-    assert a * a <= n < (a + 1) * (a + 1)
-
-
-import random
-ntrials = 1000000
-for _ in range(ntrials):
-    e = random.randint(1, 64)
-    n = 2**(e-1) + (random.getrandbits(e - 1) if e >= 2 else 0)
-    check_isqrt(n)
