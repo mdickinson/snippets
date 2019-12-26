@@ -256,9 +256,9 @@ of equivalences:
 So taking $e = \floor{(\length(n) + 1) / 2}$, $2^e$ is the smallest power of
 two that strictly exceeds the square root of~$n$. Using that as our starting
 guess, and taking the opportunity to streamline the previous code a little at
-the same time, we get the algorithm in Listing~\ref{isqrt_heron_improved}, in which
-the termination condition $a \le g(a)$ has been replaced with the equivalent
-condition $a \le \floor{n/a}$.
+the same time, we get the algorithm in Listing~\ref{isqrt_heron_improved}, in
+which the termination condition $a \le g(a)$ has been replaced with the
+equivalent condition $a \le \floor{n/a}$.
 
 \lstinputlisting[
   float,
@@ -433,10 +433,11 @@ $k=2^e$, we have:
   &\iff 3 + 4e \le \length n \\
   &\iff e \le \floor*{\frac{\length n - 3}{4}}
 \end{align*}
-So we take $k = 2^e$, where $e={\floor{(\length n - 3)/4}}$. This gives the recursive
-near square root implementation shown in Listing~\ref{isqrt_recursive}, where the
-multiplication by $k$ and the divisions by $4k$ and $4k^2$ are replaced by the
-corresponding bit-shift operations.
+So we take $k = 2^e$, where $e={\floor{(\length n - 3)/4}}$. This gives the
+recursive near square root implementation shown in
+Listing~\ref{isqrt_recursive}, where the multiplication by $k$ and the
+divisions by $4k$ and $4k^2$ are replaced by the corresponding bit-shift
+operations.
 
 \lstinputlisting[
   float,
@@ -457,9 +458,9 @@ improvements at the expense of some small loss of clarity; we leave the
 interested reader to pursue them further.
 
 The \lstinline{math.isqrt} implementation in CPython 3.8 doesn't use the
-recursive version shown in Listing~\ref{isqrt_recursive}. Instead, we unwind the recursion
-to obtain an iterative version of the algorithm. This version is presented in
-Listing~\ref{isqrt_iterative}.
+recursive version shown in Listing~\ref{isqrt_recursive}. Instead, we unwind
+the recursion to obtain an iterative version of the algorithm. This version is
+presented in Listing~\ref{isqrt_iterative}.
 
 \lstinputlisting[
   float,
@@ -469,20 +470,21 @@ Listing~\ref{isqrt_iterative}.
   lastline=13]{isqrt_iterative.py}
 
 It may not be immediately obvious that Listing~\ref{isqrt_iterative} is
-equivalent to Listing~\ref{isqrt_recursive}. Rather than describing the equivalence and
-establishing the correctness of the iterative version via that equivalence,
-it's simpler to give a direct proof of correctness for the iterative version.
+equivalent to Listing~\ref{isqrt_recursive}. Rather than describing the
+equivalence and establishing the correctness of the iterative version via that
+equivalence, it's simpler to give a direct proof of correctness for the
+iterative version.
 
 We establish two loop invariants on the variables $s$, $d$ and $a$. These
 invariants hold just before entering the \lstinline$while$ loop, at the end
 of every iteration of that loop, and hence also the beginning of any subsequent
 iteration.
 
-The first loop invariant is $d = \floor{c/2^s}$; this should be
-clear from examining the code. The second loop invariant states that at every
-step, $a$ is a near square root of $\floor{n / 4^{c-d}}$. In particular, on exit
-from the \lstinline$while$ loop, $s = 0$, $d = \floor{c/2^0} = c$ and so $a$ is
-a near square root of $\floor{n / 4^{c-c}} = n$.
+The first loop invariant is $d = \floor{c/2^s}$; this should be clear from
+examining the code. The second loop invariant states that at every step, $a$ is
+a near square root of $\floor{n / 4^{c-d}}$. In particular, on exit from the
+\lstinline$while$ loop, $s = 0$, $d = \floor{c/2^0} = c$ and so $a$ is a near
+square root of $\floor{n / 4^{c-c}} = n$.
 
 To establish the second invariant, note first that the invariant holds on
 entry to the \lstinline$while$ loop: we have $c = \floor{\log_4 n}$, so
@@ -493,8 +495,8 @@ at the end of that iteration. We prove this via the following lemma, in which
 $b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
 
 \begin{lemma}
-  Suppose that $0 \le s < \length(c)$, that $e = \floor{c / 2^{s + 1}}$, that $d =
-  \floor{c / 2^s}$, and that $b$ is a near square root of $\floor{n /
+  Suppose that $0 \le s < \length(c)$, that $e = \floor{c / 2^{s + 1}}$, that
+  $d = \floor{c / 2^s}$, and that $b$ is a near square root of $\floor{n /
   4^{c-e}}$. Let
   $$a = 2^{d-e-1}b + \floor*{\frac{n}{2^{2c-d-e+1}b}}.$$ Then $a$ is a near
   square root of $\floor{n / 4^{c-d}}$.
@@ -519,24 +521,23 @@ $b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
   $4(2^{d-e-1})^4 \le m$, as required.
 \end{proof}
 
-The quantities $c$, $d$, $e$, and $s$ are all small (machine-size)
-integers; only $a$ and $n$ are big integers. So the algorithm consists of
-two big-integer shifts, one big-integer addition and one big-integer division per
-iteration, along with a handful of operations with small integers.
+The quantities $c$, $d$, $e$, and $s$ are all small (machine-size) integers;
+only $a$ and $n$ are big integers. So the algorithm consists of two big-integer
+shifts, one big-integer addition and one big-integer division per iteration,
+along with a handful of operations with small integers.
 
 The total number of iterations $m$ of the while loop turns out to be remarkably
-simple: it's exactly $\floor*{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and zero
-iterations are required for $n = 1$). So
-for example, input values $n$ satisfying $2^{32} \le n < 2^{64}$ require exactly
-five iterations, while values in the range $2^{64} \le n < 2^{128}$ require
-exactly six.
+simple: it's exactly $\floor*{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and
+zero iterations are required for $n = 1$). So for example, input values $n$
+satisfying $2^{32} \le n < 2^{64}$ require exactly five iterations, while
+values in the range $2^{64} \le n < 2^{128}$ require exactly six.
 
 \section{Fixed-precision algorithms}
 
-The iterative algorithm shown in Listing~\ref{isqrt_iterative} specialises easily
-to particular fixed-precision cases, giving an almost branch-free algorithm.
-For example, if $2^{30} \le n < 2^{32}$, then $c = 15$, $s=4$, and we can
-compute in advance the set of $d$ and $e$ values for each of the four
+The iterative algorithm shown in Listing~\ref{isqrt_iterative} specialises
+easily to particular fixed-precision cases, giving an almost branch-free
+algorithm. For example, if $2^{30} \le n < 2^{32}$, then $c = 15$, $s=4$, and
+we can compute in advance the set of $d$ and $e$ values for each of the four
 iterations. For smaller positive~$n$, we can find an $f$ such that $2^{30} \le
 4^f n < 2^{32}$, apply the same algorithm to $4^f n$, then shift the resulting
 near square root right by~$f$ bits. This gives the algorithm shown in
@@ -633,7 +634,8 @@ not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
 \begin{lemma}\label{float_scale}
   Suppose that $x$ and $y$ are positive real numbers such that $x = 2^e y$ for
   some integer $e$, and that both $x$ and $y$ lie in the half-open interval
-  $[2^{-1022} - 2^{-1076}, 2^{1024} - 2^{970})$. Then $\float(x) = 2^e \float(y)$.
+  $[2^{-1022} - 2^{-1076}, 2^{1024} - 2^{970})$. Then $\float(x) = 2^e
+  \float(y)$.
 \end{lemma}
 
 \begin{proof}
@@ -643,7 +645,8 @@ not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
   cases to the even integer. The result follows directly from this.
 \end{proof}
 
-The following fact is well known, but we state and prove it here for convenience.
+The following fact is well known, but we state and prove it here for
+convenience.
 
 \begin{theorem}\label{sqrt_of_sqr}
   Suppose $x$ is an IEEE 754 binary64 floating-point number satisfying
@@ -670,8 +673,9 @@ The following fact is well known, but we state and prove it here for convenience
   So to prove that $\fsqrt(\fsqr(x)) = x$, it's enough to prove that
   $\fsqrt(\fsqr(y)) = y$, since we then have
   $$\fsqrt(\fsqr(x)) = 2^e \fsqrt(\fsqr(y)) = 2^e y = x.$$
-  Or in other words, it's enough to prove the original statement in the special case that
-  $1/2 < x \le 1$. So from this point on, we assume that $1/2 < x \le 1$.
+  Or in other words, it's enough to prove the original statement in the special
+  case that $1/2 < x \le 1$. So from this point on, we assume that $1/2 < x \le
+  1$.
 
   Let $z = \fsqr(x)$ be the closest float to $x^2$. Then $1/4 \le z \le 1$ and
   since floats are spaced at most $2^{-53}$ apart within the interval $[1/4,
