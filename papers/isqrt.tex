@@ -541,24 +541,24 @@ we can compute in advance the set of $d$ and $e$ values for each of the four
 iterations. For smaller positive~$n$, we can find an $f$ such that $2^{30} \le
 4^f n < 2^{32}$, apply the same algorithm to $4^f n$, then shift the resulting
 near square root right by~$f$ bits. This gives the algorithm shown in
-Listing~\ref{isqrt32}. The corresponding 64-bit version is shown in
-Listing~\ref{isqrt64}. While the original iterative algorithm was developed for
+Listing~\ref{isqrt_32bit}. The corresponding 64-bit version is shown in
+Listing~\ref{isqrt_64bit}. While the original iterative algorithm was developed for
 positive~$n$, these fixed-precision variants also turn out to give the correct
 answer in the case~$n = 0$.
 
 \lstinputlisting[
   float,
   frame=single,
-  label=isqrt32,
+  label=isqrt_32bit,
   caption={Fixed-precision variant, valid for $0 \le n < 2^{32}$},
-  lastline=10]{isqrt32.py}
+  lastline=10]{isqrt_32bit.py}
 
 \lstinputlisting[
   float,
   frame=single,
-  label=isqrt64,
+  label=isqrt_64bit,
   caption={Fixed-precision variant, valid for $0 \le n < 2^{64}$},
-  lastline=10]{isqrt64.py}
+  lastline=10]{isqrt_64bit.py}
 
 
 \section{Using floating-point}
