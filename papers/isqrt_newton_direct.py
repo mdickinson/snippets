@@ -1,15 +1,14 @@
 def isqrt(n):
-    def f(a):
+
+    def g(a):
         return (a + n//a) // 2
 
-    # Starting guess can be anything not
-    # smaller than the integer square root.
     a = n
     while True:
-        fa = f(a)
-        if fa >= a:
+        ga = g(a)
+        if a <= ga:
             return a
-        a = fa
+        a = ga
 
 
 # Testing
