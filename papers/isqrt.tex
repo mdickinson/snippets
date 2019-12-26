@@ -200,10 +200,11 @@ any $n$ of the form $a^2 - 1$ for some $a \ge 2$.
 
 By the results above, we can find $\floor{\sqrt n}$ by taking any starting
 point $a \ge \floor{\sqrt n}$, and replacing $a$ with $g(a)$ until $a\le g(a)$.
-Listing~\ref{direct_heron} expresses this algorithm in Python, using $a=n$ as
-the starting point for the iteration. Note that the function \lstinline$isqrt$
-assumes $n > 0$. Extending the code to return~$0$ for $n=0$ and to raise an
-exception for negative~$n$ is left as an easy exercise for the reader.
+Listing~\ref{isqrt_heron_direct} expresses this algorithm in Python, using
+$a=n$ as the starting point for the iteration. Note that the function
+\lstinline$isqrt$ assumes $n > 0$. Extending the code to return~$0$ for $n=0$
+and to raise an exception for negative~$n$ is left as an easy exercise for the
+reader.
 
 A linguistic note for readers unfamiliar with Python: the \lstinline$//$
 operator performs ``floor division'': \lstinline$n//a$ represents $\floor{n /
@@ -214,10 +215,10 @@ provide some form of integer division as an integer-to-integer primitive.
 
 \lstinputlisting[
   float,
-  label=direct_heron,
+  label=isqrt_heron_direct,
   frame=single,
   caption={Integer square root via Heron's method, version 1},
-  lastline=12]{isqrt_newton_direct.py}
+  lastline=12]{isqrt_heron_direct.py}
 
 The use of~$n$ as an initial estimate is inefficient for large~$n$: the initial
 iterations will roughly halve the estimate each time, and many iterations will
@@ -255,16 +256,16 @@ of equivalences:
 So taking $e = \floor{(\length(n) + 1) / 2}$, $2^e$ is the smallest power of
 two that strictly exceeds the square root of~$n$. Using that as our starting
 guess, and taking the opportunity to streamline the previous code a little at
-the same time, we get the algorithm in Listing~\ref{heron_improved}, in which
+the same time, we get the algorithm in Listing~\ref{isqrt_heron_improved}, in which
 the termination condition $a \le g(a)$ has been replaced with the equivalent
 condition $a \le \floor{n/a}$.
 
 \lstinputlisting[
   float,
-  label=heron_improved,
+  label=isqrt_heron_improved,
   frame=single,
   caption={Integer square root via Heron's method, streamlined},
-  lastline=7]{isqrt_newton.py}
+  lastline=7]{isqrt_heron_improved.py}
 
 We chose $e$ to satisfy $\floor{\sqrt n} < 2^e$. For correctness, we only need
 to satisfy the weaker condition $\floor{\sqrt n} \le 2^e$. Given that, we could
@@ -273,7 +274,7 @@ $\length(n)$. But that costs an extra operation for all inputs $n$, for a
 benefit only in the rare case that $n$ is an exact power of four. As such, the
 change is probably not valuable.
 
-The algorithm shown in Listing~\ref{heron_improved} is well-known and
+The algorithm shown in Listing~\ref{isqrt_heron_improved} is well-known and
 well-used. It has the virtues of simplicity and easy-to-establish correctness,
 and is reasonably efficient for inputs that aren't too large. Nevertheless,
 there are at least three areas in which there's room for improvement. First,
@@ -433,14 +434,14 @@ $k=2^e$, we have:
   &\iff e \le \floor*{\frac{\length n - 3}{4}}
 \end{align*}
 So we take $k = 2^e$, where $e={\floor{(\length n - 3)/4}}$. This gives the recursive
-near square root implementation shown in Listing~\ref{rec}, where the
+near square root implementation shown in Listing~\ref{isqrt_recursive}, where the
 multiplication by $k$ and the divisions by $4k$ and $4k^2$ are replaced by the
 corresponding bit-shift operations.
 
 \lstinputlisting[
   float,
   frame=single,
-  label={rec},
+  label=isqrt_recursive,
   caption={Adaptive precision Heron's method, recursive},
   lastline=11]{isqrt_recursive.py}
 
@@ -456,19 +457,19 @@ improvements at the expense of some small loss of clarity; we leave the
 interested reader to pursue them further.
 
 The \lstinline{math.isqrt} implementation in CPython 3.8 doesn't use the
-recursive version shown in Listing~\ref{rec}. Instead, we unwind the recursion
+recursive version shown in Listing~\ref{isqrt_recursive}. Instead, we unwind the recursion
 to obtain an iterative version of the algorithm. This version is presented in
-Listing~\ref{new_iterative}.
+Listing~\ref{isqrt_iterative}.
 
 \lstinputlisting[
   float,
   frame=single,
-  label=new_iterative,
+  label=isqrt_iterative,
   caption={Adaptive precision Heron's method, iterative},
   lastline=13]{isqrt_iterative.py}
 
-It may not be immediately obvious that Listing~\ref{new_iterative} is
-equivalent to Listing~\ref{rec}. Rather than describing the equivalence and
+It may not be immediately obvious that Listing~\ref{isqrt_iterative} is
+equivalent to Listing~\ref{isqrt_recursive}. Rather than describing the equivalence and
 establishing the correctness of the iterative version via that equivalence,
 it's simpler to give a direct proof of correctness for the iterative version.
 
@@ -532,7 +533,7 @@ exactly six.
 
 \section{Fixed-precision algorithms}
 
-The iterative algorithm shown in Listing~\ref{new_iterative} specialises easily
+The iterative algorithm shown in Listing~\ref{isqrt_iterative} specialises easily
 to particular fixed-precision cases, giving an almost branch-free algorithm.
 For example, if $2^{30} \le n < 2^{32}$, then $c = 15$, $s=4$, and we can
 compute in advance the set of $d$ and $e$ values for each of the four
@@ -724,7 +725,7 @@ square root is $n = 2^{106} + 2^{54} + 1 = (2^{53} + 1)^2$. For this~$n$, $\rnd
 n = 2^{106} + 2^{54}$ and $\fsqrt(\rnd n) = 2^{53}$.
 
 Listing~\ref{isqrt_accelerated} shows a version of the iterative
-algorithm in Listing~\ref{new_iterative}, modified to use floating-point
+algorithm in Listing~\ref{isqrt_iterative}, modified to use floating-point
 arithmetic to compute the initial value of~$a$.  If~$n < 2^{106}$,
 $a$ is already a near square root of~$n$ and the \lstinline$while$ loop is
 executed zero times. More generally, the number of iterations required
