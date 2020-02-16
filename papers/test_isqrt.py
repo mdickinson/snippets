@@ -1,3 +1,8 @@
+"""
+Run tests for the various isqrt algorithms.
+"""
+
+
 import random
 import unittest
 
@@ -86,3 +91,7 @@ class TestIsqrt(unittest.TestCase):
         a = algorithm(n)
         self.assertLessEqual(a*a, n)
         self.assertLess(n, (a+1)*(a+1))
+
+
+if __name__ == "__main__":
+    unittest.main()
