@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 // count leading zeros of nonzero 32-bit unsigned integer
-int clz32(uint32_t a);
+int clz32(uint32_t x);
 
 // isqrt32_tab[k] = isqrt(256*(k+64)-1) for 0 <= k < 192
 static const uint8_t isqrt32_tab[192] = {

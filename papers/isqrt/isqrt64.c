@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 // count leading zeros of nonzero 64-bit unsigned integer
-int clz64(uint64_t a);
+int clz64(uint64_t x);
 
 // isqrt64_tab[k] = isqrt(256*(k+65)-1) for 0 <= k < 192
 static const uint8_t isqrt64_tab[192] = {
