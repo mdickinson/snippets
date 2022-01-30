@@ -14,6 +14,9 @@
 \DeclareMathOperator{\float}{float}
 \DeclareMathOperator{\rint}{rint}
 
+\newcommand{\isqrt}[1]{\floor{\sqrt{#1}}}
+\newcommand{\csqrt}[1]{\ceil{\sqrt{#1}}}
+
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -30,12 +33,14 @@
 \lstset{language=Python}
 \maketitle
 \begin{abstract}
-We present an adaptive-precision variant of Heron's method for computing
-integer square roots of arbitrary-precision integers. The method is efficient
-both at small scales and asymptotically, and represents an attractive
-compromise between speed and simplicity. Since Python 3.8, the algorithm is
-used by the CPython implementation of the Python programming language for its
-standard library integer square root function.
+We present a novel adaptive-precision variant of Heron's method for computing
+integer square roots of arbitrary-precision integers. The algorithm is unusual
+in that it is almost branch-free, requiring only a single final correction
+step, and in that the number of required iterations is easily predicted in
+advance. The algorithm is efficient both at small scales and asymptotically,
+and represents an attractive compromise between speed and simplicity. Since
+Python 3.8, the algorithm is used by the CPython implementation of the Python
+programming language for its standard library integer square root function.
 \end{abstract}
 \section{Introduction}
 
@@ -51,33 +56,47 @@ square root of~$n$, or $\floor{\sqrt n}$.
 
 The integer square root is a basic building block of any arbitrary-precision
 arithmetic toolkit. Many number-theoretic and cryptographic algorithms require
-the ability to detect whether a given integer is a square, and if so, to
-extract its root.
+either the ability to find integer square roots, or the slightly weaker ability
+to detect whether a given integer is a square, and if so to extract its square
+root. Thus for the Python programming language, whose integer type is
+unbounded, it's desirable to have an implementation of integer square root
+that remains reasonably efficient even for large inputs. However, the CPython
+maintainers also value portability and maintainability of the codebase, which
+argues for not using a complex algorithm where a simpler one would be good
+enough. The algorithm described in this paper hits the sweet spot for CPython,
+giving a compromise between efficiency and simplicity.
+
+Before introducing the new algorithm, we review existing well-known approaches.
+Section~\ref{float_method} briefly outlines the limitations of using a simple
+floating-point based approach, while section~\ref{old_method} describes a
+well-known purely integer-based approach, which forms the basis of the
+algorithm currently used in Java, for example. Section~\ref{old_method} also
+provides much of the background we need to introduce our algorithm, which is
+presented in section~\ref{new_method}.
+
+\section{Floating-point-based methods}
+\label{float_method}
 
 For small $n$, it's feasible to use floating-point arithmetic to
 compute integer square roots. For example, assuming IEEE 754 binary64 format
 floating-point and a correctly-rounded square root operation, one can show that
 computing $\floor{\sqrt n}$ directly gives the integer square root of $n$,
-provided that $n < 2^{52} + 2^{27}$. However, neither the Python language nor
-the CPython reference implementation of that language provides a guarantee of
-either IEEE 754 format floating-point or correct rounding of floating-point
-arithmetic operations. As such, any floating-point-based method for computing
-an integer square root would need a correctness check along with a pure-integer
-fallback method for the case where the floating-point square root operation
-fails to provide sufficient accuracy. To avoid this complication, and to allow
-integer square roots to be computed for arbitrarily large integers, it's
-desirable to have an integer square root algorithm that works entirely with
-integer arithmetic.
+provided that $n < 2^{52} + 2^{27}$.
 
-In this article we present a simple and fast pure-integer algorithm to compute
-the integer square root of an arbitrary positive integer. This algorithm has
-been implemented for CPython's \lstinline{math} module and is available from
-Python 3.8 onwards as \lstinline{math.isqrt}.
+Floating-point methods are also potentially useful for providing an initial
+approximation to the square root for an iterative method like Heron's method,
+particularly where the algorithm used is robust enough to work correctly even
+when a floating-point square root provides poor accuracy, for whatever reason.
 
-Section~\ref{old_method} of this article reviews a well-known method for
-computing integer square roots based on Heron's method. This provides much of
-the background we need to introduce our algorithm, which is presented in
-section~\ref{new_method}.
+However, neither the Python language nor the CPython reference implementation
+of that language provides a guarantee of either IEEE 754 format floating-point
+or correct rounding of floating-point arithmetic operations. As such, any
+floating-point-based method for computing an integer square root would need a
+correctness check along with a pure-integer fallback method for the case where
+the floating-point square root operation fails to provide sufficient accuracy.
+To avoid this complication, and to allow integer square roots to be computed
+for arbitrarily large integers, it's desirable to have an integer square root
+algorithm that works entirely with integer arithmetic.
 
 \section{Heron's method}
 \label{old_method}
@@ -86,16 +105,17 @@ In this section we describe a well-known approach to computing integer square
 roots, based on an adaptation of Heron's method to the domain of positive
 integers.
 
-Heron's method, also known as the Babylonian method, is a procedure for
-approximating the square root of a given positive real number~$t$. It's based
-on the idea that if $x$ is a positive real approximation to~$\sqrt t$, then
-$$h(x) = \frac{x + t/x}2$$ is an improved approximation. Applying~$h$ to that
+Heron's method, also known as the Babylonian method, and perhaps more
+recognisable in recent centuries as a special case of the Newton-Raphson
+method, is a procedure for approximating the square root of a positive
+real number~$t$. The idea is that if $x$ is a positive real
+approximation to~$\sqrt t$, then~$h(x)$, defined by
+$$h(x) = \frac{x + t/x}2,$$ is an improved approximation. Applying~$h$ to that
 improved approximation yields a still better approximation~$h(h(x))$, and so
 on. It can be shown that the sequence of iterates of~$h$ on~$x$ converges
 towards~$\sqrt t$ from any positive initial value~$x$, and that once the
-sequence gets sufficiently close to~$\sqrt t$, convergence is
-quadratic, so that the number of correct decimal places roughly doubles with
-each iteration.
+sequence gets sufficiently close to~$\sqrt t$, convergence is quadratic, so
+that the number of correct decimal places roughly doubles with each iteration.
 
 \begin{example}
   Suppose $t=2$. Given an approximation $7/5 = 1.4$ to the square root
@@ -113,12 +133,12 @@ remainder of this section we assume that $n$ is a fixed positive integer, and
 we define a function $g$ on the positive integers by
 $$g(a) = \floor*{\frac{a + \floor{n/a}}2}.$$
 
-The idea is that, just like its real counterpart~$h$, the function $g$ should
+The hope is that, just like its real counterpart~$h$, the function $g$ will
 transform a poor approximation to the integer square root of $n$ into an
-improved approximation, and so by applying $g$ repeatedly we hope to eventually
-reach the integer square root of~$n$. This works, but we have to be a little
-careful with the details, and in particular the termination condition. The
-lemmas below make this precise.
+improved approximation, and so by applying $g$ repeatedly we eventually reach
+the integer square root of~$n$. This works, but we have to be a little careful
+with the details, and in particular the termination condition. The lemmas below
+make this precise.
 
 \begin{lemma}\label{heron_high}
   For any positive integer $a$, $\floor{\sqrt n} \le g(a)$.
@@ -314,8 +334,8 @@ deficiencies, at the expense of only a little extra complexity.
 
 In this section we introduce a simple variant of Heron's method that's
 more efficient than the basic algorithm for large inputs. As in
-the previous section, we assume that~$n$ is a positive integer, and we aim to
-compute the integer square root of~$n$.
+the previous section, we assume that~$n$ is a positive integer, and our aim
+is to compute the integer square root of~$n$.
 
 There are two key ideas. First, we vary the working precision as we go: our
 algorithm produces at each iteration an integer approximation to the square
@@ -323,7 +343,7 @@ root of $\floor{n/4^f}$ for some integer $f$, with $f$ decreasing to $0$ as the
 iterations progress. Second, we don't insist on obtaining the exact integer
 square root of $\floor{n/4^f}$ at each iteration (which would require a
 per-iteration check-and-correct step), but instead allow the error to
-propagate, and we prove that with careful control of the rate at which the
+propagate, and we show that with careful control of the rate at which the
 precision increases, the error remains bounded throughout the algorithm. We
 then use a single check-and-correct step at the end of the algorithm.
 
@@ -337,7 +357,8 @@ To describe the algorithm, it's convenient to introduce a new notion: that of a
 
 In other words, $a$ is a near square root of $n$ if $a$ is either $\floor{\sqrt
 n}$ or $\ceil{\sqrt n}$. In particular, if $n = a^2$ is a perfect square then
-$a$ is the \emph{only} near square root of $n$.
+$a$ is the \emph{only} near square root of $n$; otherwise, $n$ has two near
+square roots.
 
 Given a near square root $a$ of $n$, the integer square root of $n$ is clearly
 either $a$ or $a-1$, depending on whether $a^2 \le n$ or $a^2 > n$
@@ -347,13 +368,13 @@ section we focus on finding near square roots.
 
 Our algorithm is based on the idea of ``lifting" a near square root of a
 quotient of $n$ to a near square root of $n$. Suppose that $j$ is a positive
-integer and $b$ is a near square root of $\floor{n / j^2}$. Then $b$ is an
-approximation to $\sqrt n / j$, and so $jb$ is an approximation to $\sqrt n$. A
-single iteration of the integer form of Heron's method applied to $jb$ then
-gives an improved approximation
-$$\floor*{\frac{jb + \floor{n / jb}}2} \sim \sqrt n.$$
-If $j$ is not too large relative to~$n$, this
-improved approximation will again be a near square root of~$n$.
+integer satisfying $j^2 \le n$ and $b$ is a near square root of $\floor{n /
+j^2}$. Then $b$ is an approximation to $\sqrt n / j$, and so $jb$ is an
+approximation to $\sqrt n$. A single iteration of the integer form of Heron's
+method applied to $jb$ then gives an improved approximation
+$$\floor*{\frac{jb + \floor{n / jb}}2} \sim \sqrt n.$$ If $j$ is not too large
+relative to~$n$, this improved approximation will again be a near square root
+of~$n$.
 
 Here's a theorem that makes that ``not too large" bound precise. For
 simplicity, we restrict~$j$ to be an even integer: write $j = 2k$, then in the
@@ -423,9 +444,10 @@ approximation to $\sqrt n$, and our improved approximation is $kb + \floor{n /
 Now we turn to implementation. Like many arbitrary-precision integer
 implementations, Python's integer implementation is binary-based, so
 multiplications and floor divisions by powers of two can be performed
-efficiently by bit-shifting. So when applying Theorem~\ref{main_theorem}, we'll
-take for our $k$ the largest power of two satisfying $4k^4 \le n$. Writing
-$k=2^e$, we have:
+efficiently by bit-shifting. So in applying Theorem~\ref{main_theorem}, we'd
+like to choose $k$ to be a power of two satisfying $4k^4 \le n$, and in order
+for the algorithm to proceed as fast as possible we'd like $k$ to be the
+largest such power. Writing $k=2^e$, we have:
 \begin{align*}
   4k^4 \le n
   &\iff 2^{2 + 4e} \le n \\
@@ -446,21 +468,25 @@ operations.
   caption={Adaptive-precision Heron's method, recursive}]
   {isqrt_recursive.py}
 
-Each step of the algorithm involves three big-integer shifts, one
-big-integer addition, one bit-length computation, and one big-integer division,
-along with a handful of operations that only involve small integers.
-We can improve this slightly: one of the two right-shifts can be eliminated, by
-keeping track of the amount by which~$n$ should be shifted in the recursive
-call instead of actually shifting. With a little more bookkeeping, we can
-also replace the per-iteration bit-length computation with a single
-initial bit-length computation. These changes represent minor efficiency
-improvements at the expense of some small loss of clarity; we leave the
-interested reader to pursue them further.
+Each step of the algorithm shown in Listing~\ref{isqrt_recursive} involves
+three big-integer shifts, one big-integer addition, one bit-length computation,
+and one big-integer division, along with a handful of operations that only
+involve small integers. We can improve this slightly: one of the two
+right-shifts can be eliminated, by keeping track of the amount by which~$n$
+should be shifted in the recursive call instead of actually shifting. With a
+little more bookkeeping, we can also replace the per-iteration bit-length
+computation with a single initial bit-length computation. These changes
+represent minor efficiency improvements at the expense of some small loss of
+clarity; we leave it to the interested reader to pursue them further.
 
 The \lstinline{math.isqrt} implementation in CPython 3.8 doesn't use the
 recursive version shown in Listing~\ref{isqrt_recursive}. Instead, we unwind
 the recursion to obtain an iterative version of the algorithm. This version is
-presented in Listing~\ref{isqrt_iterative}.
+presented in Listing~\ref{isqrt_iterative}. It may not be immediately obvious
+that Listing~\ref{isqrt_iterative} is equivalent to
+Listing~\ref{isqrt_recursive}. Rather than describing the equivalence and
+establishing the correctness of the iterative version via that equivalence,
+we give a direct proof of correctness for the iterative version.
 
 \lstinputlisting[
   label=isqrt_iterative,
@@ -469,30 +495,24 @@ presented in Listing~\ref{isqrt_iterative}.
   caption={Adaptive-precision Heron's method, iterative}]
   {isqrt_iterative.py}
 
-It may not be immediately obvious that Listing~\ref{isqrt_iterative} is
-equivalent to Listing~\ref{isqrt_recursive}. Rather than describing the
-equivalence and establishing the correctness of the iterative version via that
-equivalence, it's simpler to give a direct proof of correctness for the
-iterative version.
 
 We establish two loop invariants on the variables $s$, $d$ and $a$. These
-invariants hold just before entering the \lstinline$while$ loop, at the end
+invariants hold just before entering the \lstinline$while$ loop and at the end
 of every iteration of that loop, and hence also the beginning of any subsequent
-iteration.
+iteration. The first loop invariant is $d = \floor{c/2^s}$; this should be
+clear from examining the code. The second loop invariant states that at every
+step, $a$ is a near square root of $\floor{n / 4^{c-d}}$. In particular, on
+exit from the \lstinline$while$ loop, $s = 0$, $d = \floor{c/2^0} = c$ and so
+$a$ is a near square root of $\floor{n / 4^{c-c}} = n$.
 
-The first loop invariant is $d = \floor{c/2^s}$; this should be clear from
-examining the code. The second loop invariant states that at every step, $a$ is
-a near square root of $\floor{n / 4^{c-d}}$. In particular, on exit from the
-\lstinline$while$ loop, $s = 0$, $d = \floor{c/2^0} = c$ and so $a$ is a near
-square root of $\floor{n / 4^{c-c}} = n$.
-
-To establish the second invariant, note first that the invariant holds on
-entry to the \lstinline$while$ loop: we have $c = \floor{\log_4 n}$, so
-$4^c \le n < 4^{c+1}$ and $1 \le \floor{n / 4^c} < 4$, so $a = 1$ is a near
+To establish the second invariant, note first that the invariant holds on the
+first entry to the \lstinline$while$ loop: we have $c = \floor{\log_4 n}$, so
+$4^c \le n < 4^{c+1}$, $1 \le \floor{n / 4^c} < 4$, and $a = 1$ is a near
 square root of $\floor{n / 4^c}$. We then need to establish that if the
-invariant holds at the beginning of any while loop iteration, it also applies
-at the end of that iteration. We prove this via the following lemma, in which
-$b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
+invariant holds at the beginning of any \lstinline$while$ loop iteration, it
+also applies at the end of that iteration. We prove this via the following
+lemma, in which $b$ and $e$ represent the values of $a$ and $d$ at the start of
+the iteration.
 
 \begin{lemma}
   Suppose that $0 \le s < \length(c)$, that $e = \floor{c / 2^{s + 1}}$, that
@@ -505,8 +525,8 @@ $b$ and $e$ represent the values of $a$ and $d$ at the start of the iteration.
 \begin{proof}
   Let $m = \floor{n / 4^{c-d}}$. Then $b$ is a near square root of
   $\floor{m/4^{d-e}}$ and we can rewrite $a$ as
-  $$a = 2^{d-e-1}b + \floor*{\frac{m}{2^{d-e+1}b}}.$$ Now we can apply the main
-  theorem: if we can show that $2^{d-e-1}$ is an integer and that
+  $$a = 2^{d-e-1}b + \floor*{\frac{m}{4\cdot 2^{d-e-1}b}}.$$ Now we can apply
+  the main theorem: if we can show that $2^{d-e-1}$ is an integer and that
   $4(2^{d-e-1})^4 \le m$, it follows from Theorem~\ref{main_theorem} that $a$
   is a near square root of $m$. But from the definitions of $d$ and $e$, $1 \le
   d$ and $e = \floor{d/2}$, so it follows that $0 \le d - e - 1 \le e$, and
@@ -526,9 +546,9 @@ only $a$ and $n$ are big integers. So the algorithm consists of two big-integer
 shifts, one big-integer addition and one big-integer division per iteration,
 along with a handful of operations with small integers.
 
-The total number of iterations $m$ of the while loop turns out to be remarkably
-simple: it's exactly $\floor*{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and
-zero iterations are required for $n = 1$). So for example, input values $n$
+The total number of iterations $m$ of the while loop is remarkably simple: it's
+exactly $\floor*{\log_2 \floor{\log_2 n}}$, assuming $n\ge 2$ (and zero
+iterations are required for $n = 1$). So for example, input values $n$
 satisfying $2^{32} \le n < 2^{64}$ require exactly five iterations, while
 values in the range $2^{64} \le n < 2^{128}$ require exactly six.
 
@@ -560,6 +580,99 @@ answer in the case~$n = 0$.
   caption={Fixed-precision variant, valid for $0 \le n < 2^{64}$}]
   {isqrt_64bit.py}
 
+For practical implementation, we can replace the initial steps of the algorithm
+with a lookup table. Listing~\ref{isqrt_32bit_c} gives an implementation of a
+32-bit integer square root in standard C. It makes use of a lookup table, and
+requires just a single division. As written, that division is of a 32-bit
+dividend by a 32-bit divisor, but both the divisor and the quotient fit into a
+16-bit unsigned integer. The code also assumes the existence of a 32-bit "count
+leading zeros" function, \lstinline$clz32$.
+
+\lstinputlisting[
+  label=isqrt_32bit_c,
+  float,
+  frame=single,
+  caption={32-bit integer square root in C}]
+  {isqrt32.c}
+
+The rough shape of the code is straightforward: we first deal with
+the special case where $x$ is zero. Then we normalise $x$, shifting left
+by an even number of bits to ensure that $2^{30} \le x < 2^{32}$. Then
+we compute the integer square root of our new $x$, and finally shift back
+right to compensate for the original shift left. In the center of the function,
+for $2^{30} \le x < 2^{32}$, the line with the table lookup provides a near
+square root for $\floor{x / 2^{16}}$. The following line lifts that to a near
+square root $y$ for~$x$, and then the line after that corrects $y$ downwards if
+necessary.
+
+There are a couple of subtleties to note. Immediately before the correction
+step, from the bounds on~$x$ and the fact that~$y$ is a near square root
+of~$x$, we know that $2^{15} \le y \le 2^{16}$. But if $y = 2^{16}$ then it
+won't fit into a 16-bit unsigned integer, so we need to exclude this
+possibility. But if $y = 2^{16}$, then since $y$ is a near square root of $x$,
+we must have $x > (2^{16} - 1)^2$. It then follows that in the previous line we
+end up using the very last entry in the lookup table to yield $y = 256$, and
+from there that after the lifting $y = 2^{16} - 1$, a contradiction. So $y =
+2^{16}$ is impossible at this stage, and $y$ will always fit into a 16-bit
+unsigned integer.
+
+To make the lookup table work, the key fact is that given a 16-bit
+integer $t$ satisfying $2^{14} \le t < 2^{16}$, we can compute a near square
+root of $t$ using only the most significant 8 bits of~$t$. The following lemma
+shows that we have a small amount of choice in generating the lookup table
+entries.
+
+\begin{lemma} Suppose that $2^{14} \le t < 2^{16}$, and let $s = \floor{t /
+256}$. Then $a := \csqrt{256(s+1)} - 1$ and $b := \csqrt{256s}$ are both near
+square roots of~$t$.
+\end{lemma}
+
+\begin{proof}
+We have $\sqrt{256s} \le \sqrt{t} <
+\sqrt{256(s+1)}$. So
+$$\csqrt{256s} - 1 < \sqrt{256s} \le \sqrt t < \sqrt{256(s+1)} \le \csqrt{256(s+1)}.$$
+Or in other words,
+$$b - 1 < \sqrt t < a + 1,$$
+so
+$$(b - 1)^2 < t < (a + 1)^2.$$
+All that remains is to show that~$a\le b$, and then we have
+$$(a - 1)^2 \le (b - 1)^2 < t < (a + 1)^2 \le (b + 1)^2,$$ showing that
+both~$a$ and~$b$ are near square roots of~$t$. But from our assumption that
+$2^{14} \le t$, we have~$64 \le s$, and it follows that $128 \le \sqrt{256s}
+\le \sqrt{256(s+1)}$ and hence
+$$256 \le \sqrt{256(s+1)} + \sqrt{256s}$$ Multiplying both sides
+by~$(\sqrt{256(s+1)} - \sqrt{256s}) / 256$ gives:
+$$\sqrt{256(s+1)} - \sqrt{256s} \le 1.$$ Now rearranging and taking ceilings
+gives
+$$a = \csqrt{256(s+1)} - 1 \le \csqrt{256s} = b$$ as desired.
+\end{proof}
+
+In~Listing~\ref{isqrt_32bit_c}, the lookup table value $T(k)$ at position~$k$
+is given by $T(k) = \isqrt{256(k + 64) - 1}$. So by the above lemma applied
+to~$t=\floor{n / 2^{16}}$,
+$$1 + T(\floor{n / 2^{24}} - 64) = \csqrt{256 \floor{n / 2^{24}}}$$ gives a
+near square root of~$\floor{n / 2^{16}}$. It would have been more natural to
+absorb the addition of $1$ into the table values, but that would have meant
+that the final table value would no longer fit in an 8-bit integer, which in
+turn would require the whole table to use 16-bit integers, wasting significant
+space.
+
+Finally, a 64-bit integer square root algorithm is shown
+in~Listing~\ref{isqrt_64bit_c}. The same subtleties apply as with the 32-bit
+integer square root: for values of~$x$ larger than $(2^32 - 1)^2$, both~$255$
+and~$256$ are near square roots of~$\floor{x/2^{56}}$. However, a result
+of~$256$ from the table lookup would lead to~$y$ overflowing a 32-bit
+unsigned integer, while with a value of~$255$, $y$ remains representable
+throughout the algorithm. This is the opposite situation to the 32-bit
+case, where we needed the table lookup to produce~$256$ rather than $255$
+for~$x$ near the upper limits of the input range.
+
+\lstinputlisting[
+  label=isqrt_64bit_c,
+  float,
+  frame=single,
+  caption={64-bit integer square root in C}]
+  {isqrt64.c}
 
 \section{Using floating-point}
 
@@ -759,5 +872,12 @@ is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 % - Reference for Heron's method / Babylonian method / Newton's method.
 % - Reference for assertion that the number of correct decimal places
 % doubles with each iteration.
+
+
+% \section{Leftover snippets}
+% In this article we present a simple and fast pure-integer algorithm to compute
+% the integer square root of an arbitrary positive integer. This algorithm has
+% been implemented for CPython's \lstinline{math} module and is available from
+% Python 3.8 onwards as \lstinline{math.isqrt}.
 
 \end{document}
