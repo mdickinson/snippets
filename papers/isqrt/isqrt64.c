@@ -32,7 +32,7 @@ uint32_t isqrt64(uint64_t x)
 {
     if (x == 0) return 0;
 
-    int lz = clz64(x) & -2;
+    int lz = clz64(x) & 62;
     x <<= lz;
     uint32_t y = isqrt64_tab[(x >> 56) - 64];
     y = (y << 7) + (x >> 41) / y;

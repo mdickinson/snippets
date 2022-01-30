@@ -32,7 +32,7 @@ uint16_t isqrt32(uint32_t x)
 {
     if (x == 0) return 0;
 
-    int lz = clz32(x) & -2;
+    int lz = clz32(x) & 30;
     x <<= lz;
     uint16_t y = 1 + isqrt32_tab[(x >> 24) - 64];
     y = (y << 7) + (x >> 9) / y;
