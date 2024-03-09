@@ -1,7 +1,24 @@
 #include <assert.h>
-#include <stdio.h>
+#include <stdint.h>
 
-#include "isqrt64.c"
+static const uint8_t clz32_tab[32] =
+{
+    31, 22, 30, 21, 18, 10, 29,  2, 20, 17, 15, 13, 9,  6, 28, 1,
+    23, 19, 11,  3, 16, 14,  7, 24, 12,  4,  8, 25, 5, 26, 27, 0
+};
+
+// count leading zeros of nonzero 32-bit unsigned integer
+// See https://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn.
+int clz32(uint32_t x)
+{
+    assert(x);
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return clz32_tab[(uint32_t)(x * 0x07c4acddu) >> 27];
+}
 
 static const uint8_t clz64_tab[64] = {
     63,  5, 62,  4, 16, 10, 61,  3, 24, 15, 36,  9, 30, 21, 60,  2,
@@ -23,25 +40,4 @@ int clz64(uint64_t x)
     x |= x >> 16;
     x |= x >> 32;
     return clz64_tab[(uint64_t)(x * 0x03f6eaf2cd271461u) >> 58];
-}
-
-int check_isqrt64(uint64_t x) {
-    uint64_t y = isqrt64(x);
-    int y_ok = y*y <= x && x - y*y <= 2*y;
-    if (!y_ok) {
-        printf("isqrt64(%llu) returned incorrect answer %llu\n", x, y);
-    }
-    return y_ok;
-}
-
-int main(void)
-{
-    printf("Checking isqrt64 for selected values in [0, 2**64) ...\n");
-    for (uint64_t s = 0; s < 0x100000000u; s++) {
-        if (!check_isqrt64(s*s)) return 1;
-        if (!check_isqrt64(s*s + s)) return 1;
-        if (!check_isqrt64(s*s + 2*s)) return 1;
-    };
-    printf("All tests passed\n");
-    return 0;
 }
