@@ -607,7 +607,7 @@ necessary.
 
 There are a couple of subtleties to note. Immediately before the correction
 step, from the bounds on~$x$ and the fact that~$y$ is a near square root
-of~$x$, we know that $2^{15} \le y \le 2^{16}$. But if $y = 2^{16}$ then it
+of~$x$, we know that $2^{15} \le y \le 2^{16}$. If $y = 2^{16}$ then it
 won't fit into a 16-bit unsigned integer, so we need to exclude this
 possibility. But if $y = 2^{16}$, then since $y$ is a near square root of $x$,
 we must have $x > (2^{16} - 1)^2$. It then follows that in the previous line we
@@ -616,15 +616,42 @@ from there that after the lifting $y = 2^{16} - 1$, a contradiction. So $y =
 2^{16}$ is impossible at this stage, and $y$ will always fit into a 16-bit
 unsigned integer.
 
-To make the lookup table work, the key fact is that given a 16-bit
-integer $t$ satisfying $2^{14} \le t < 2^{16}$, we can compute a near square
-root of $t$ using only the most significant 8 bits of~$t$. The following lemma
-shows that we have a small amount of choice in generating the lookup table
-entries.
+To make the lookup table work, the key fact is that given a 16-bit integer $t$
+satisfying $2^{14} \le t < 2^{16}$, we can compute a near square root of $t$
+using only the most significant 8 bits of~$t$. More generally, we have the
+following lemma, which shows that we also have a small amount of freedom in
+choosing the lookup table entries to be used.
+
+\begin{lemma} Suppose that $n$ and $k$ are positive integers satisfying
+  $(k+1)^2 \le 4n$, and let $m = \floor{n / k}$.
+  Then $a \coloneqq \csqrt{2k(m+1)} - 1$ and $b \coloneqq \csqrt{2km}$
+  are both near square roots of~$n$.
+\end{lemma}
+
+\begin{proof}
+  We have:
+    $$\csqrt{2km} - 1
+      < \sqrt{2km}
+      \le \sqrt n
+      < \sqrt{2k(m+1)}
+      \le \csqrt{2k(m+1)}.$$
+  Or in other words,
+    $$b - 1 < \sqrt n < a + 1.$$
+  So
+    $$(b - 1)^2 < n < (a + 1)^2.$$
+  All that remains is to show that $a \le b$, and then we have
+    $$(a - 1)^2 \le (b - 1)^2 < n < (a + 1)^2 \le (b + 1)^2,$$
+  showing that both $a$ and $b$ are near square roots of $n$.
+
+  But from our assumption that $k^2 \le n$ we have $k/2 < n / 2k$
+
+\end{proof}
+
+Now put $k=128$ in the above to get:
 
 \begin{lemma} Suppose that $2^{14} \le t < 2^{16}$, and let $s = \floor{t /
-256}$. Then $a := \csqrt{256(s+1)} - 1$ and $b := \csqrt{256s}$ are both near
-square roots of~$t$.
+256}$. Then $a \coloneqq \csqrt{256(s+1)} - 1$ and $b \coloneqq \csqrt{256s}$
+are both near square roots of~$t$.
 \end{lemma}
 
 \begin{proof}
