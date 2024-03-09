@@ -59,12 +59,12 @@ arithmetic toolkit. Many number-theoretic and cryptographic algorithms require
 either the ability to find integer square roots, or the slightly weaker ability
 to detect whether a given integer is a square, and if so to extract its square
 root. Thus for the Python programming language, whose integer type is
-unbounded, it's desirable to have an implementation of integer square root
-that remains reasonably efficient even for large inputs. However, the CPython
+unbounded, it's desirable to have an implementation of integer square root that
+remains reasonably efficient even for large inputs. However, the CPython
 maintainers also value portability and maintainability of the codebase, which
 argues for not using a complex algorithm where a simpler one would be good
-enough. The algorithm described in this paper hits the sweet spot for CPython,
-giving a compromise between efficiency and simplicity.
+enough. In the author's opinion, the algorithm described in this paper hits the
+sweet spot for CPython, giving a compromise between efficiency and simplicity.
 
 Before introducing the new algorithm, we review existing well-known approaches.
 Section~\ref{float_method} briefly outlines the limitations of using a simple
@@ -77,10 +77,10 @@ presented in section~\ref{new_method}.
 \section{Floating-point-based methods}
 \label{float_method}
 
-For small $n$, it's feasible to use floating-point arithmetic to
+For small~$n$, it's feasible to use floating-point arithmetic to
 compute integer square roots. For example, assuming IEEE 754 binary64 format
 floating-point and a correctly-rounded square root operation, one can show that
-computing $\floor{\sqrt n}$ directly gives the integer square root of $n$,
+computing $\floor{\sqrt n}$ directly gives the integer square root of~$n$,
 provided that $n < 2^{52} + 2^{27}$.
 
 Floating-point methods are also potentially useful for providing an initial
@@ -900,11 +900,11 @@ is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 % - Reference for assertion that the number of correct decimal places
 % doubles with each iteration.
 
+% Complexity analysis: write S(n) as an upper bound for the cost of squaring an
+% n-bit number, and D(n) as an upper bound for the cost of dividing a 2n-bit
+% number by an n-bit number.  We can reasonably assume that S(n/2) <= S(n)/2
+% and D(n/2) <= D(n)/2, for n sufficiently large. All other operations involved
+% in the algorithm are linear time in the number of bits of $n$.
 
-% \section{Leftover snippets}
-% In this article we present a simple and fast pure-integer algorithm to compute
-% the integer square root of an arbitrary positive integer. This algorithm has
-% been implemented for CPython's \lstinline{math} module and is available from
-% Python 3.8 onwards as \lstinline{math.isqrt}.
 
 \end{document}
