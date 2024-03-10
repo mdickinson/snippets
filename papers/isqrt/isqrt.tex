@@ -294,6 +294,12 @@ $\length(n)$. But that costs an extra operation for all inputs $n$, for a
 benefit only in the rare case that $n$ is an exact power of four. As such, the
 change is probably not valuable.
 
+Another simple and easily-computed starting guess is given by $a = \floor{n /
+2^e}$ where $e =\floor{(\length(n) - 1) / 2}$. We leave it to the reader to
+verify that this value for~$a$ also satisfies $\floor{\sqrt n} \le a$. There's
+no obvious reason to prefer either form of starting guess over the other: in
+particular, neither value is consistently smaller than the other for all~$n$.
+
 The algorithm shown in Listing~\ref{isqrt_heron_improved} is well-known and
 well-used. It has the virtues of simplicity and easy-to-establish correctness,
 and is reasonably efficient for inputs that aren't too large. Nevertheless,
