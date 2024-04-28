@@ -44,59 +44,33 @@ programming language for its standard library integer square root function.
 \end{abstract}
 \section{Introduction}
 
-We start with a simple definition.
+For a nonnegative integer~$n$, the \emph{integer square root} of~$n$ is the
+unique nonnegative integer~$a$ satifying $a^2 \le n < (a + 1)^2$. Equivalently,
+it's the integer part of the nonnegative real square root of~$n$, or
+$\floor{\sqrt n}$. The integer square root is a basic building block of any
+arbitrary-precision arithmetic toolkit: many number-theoretic and cryptographic
+algorithms require either the ability to find integer square roots, or the
+slightly weaker ability to detect whether a given integer is a square, and if
+so to extract its square root.
 
-\begin{definition}
-  For a nonnegative integer $n$, the \emph{integer square root} of $n$ is
-  the unique nonnegative integer $a$ satifying $a^2 \le n < (a + 1)^2$.
-\end{definition}
+The Python programming language has an arbitrary-precision integer type
+\lstinline$int$, and since Python 3.8 the Python standard library implements an
+integer square root operation, \lstinline$math.isqrt$. The implementation of
+this operation in the reference CPython implementation of the Python language
+was subject to competing concerns. The operation should be fast for small
+inputs (overwhelmingly the most common use-case) while remaining reasonably
+efficient even for large inputs. However, the CPython maintainers also value
+portability and maintainability of the codebase, which argues for not using a
+complex algorithm where a simpler one would be good enough. This paper
+describes the algorithm that was used in CPython, which (in the author's
+opinion) hits the sweet spot between the various concerns, giving an elegant
+compromise between efficiency and simplicity.
 
-Equivalently, the integer square root of~$n$ is the integer part of the exact
-square root of~$n$, or $\floor{\sqrt n}$.
-
-The integer square root is a basic building block of any arbitrary-precision
-arithmetic toolkit. Many number-theoretic and cryptographic algorithms require
-either the ability to find integer square roots, or the slightly weaker ability
-to detect whether a given integer is a square, and if so to extract its square
-root. Thus for the Python programming language, whose integer type is
-unbounded, it's desirable to have an implementation of integer square root that
-remains reasonably efficient even for large inputs. However, the CPython
-maintainers also value portability and maintainability of the codebase, which
-argues for not using a complex algorithm where a simpler one would be good
-enough. In the author's opinion, the algorithm described in this paper hits the
-sweet spot for CPython, giving a compromise between efficiency and simplicity.
-
-Before introducing the new algorithm, we review existing well-known approaches.
-Section~\ref{float_method} briefly outlines the limitations of using a simple
-floating-point based approach, while section~\ref{old_method} describes a
-well-known purely integer-based approach, which forms the basis of the
-algorithm currently used in Java, for example. Section~\ref{old_method} also
-provides much of the background we need to introduce our algorithm, which is
-presented in section~\ref{new_method}.
-
-\section{Floating-point-based methods}
-\label{float_method}
-
-For small~$n$, it's feasible to use floating-point arithmetic to
-compute integer square roots. For example, assuming IEEE 754 binary64 format
-floating-point and a correctly-rounded square root operation, one can show that
-computing $\floor{\sqrt n}$ directly gives the integer square root of~$n$,
-provided that $n < 2^{52} + 2^{27}$.
-
-Floating-point methods are also potentially useful for providing an initial
-approximation to the square root for an iterative method like Heron's method,
-particularly where the algorithm used is robust enough to work correctly even
-when a floating-point square root provides poor accuracy, for whatever reason.
-
-However, neither the Python language nor the CPython reference implementation
-of that language provides a guarantee of either IEEE 754 format floating-point
-or correct rounding of floating-point arithmetic operations. As such, any
-floating-point-based method for computing an integer square root would need a
-correctness check along with a pure-integer fallback method for the case where
-the floating-point square root operation fails to provide sufficient accuracy.
-To avoid this complication, and to allow integer square roots to be computed
-for arbitrarily large integers, it's desirable to have an integer square root
-algorithm that works entirely with integer arithmetic.
+Before introducing the new algorithm, we review a common integer-based
+approach, Heron's method, in section~\ref{old_method}. This forms the basis of
+the algorithm currently used for Java's \lstinline{BigInteger.isqrt} method,
+for example. Section~\ref{old_method} provides much of the background we need
+to introduce our algorithm, which is presented in section~\ref{new_method}.
 
 \section{Heron's method}
 \label{old_method}
@@ -709,20 +683,32 @@ for~$x$ near the upper limits of the input range.
 
 \section{Using floating-point}
 
-If we have access to a binary floating-point type that provides IEEE 754 format
-and semantics, we can use floating-point arithmetic to compute integer square
-roots directly for small~$n$, and to accelerate the computation of integer
-square roots for larger~$n$. Note that Python does not currently require IEEE
-754 format or semantics, but that in practice use of IEEE 754 floating-point is
-almost ubiquitous on platforms that support Python, and Python's
-\lstinline{float} type is highly likely to map to the IEEE 754
-``double precision'' binary64 interchange format, defined in section~3.6 of
-IEEE 754-2019.
+Floating-point methods can be used either to compute integer square roots
+directly for small~$n$, or to accelerate the computation of an integer square
+root for larger~$n$ by providing an accurate starting guess for an iterative
+algorithm. In this section we give some details. Note however that CPython's
+implementation of \lstinline{math.isqrt} does not make any use of
+floating-point.
 
-In this section, we assume that Python's \lstinline{float} type \emph{does} use
-the binary64 format, and that basic arithmetic operations and the standard
-library \lstinline{math.sqrt} function are all correctly rounded, using the
-default IEEE 754 ``roundTiesToEven" rounding mode.
+Neither the Python language nor (prior to Python 3.12) the CPython
+reference implementation of that language, provides a guarantee of either IEEE
+754 format floating-point or correct rounding of floating-point arithmetic
+operations. As such, any floating-point-based method for direct computation of
+an integer square root would need a correctness check along with a pure-integer
+fallback method for the case where the floating-point square root operation
+fails to provide sufficient accuracy. For this reason, use of floating-point
+was avoided in the implementation of \lstinline{math.isqrt}.
+
+Despite the lack of language guarantees, use of IEEE 754 floating-point is
+almost ubiquitous on platforms that support Python, and on almost all systems
+currently in use Python's \lstinline{float} type maps to the IEEE 754 ``double
+precision'' binary64 interchange format, defined in section~3.6 of IEEE
+754-2019. Moreover, floating-point square root operations implemented in
+hardware are invariably correctly rounded. From this point onwards, we assume
+that Python's \lstinline{float} type \emph{does} use the binary64 format, and
+that basic arithmetic operations and the standard library \lstinline{math.sqrt}
+function are all correctly rounded, using the default IEEE 754
+``roundTiesToEven" rounding mode.
 
 First some definitions: given a real number~$x$, write $\float(x)$ for the
 nearest (under ``roundTiesToEven") binary64 floating-point number to~$x$. If
@@ -734,8 +720,8 @@ correctly-rounded square root of~$x$, and $\fsqr(x)$ for the correctly-rounded
 square of $x$. In other words, $\fsqrt(x) = \float(\sqrt x)$ and $\fsqr(x) =
 \float(x^2)$.
 
-We first prove the statement given in the introduction, that if $n$ is
-not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
+We first prove that if $n$ is not too large then $\floor{\fsqrt(n)}$ gives the
+integer square root of~$n$.
 
 \begin{lemma}
   Suppose that $n$ is a nonnegative integer satisfying $n < 2^{52}$. Then
@@ -757,12 +743,12 @@ not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
   the possibility that~$\float(\sqrt n) = a + 1$.
 
   Since~$n$ is positive, so is~$a$, and we can find an integer $k$ such that
-  $2^k \le a < 2^{k + 1}$. Any two consecutive floating-point numbers in the
-  interval $[2^k, 2^{k+1}]$ are separated by exactly $2^{k-52}$, so the largest
-  floating-point number that's strictly smaller than $a + 1$ is $a + 1 - 2^{k -
-  52}.$ To avoid the possibility that $\sqrt n$ rounds up to $a + 1$, it's
-  enough to show that $\sqrt n$ is closer to $a + 1 - 2^{k-52}$ than to~$a +
-  1$; that is, that
+  $2^k \le a < a + 1 \le 2^{k + 1}$. Any two consecutive floating-point numbers
+  in the interval $[2^k, 2^{k+1}]$ are separated by exactly $2^{k-52}$, so the
+  largest floating-point number that's strictly smaller than $a + 1$ is $a + 1
+  - 2^{k - 52}.$ To avoid the possibility that $\sqrt n$ rounds up to $a + 1$,
+  it's enough to show that $\sqrt n$ is closer to $a + 1 - 2^{k-52}$ than to~$a
+  + 1$; that is, that
   $$\sqrt n < a + 1 - 2^{k-53}$$
   or equivalently that
   $$a + 1 - \sqrt n > 2^{k - 53}.$$
@@ -772,10 +758,32 @@ not too large, $\floor{\fsqrt(n)}$ gives the integer square root of~$n$.
   n < a + 1$, the denominator is less than $2(a+1)$, which is in turn less than
   or equal to $2^{k+2}$. So
   $$a + 1 - \sqrt n > 2^{-k-2}.$$ So we only need to show that $2^{-k-2} \ge
-  2^{k-53}$. But that's equivalent to $2k \le 51$, and from our assumptions,
-  $a^2 \le n < 2^{52}$, so $2^k \le a < 2^{26}$, hence $k < 26$.
+  2^{k-53}$. But from our assumptions, $a^2 \le n < 2^{52}$, so $a < 2^{26}$,
+  so $k$ is at most~$25$ and if follows that $2^{-k-2} \ge 2^{-27} > 2^{-28}
+  \ge 2^{k-53}$, as required.
 \end{proof}
 
+The upper bound can be extended slightly:
+
+\begin{corollary}
+  Suppose that~$n$ is a nonnegative integer satisfying $n < 2^{52} + 2^{27}$.
+  Then $\floor{\fsqrt(n)}$ is the integer square root of~$n$. However, for~$n =
+  2^{52} + 2^{27} = (2^{26} + 1)^2 - 1$, $\floor{\fsqrt(n)}$ gives~$2^{26} +
+  1$, while the integer square root of~$n$ is $2^{26}$.
+\end{corollary}
+
+\begin{proof}
+  We already proved the statement for $n < 2^{52}$. For any~$n$ in the range
+  $2^{52} \le n < 2^{52} + 2^{27}$ the correct integer square root is $2^{26}$
+  and it's enough to observe that the operation $\floor{\fsqrt(n)}$ is
+  monotonic in~$n$ and that it gives the correct answer for both~$2^{52}$ and
+  for~$2^{52} + 2^{27}$. The last statement follows by direct computation.
+\end{proof}
+
+Next we show that if all we need is a near square root of~$n$ (as defined in
+section~\ref{new_method}), then we can use a much larger upper bound on~$n$.
+First, a lemma leading to a well-known theorem: that the floating-point
+square root operation recovers a float~$x$ from its (floating-point) square.
 
 \begin{lemma}\label{float_scale}
   Suppose that $x$ and $y$ are positive real numbers such that $x = 2^e y$ for
@@ -819,9 +827,7 @@ convenience.
   So to prove that $\fsqrt(\fsqr(x)) = x$, it's enough to prove that
   $\fsqrt(\fsqr(y)) = y$, since we then have
   $$\fsqrt(\fsqr(x)) = 2^e \fsqrt(\fsqr(y)) = 2^e y = x.$$
-  Or in other words, it's enough to prove the original statement in the special
-  case that $1/2 < x \le 1$. So from this point on, we assume that $1/2 < x \le
-  1$.
+  So from this point on, we assume that $1/2 < x \le 1$.
 
   Let $z = \fsqr(x)$ be the closest float to $x^2$. Then $1/4 \le z \le 1$ and
   since floats are spaced at most $2^{-53}$ apart within the interval $[1/4,
@@ -871,8 +877,9 @@ floating-point square root can be used to compute a near square root of~$n$.
 
 In fact, $\floor{\fsqrt(\rnd n)}$ gives a near square root of~$n$ for all $n
 \le 2^{106} + 2^{54}$. The smallest~$n$ for which it fails to give a near
-square root is $n = 2^{106} + 2^{54} + 1 = (2^{53} + 1)^2$. For this~$n$, $\rnd
-n = 2^{106} + 2^{54}$ and $\fsqrt(\rnd n) = 2^{53}$.
+square root is $n = 2^{106} + 2^{54} + 1 = (2^{53} + 1)^2$: for this~$n$,
+the only possible near square root is~$2^{53 + 1}$, which is not representable
+in the IEEE 754 binary64 floating-point format.
 
 Listing~\ref{isqrt_accelerated} shows a version of the iterative
 algorithm in Listing~\ref{isqrt_iterative}, modified to use floating-point
@@ -905,6 +912,7 @@ is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 % - Reference for Heron's method / Babylonian method / Newton's method.
 % - Reference for assertion that the number of correct decimal places
 % doubles with each iteration.
+% - Add comparison with GMP's recursive square root algorithm.
 
 % Complexity analysis: write S(n) as an upper bound for the cost of squaring an
 % n-bit number, and D(n) as an upper bound for the cost of dividing a 2n-bit
