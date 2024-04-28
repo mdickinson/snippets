@@ -548,10 +548,6 @@ square detection, we can discard the final correction step from the algorithm
 shown in Listing~\ref{isqrt_recursive}. This is shown in
 Listing~\ref{is_square_recursive}.
 
-Similarly, if we already know that~$n$ is a perfect square, then the
-\lstinline$nsqrt$ function in Listing~\ref{isqrt_recursive} will compute its
-square root, and again the correction step is not needed.
-
 \lstinputlisting[
   label=is_square_recursive,
   float,
@@ -559,6 +555,10 @@ square root, and again the correction step is not needed.
   caption={Perfect square detection using nsqrt}]
   {is_square_recursive.py}
 
+Similarly, if we somehow already know that an integer~$n$ is a perfect square
+and we want to compute its square root, we can omit the correction step in
+Listing~\ref{isqrt_recursive}: the \lstinline$nsqrt$ function will compute the
+square root directly.
 
 \section{Fixed-precision algorithms}
 
