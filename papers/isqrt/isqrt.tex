@@ -543,9 +543,9 @@ the integer square root~$a$ of~$n$ and check whether~$a^2 = n$.
 For that final step it's sufficient to compute a near square root rather than
 an integer square root: given an algorithm \lstinline{nsqrt} that computes near
 square roots of positive integers, a positive integer~$n$ is a square if and
-only if \lstinline$n = nsqrt(n)*nsqrt(n)$. This means that for the purposes of
-square detection, we can discard the final correction step from the algorithm
-shown in Listing~\ref{isqrt_recursive}. This is shown in
+only if $n$ is equal to the square of~\lstinline$nsqrt(n)$. This means that for
+the purposes of square detection, we can discard the final correction step from
+the algorithm shown in Listing~\ref{isqrt_recursive}. This is shown in
 Listing~\ref{is_square_recursive}.
 
 \lstinputlisting[
