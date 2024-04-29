@@ -532,6 +532,34 @@ iterations are required for $n = 1$). So for example, input values $n$
 satisfying $2^{32} \le n < 2^{64}$ require exactly five iterations, while
 values in the range $2^{64} \le n < 2^{128}$ require exactly six.
 
+\section{Near square roots and square detection}
+
+Occasionally all that's required is the ability to detect whether a given
+integer~$n$ is a perfect square. Typical efficient square-detection algorithms
+perform a series of cheap tests on the value~$n$ to eliminate classes of
+non-square integers - for example, by looking at the residue of~$n$
+modulo~$256$ or~$255$. If~$n$ passes those tests, the final step is to compute
+the integer square root~$a$ of~$n$ and check whether~$a^2 = n$.
+For that final step it's sufficient to compute a near square root rather than
+an integer square root: given an algorithm \lstinline{nsqrt} that computes near
+square roots of positive integers, a positive integer~$n$ is a square if and
+only if $n$ is equal to the square of~\lstinline$nsqrt(n)$. This means that for
+the purposes of square detection, we can discard the final correction step from
+the algorithm shown in Listing~\ref{isqrt_recursive}. This is shown in
+Listing~\ref{is_square_recursive}.
+
+\lstinputlisting[
+  label=is_square_recursive,
+  float,
+  frame=single,
+  caption={Perfect square detection using nsqrt}]
+  {is_square_recursive.py}
+
+Similarly, if we somehow already know that an integer~$n$ is a perfect square
+and we want to compute its square root, we can omit the correction step in
+Listing~\ref{isqrt_recursive}: the \lstinline$nsqrt$ function will compute the
+square root directly.
+
 \section{Fixed-precision algorithms}
 
 The iterative algorithm shown in Listing~\ref{isqrt_iterative} specialises
@@ -897,16 +925,10 @@ is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 
 % \section{To do}
 
-% - Note that if a value is already known to be a square, no check-and-correct
-% step is needed.
-% - Similarly for square detection: take a near square root, square it, and check.
-% - And square root ceiling is easy, too.
 % - Running time analysis, and real-world timings to back it up. Asymptotically,
 % isqrt of a $2n$-bit integer should be faster than division of a $2n$-bit integer
 % by an $n$-bit dividend.
-% - Fixed-precision versions.
-% - Floating-point methods and floating-point accelerations.
-% - Details on correctness of floating-point algorithm.
+% - Variants: ceiling of square root, nearest integer to square root.
 % - Reference(s) for "Many number-theoretic and cryptographic algorithms ..." Cohen?
 % - Reference for Java BigInteger.sqrt
 % - Reference for Heron's method / Babylonian method / Newton's method.
