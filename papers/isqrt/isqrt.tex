@@ -560,6 +560,102 @@ and we want to compute its square root, we can omit the correction step in
 Listing~\ref{isqrt_recursive}: the \lstinline$nsqrt$ function will compute the
 square root directly.
 
+\section{Complexity analysis}
+
+It is straightforward to express the bit complexity of the algorithm presented
+in section~\ref{new_method} in terms of the bit complexities of multiplication
+and division, under some reasonable assumptions on those operations and on the
+representation of arbitrary-precision integers in use. In short, the complexity
+is dominated by a single operation on arbitrary-precision integers, namely
+whichever is the slower of (a) the division in the final iteration of the while
+loop, or (b) the multiplication in the correction step.
+
+In this section, we'll analyse the complexity of the iterative algorithm
+presented in Listing~\ref{isqrt_iterative}. We write~$b$ for the bit length
+of~$n$, and express the bit complexity in terms of~$b$. We start by identifying
+and eliminating operations that don't contribute significantly to the overall
+complexity.
+
+The \lstinline$bit_length$ operation used in the first line of the function
+body has a complexity of~$O(b)$, depending on the exact implementation and the
+in-memory representation of arbitrary-precision integers being used. In
+practice, assuming an integer representation based on some power of~$2$ with a
+directly encoded size field of some form, it's reasonable to expect it to
+be~$O(1)$. (This assumption applies to both CPython and GMP.)
+
+The integer quantities~$c$, $d$, $e$ in the listing are bounded by~$b$,
+while~$s$ is smaller still, bounded by~$1 + \log_2(b)$. In the various
+computations involving these quantities, for example the computation of~$2c - d
+- e + 1$ in the penultimate line of code, we use only linear-complexity
+operations: addition, subtraction, doubling and bit shifting. So each
+arithmetic operation on quantities of this size has bit
+complexity~$O(\log(b))$. Recall from section~\ref{new_method} that the body of
+the while loop is executed exactly $\max(\floor{\log_2(\log_2(n))}, 0)$ times.
+As a result, the total bit complexity of the operations involving only~$c$,
+$d$, $e$ and~$s$ is~$O(\log(b)^2)$, which will give negligible contribution to
+the bit complexity of the complete algorithm.
+
+It remains to analyse the contribution to bit complexity from the arithmetic
+operations on integers of magnitude comparable to~$n$. Each execution of the
+body of the~\lstinline$while$-loop involves four such operations:
+
+\begin{itemize}
+  \item the left shift of~$a$ by $d - e - 1$;
+  \item the right shift of~$n$ by $2c - d - e + 1$;
+  \item the division of the right shift result by~$a$;
+  \item the addition of the division result to the left shift result.
+\end{itemize}
+
+In addition, the correction step in the last line of code involves a squaring
+operation, a comparison, and possibly a decrement operation.
+
+For the analysis of the \lstinline$while$ loop, we examine the state just
+before executing the final line in the body of the loop. At that point, the
+bit lengths of the various quantities involved are as follows:
+
+\begin{itemize}
+  \item the bit length of~$n$ is at most~$2c + 2$;
+  \item the bit length of~$a$ is at most~$e + 2$;
+  \item the bit length of the left-shift result is also at most~$d + 1$;
+  \item the bit length of the right-shift result is at most~$d + e + 1$;
+  \item the bit length of the quotient is at most~$d + 1$;
+  \item the bit length of the sum (the new value for~$a$) is at most~$d + 2$.
+\end{itemize}
+
+For the two shift operations and the addition, the complexity is linear in the
+number of bits involved. Note in particular that, at least with CPython's
+implementation of arbitrary precision integers, the complexity of the right
+shift operation grows with the number of bits in the \emph{result} of the
+shift, not the number of bits of~$n$. So the complexity of all three operations
+together is~$O(d+e)$, which is~$O(b/2^s)$. Summing over all~$s$, we get a
+total contribution of~$O(b)$ for the execution of the while loop excluding
+the division.
+
+The division is a division of a $d + e + 1$-bit quantity by an~$e + 2$-bit
+quantity with a~$d + 1$-bit result, or roughly, a division of an approximately
+$3b/2^{s+2}$-bit quantity by an approximately~$b/2^{s+2}$ quantity. So
+the sizes involved roughly double on each iteration. We can
+reasonably assume that the complexity of the division operation grows
+faster than linearly, so that the total complexity from the divisions is
+dominated by the final division.
+
+For the correction step, only the squaring operation has non-linear complexity,
+and the other operations are negligible in comparison. So overall, the
+complexity is dominated by either the final division operation, or the
+squaring operation in the correction step.
+
+For CPython specifically, for Python versions prior to Python 3.12,
+multiplication uses the Karatsuba algorithm for large integer sizes, so has
+complexity~$O(b^{1.585})$ (where the constant~$1.585$ is an upper bound
+for~$\log(3)/\log(2) = 1.5849625...$), while division utilises a
+straightforward approach with quadratic complexity. So
+the~\lstinline$math.isqrt$ function has bit complexity~$O(b^2)$.
+
+For CPython 3.12 and later, division uses a well-known divide-and-conquer
+algorithm due to Burnikel and Ziegler, with complexity~$O(b^{1.585})$, and as a
+result the~\lstinline$math.isqrt$ function also has bit
+complexity~$O(b^{1.585})$.
+
 \section{Fixed-precision algorithms}
 
 The iterative algorithm shown in Listing~\ref{isqrt_iterative} specialises
@@ -935,6 +1031,8 @@ is~$\floor{\log_2((\log_2n)/53)}$ for~$n \ge 2^{53}$, and~$0$ otherwise.
 % - Reference for assertion that the number of correct decimal places
 % doubles with each iteration.
 % - Add comparison with GMP's recursive square root algorithm.
+% - Clarify that of the "two key ideas", only the second is new; reference GMP.
+
 
 % Complexity analysis: write S(n) as an upper bound for the cost of squaring an
 % n-bit number, and D(n) as an upper bound for the cost of dividing a 2n-bit
