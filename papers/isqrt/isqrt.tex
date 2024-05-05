@@ -790,7 +790,7 @@ space.
 
 Finally, a 64-bit integer square root algorithm is shown
 in~Listing~\ref{isqrt_64bit_c}. The same subtleties apply as with the 32-bit
-integer square root: for values of~$x$ larger than $(2^32 - 1)^2$, both~$255$
+integer square root: for values of~$x$ larger than $(2^{32} - 1)^2$, both~$255$
 and~$256$ are near square roots of~$\floor{x/2^{56}}$. However, a result
 of~$256$ from the table lookup would lead to~$y$ overflowing a 32-bit
 unsigned integer, while with a value of~$255$, $y$ remains representable
