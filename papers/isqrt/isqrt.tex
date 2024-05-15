@@ -179,7 +179,9 @@ this sequence must eventially reach~$\floor{\sqrt n}$.
 \end{theorem}
 
 \begin{proof}
-  By the well-ordering principle, there's an~$i$ for which $a_i$ is minimal
+  For an fixed positive number $n$, there exists a subset $S=\lbrace a_i \rbrace$ of natural number
+  where each element $a_i$ is obtained by the iteration $a_{i+1}=g(a_i)$ and $a_0=a$. 
+  Hence $S$ is non-empty set. By the well-ordering principle, there's an~$i$ for which $a_i$ is minimal
   amongst all elements of the sequence. That minimality implies $a_i \le
   a_{i+1}$, and so by Lemma~\ref{isqrt_condition}, $a_i$ is the integer square
   root of~$n$.
