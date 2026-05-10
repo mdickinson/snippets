@@ -61,14 +61,13 @@ def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c) (n_nonneg : 0 ≤ n) : { a : ℤ 
   else
     let k := pyFloorDiv (c - 1) 2 (by omega)
     have k_nonneg : 0 ≤ k := pyFloorDiv_nonneg (by omega) (by omega)
-    let m := 2 * k + 2
-    have m_nonneg : 0 ≤ m := by omega
     let d := pyFloorDiv c 2 (by omega)
     have d_nonneg : 0 ≤ d := pyFloorDiv_nonneg c_nonneg (by omega)
-    let ⟨a, a_pos⟩ := isqrt_aux d (pyRShift n m m_nonneg)
+    let ⟨a, a_pos⟩ := isqrt_aux d (pyRShift n (2 * k + 2) (by omega))
                                  d_nonneg (pyRShift_nonneg n_nonneg)
-    ⟨pyLShift a k k_nonneg + pyFloorDiv (pyRShift n (k + 2) (by omega)) a (ne_of_gt a_pos),
-     isqrt_aux_return_pos a_pos n_nonneg k_nonneg (by omega)⟩
+    let b := pyLShift a k k_nonneg + pyFloorDiv (pyRShift n (k + 2) (by omega)) a (ne_of_gt a_pos)
+    have b_pos : 0 < b := isqrt_aux_return_pos a_pos n_nonneg k_nonneg (by omega)
+    ⟨b, b_pos⟩
 termination_by c.toNat
 decreasing_by
   simp_wf
