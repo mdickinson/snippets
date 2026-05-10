@@ -22,6 +22,7 @@ import IsqrtLean4.PythonOps
 /-! ## pyRShift -/
 
 #guard pyRShift 100 3 (by omega) == 12       -- 100 >> 3 == 100 // 8
+#guard pyRShift (-100) 3 (by omega) == -13   -- (-100) >> 3 == -100 // 8 == -13 in Python
 
 /-! ## pyLShift -/
 
