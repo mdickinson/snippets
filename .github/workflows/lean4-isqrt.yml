@@ -1,0 +1,22 @@
+name: Lean 4 isqrt proof
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "proofs/isqrt_lean4/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "proofs/isqrt_lean4/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          build-args: "--wfail"
+          lake-package-directory: proofs/isqrt_lean4
