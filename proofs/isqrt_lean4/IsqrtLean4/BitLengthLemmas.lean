@@ -94,6 +94,11 @@ theorem pyBitLength_nonneg (n : ℤ) : 0 ≤ pyBitLength n := by
 theorem pyBitLength_eq_zero_iff {n : ℤ} : pyBitLength n = 0 ↔ n = 0 := by
   simp [pyBitLength, natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
 
+theorem pyBitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < pyBitLength n := by
+  rcases eq_or_lt_of_le (pyBitLength_nonneg n) with h | h
+  · exact absurd (pyBitLength_eq_zero_iff.mp h.symm) hn
+  · exact h
+
 theorem pyBitLength_of_nonneg {n : ℤ} (hn : 0 ≤ n) :
     pyBitLength n = ↑(natBitLength n.toNat) := by
   unfold pyBitLength

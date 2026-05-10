@@ -75,23 +75,20 @@ decreasing_by
 
 /-! ## isqrt -/
 
+/-- The recursion depth `(n.bit_length() - 1) // 2` is nonneg for nonzero `n`. -/
+private theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
+    0 ≤ pyFloorDiv (pyBitLength n - 1) 2 (by omega) :=
+  pyFloorDiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
+
 /-- Integer square root, matching CPython's `math.isqrt`.
 
 Precondition: `0 ≤ n`.
 
 Returns the largest integer `a` such that `a² ≤ n`. -/
-def isqrt (n : ℤ) (_hn : 0 ≤ n) : ℤ :=
-  if hn0 : n = 0 then
+def isqrt (n : ℤ) (n_nonneg : 0 ≤ n) : ℤ :=
+  if _ : n = 0 then
     0
   else
-    have hn_pos : 0 < n := lt_of_le_of_ne _hn (Ne.symm hn0)
-    have hbl_pos : 0 < pyBitLength n := by
-      simp [pyBitLength_def]
-      rw [Nat.pos_iff_ne_zero]
-      exact (natBitLength_pos_iff.mpr (by omega : 0 < n.natAbs)).ne'
-    have hbl_nn : 0 ≤ pyBitLength n - 1 := by omega
-    let a := (isqrt_aux (pyFloorDiv (pyBitLength n - 1) 2 (by omega))
-                        n
-                        (pyFloorDiv_nonneg hbl_nn (by omega))
-                        (le_of_lt hn_pos)).val
+    let c := pyFloorDiv (pyBitLength n - 1) 2 (by omega)
+    let a := (isqrt_aux c n (isqrt_c_nonneg (by omega)) (by omega)).val
     if n < a * a then a - 1 else a
