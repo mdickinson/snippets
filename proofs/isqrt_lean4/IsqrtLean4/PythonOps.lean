@@ -41,6 +41,19 @@ def natBitLength : ℕ → ℕ
 `abs(n)`, with `(0).bit_length() == 0`. -/
 def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
 
+/-! ## Python-style operators
+
+These give `pyFloorDiv`, `pyRShift`, and `pyLShift` the same syntax as
+Python's `//`, `>>`, and `<<`, with relative precedence matching Python:
+`//` (70, same as `*`) binds tighter than `+` (65), which binds tighter
+than `>>` and `<<` (60). Scoped to avoid conflict with Lean's `>>`. -/
+
+namespace PyOps
+scoped infixl:70 " // " => pyFloorDiv
+scoped infixl:60 " >> " => pyRShift
+scoped infixl:60 " << " => pyLShift
+end PyOps
+
 /-! ## Unfolding lemmas
 
 These reduce our Python-facing definitions to their underlying Lean
