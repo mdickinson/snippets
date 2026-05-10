@@ -74,3 +74,15 @@ theorem natBitLength_succ (n : ℕ) :
 theorem pyRShift_eq_pyFloorDiv (n k : ℤ) (hk : 0 ≤ k)
     (h : (2 : ℤ) ^ k.toNat ≠ 0) :
     pyRShift n k hk = pyFloorDiv n (2 ^ k.toNat) h := rfl
+
+/-! ## Nonnegativity lemmas -/
+
+/-- Floor division of a nonneg numerator by a positive denominator is nonneg. -/
+theorem pyFloorDiv_nonneg {a b : ℤ} {hb : b ≠ 0} (ha : 0 ≤ a) (hb_pos : 0 < b) :
+    0 ≤ pyFloorDiv a b hb := by
+  simp; exact Int.fdiv_nonneg ha (le_of_lt hb_pos)
+
+/-- Right-shifting a nonneg integer gives a nonneg result. -/
+theorem pyRShift_nonneg {n k : ℤ} {hk : 0 ≤ k} (hn : 0 ≤ n) :
+    0 ≤ pyRShift n k hk := by
+  simp; exact Int.fdiv_nonneg hn (by positivity)

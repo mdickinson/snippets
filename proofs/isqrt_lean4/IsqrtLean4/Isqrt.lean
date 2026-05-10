@@ -27,6 +27,26 @@ import IsqrtLean4.BitLengthLemmas
 
 /-! ## isqrt_aux -/
 
+/-- The return expression `(a << k) + (n >> (k+2)) // a` is positive
+when `a > 0`, `n ≥ 0`, and `k ≥ 0`. -/
+private theorem isqrt_aux_return_pos {a n k : ℤ}
+    (a_pos : 0 < a) (n_nonneg : 0 ≤ n)
+    (k_nonneg : 0 ≤ k) (hk2 : 0 ≤ k + 2) :
+    0 < pyLShift a k k_nonneg +
+        pyFloorDiv (pyRShift n (k + 2) hk2) a (ne_of_gt a_pos) := by
+  simp [pyLShift_def, pyFloorDiv_def, pyRShift_def]
+  have : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
+  have : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
+    Int.fdiv_nonneg (Int.fdiv_nonneg n_nonneg (by positivity)) (le_of_lt a_pos)
+  omega
+
+/-- Floor-dividing a positive integer by 2 gives a strictly smaller
+positive result — in the form needed by the termination checker. -/
+private theorem fdiv_two_decreasing {c : ℤ} (hc_nonneg : 0 ≤ c) (hc_ne : ¬ c = 0) :
+    c.fdiv 2 < c ∧ 0 < c := by
+  rw [Int.fdiv_eq_ediv_of_nonneg c (by omega : (0 : ℤ) ≤ 2)]
+  omega
+
 /-- Recursive auxiliary function for integer square root.
 
 Preconditions:
@@ -35,37 +55,24 @@ Preconditions:
 
 Returns `{ a : ℤ // 0 < a }`: the result is always positive, which is
 needed for the `// a` division in the recursive case. -/
-def isqrt_aux (c n : ℤ) (_hc : 0 ≤ c) (_hn : 0 ≤ n) : { a : ℤ // 0 < a } :=
-  if hc0 : c = 0 then
+def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c) (n_nonneg : 0 ≤ n) : { a : ℤ // 0 < a } :=
+  if _ : c = 0 then
     ⟨1, by omega⟩
   else
-    have hc_pos : 0 < c := lt_of_le_of_ne _hc (Ne.symm hc0)
     let k := pyFloorDiv (c - 1) 2 (by omega)
-    have hk_nonneg : 0 ≤ k := by
-      simp [k, pyFloorDiv_def]
-      exact Int.fdiv_nonneg (by omega) (by omega)
-    have h2k2 : 0 ≤ 2 * k + 2 := by omega
-    have hk2 : 0 ≤ k + 2 := by omega
-    have hn' : 0 ≤ pyRShift n (2 * k + 2) h2k2 := by
-      simp [pyRShift_def]
-      exact Int.fdiv_nonneg _hn (by positivity)
-    have hc2 : 0 ≤ pyFloorDiv c 2 (by omega) := by
-      simp [pyFloorDiv_def]
-      exact Int.fdiv_nonneg (by omega) (by omega)
-    let ⟨a, ha⟩ := isqrt_aux (pyFloorDiv c 2 (by omega))
-                              (pyRShift n (2 * k + 2) h2k2) hc2 hn'
-    ⟨pyLShift a k hk_nonneg + pyFloorDiv (pyRShift n (k + 2) hk2) a (ne_of_gt ha),
-     by
-      simp [pyLShift_def, pyFloorDiv_def, pyRShift_def]
-      have : 0 < a * 2 ^ k.toNat := Int.mul_pos ha (by positivity)
-      have : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
-        Int.fdiv_nonneg (Int.fdiv_nonneg _hn (by positivity)) (le_of_lt ha)
-      omega⟩
+    have k_nonneg : 0 ≤ k := pyFloorDiv_nonneg (by omega) (by omega)
+    let m := 2 * k + 2
+    have m_nonneg : 0 ≤ m := by omega
+    let d := pyFloorDiv c 2 (by omega)
+    have d_nonneg : 0 ≤ d := pyFloorDiv_nonneg c_nonneg (by omega)
+    let ⟨a, a_pos⟩ := isqrt_aux d (pyRShift n m m_nonneg)
+                                 d_nonneg (pyRShift_nonneg n_nonneg)
+    ⟨pyLShift a k k_nonneg + pyFloorDiv (pyRShift n (k + 2) (by omega)) a (ne_of_gt a_pos),
+     isqrt_aux_return_pos a_pos n_nonneg k_nonneg (by omega)⟩
 termination_by c.toNat
 decreasing_by
   simp_wf
-  rw [Int.fdiv_eq_ediv_of_nonneg c (by omega : (0 : ℤ) ≤ 2)]
-  omega
+  exact fdiv_two_decreasing c_nonneg ‹¬c = 0›
 
 /-! ## isqrt -/
 
@@ -86,7 +93,6 @@ def isqrt (n : ℤ) (_hn : 0 ≤ n) : ℤ :=
     have hbl_nn : 0 ≤ pyBitLength n - 1 := by omega
     let a := (isqrt_aux (pyFloorDiv (pyBitLength n - 1) 2 (by omega))
                         n
-                        (by simp [pyFloorDiv_def]
-                            exact Int.fdiv_nonneg hbl_nn (by omega))
+                        (pyFloorDiv_nonneg hbl_nn (by omega))
                         (le_of_lt hn_pos)).val
     if n < a * a then a - 1 else a
