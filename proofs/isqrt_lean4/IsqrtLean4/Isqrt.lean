@@ -55,7 +55,7 @@ Preconditions:
 
 Returns `{ a : ℤ // 0 < a }`: the result is always positive, which is
 needed for the `// a` division in the recursive case. -/
-def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c) (n_nonneg : 0 ≤ n) : { a : ℤ // 0 < a } :=
+def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n := by omega) : { a : ℤ // 0 < a } :=
   if _ : c = 0 then
     ⟨1, by omega⟩
   else
@@ -85,10 +85,10 @@ private theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
 Precondition: `0 ≤ n`.
 
 Returns the largest integer `a` such that `a² ≤ n`. -/
-def isqrt (n : ℤ) (n_nonneg : 0 ≤ n) : ℤ :=
+def isqrt (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ :=
   if _ : n = 0 then
     0
   else
     let c := pyFloorDiv (pyBitLength n - 1) 2
-    let a := (isqrt_aux c n (isqrt_c_nonneg (by omega)) (by omega)).val
+    let a := (isqrt_aux c n (isqrt_c_nonneg (by omega))).val
     if n < a * a then a - 1 else a
