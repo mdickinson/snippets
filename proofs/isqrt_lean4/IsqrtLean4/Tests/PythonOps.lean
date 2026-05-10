@@ -11,22 +11,22 @@ import IsqrtLean4.PythonOps
 /-! ## pyFloorDiv -/
 
 -- positive denominator
-#guard pyFloorDiv 7 2 (by omega) == 3
-#guard pyFloorDiv (-7) 2 (by omega) == -4    -- floor division rounds toward -∞
-#guard pyFloorDiv 0 3 (by omega) == 0
+#guard pyFloorDiv 7 2 == 3
+#guard pyFloorDiv (-7) 2 == -4    -- floor division rounds toward -∞
+#guard pyFloorDiv 0 3 == 0
 
 -- negative denominator
-#guard pyFloorDiv 7 (-2) (by omega) == -4    -- 7 // (-2) == -4 in Python
-#guard pyFloorDiv (-7) (-2) (by omega) == 3  -- (-7) // (-2) == 3 in Python
+#guard pyFloorDiv 7 (-2) == -4    -- 7 // (-2) == -4 in Python
+#guard pyFloorDiv (-7) (-2) == 3  -- (-7) // (-2) == 3 in Python
 
 /-! ## pyRShift -/
 
-#guard pyRShift 100 3 (by omega) == 12       -- 100 >> 3 == 100 // 8
-#guard pyRShift (-100) 3 (by omega) == -13   -- (-100) >> 3 == -100 // 8 == -13 in Python
+#guard pyRShift 100 3 == 12       -- 100 >> 3 == 100 // 8
+#guard pyRShift (-100) 3 == -13   -- (-100) >> 3 == -100 // 8 == -13 in Python
 
 /-! ## pyLShift -/
 
-#guard pyLShift 3 4 (by omega) == 48         -- 3 << 4 == 3 * 16
+#guard pyLShift 3 4 == 48         -- 3 << 4 == 3 * 16
 
 /-! ## pyBitLength -/
 

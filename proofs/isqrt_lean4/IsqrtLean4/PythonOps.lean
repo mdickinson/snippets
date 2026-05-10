@@ -20,15 +20,15 @@ import Mathlib.Tactic.Positivity
 /-- Python's `a // b` (floor division). Uses `Int.fdiv`, which rounds toward
 negative infinity — matching Python's `//` for all sign combinations.
 Note: this is NOT `Int.ediv` (Lean's default `/` on `ℤ`). -/
-def pyFloorDiv (a b : ℤ) (_hb : b ≠ 0) : ℤ := Int.fdiv a b
+def pyFloorDiv (a b : ℤ) (_hb : b ≠ 0 := by omega) : ℤ := Int.fdiv a b
 
 /-- Python's `n >> k` (right shift by `k` bits). Equivalent to floor division
 by `2^k`. Requires a proof that the shift amount is nonneg. -/
-def pyRShift (n k : ℤ) (_hk : 0 ≤ k) : ℤ := Int.fdiv n (2 ^ k.toNat)
+def pyRShift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := Int.fdiv n (2 ^ k.toNat)
 
 /-- Python's `n << k` (left shift by `k` bits). Equivalent to multiplication
 by `2^k`. Requires a proof that the shift amount is nonneg. -/
-def pyLShift (n k : ℤ) (_hk : 0 ≤ k) : ℤ := n * (2 ^ k.toNat)
+def pyLShift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := n * (2 ^ k.toNat)
 
 /-- Bit length of a natural number: the number of bits needed to represent `n`,
 with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2`
