@@ -27,13 +27,12 @@ import IsqrtLean4.BitLengthLemmas
 
 /-! ## isqrt_aux -/
 
-open PyOps in
-/-- The return expression `(a << k) + (n >> (k+2)) // a` is positive
+/-- The return expression `(a py<< k) + (n py>> (k+2)) py// a` is positive
 when `a > 0`, `n ≥ 0`, and `k ≥ 0`. -/
 private theorem isqrt_aux_return_pos {a n k : ℤ}
     (a_pos : 0 < a) (n_nonneg : 0 ≤ n)
     (k_nonneg : 0 ≤ k) :
-    0 < (a << k) + (n >> (k + 2)) // a := by
+    0 < (a py<< k) + (n py>> (k + 2)) py// a := by
   simp [pyLShift_def, pyFloorDiv_def, pyRShift_def]
   have : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
   have : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
@@ -55,17 +54,17 @@ Preconditions:
 
 Returns `{ a : ℤ // 0 < a }`: the result is always positive, which is
 needed for the `// a` division in the recursive case. -/
-def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n := by omega) : { a : ℤ // 0 < a } := open PyOps in
+def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n := by omega) : { a : ℤ // 0 < a } :=
   if _ : c = 0 then
     ⟨1, by omega⟩
   else
-    let k := (c - 1) // 2
+    let k := (c - 1) py// 2
     have k_nonneg : 0 ≤ k := pyFloorDiv_nonneg (by omega) (by omega)
-    let d := c // 2
+    let d := c py// 2
     have d_nonneg : 0 ≤ d := pyFloorDiv_nonneg c_nonneg (by omega)
-    let ⟨a, a_pos⟩ := isqrt_aux d (n >> (2 * k + 2))
+    let ⟨a, a_pos⟩ := isqrt_aux d (n py>> (2 * k + 2))
                                  d_nonneg (pyRShift_nonneg n_nonneg)
-    let b := (a << k) + (n >> (k + 2)) // a
+    let b := (a py<< k) + (n py>> (k + 2)) py// a
     have b_pos : 0 < b := isqrt_aux_return_pos a_pos n_nonneg k_nonneg
     ⟨b, b_pos⟩
 termination_by c.toNat
@@ -75,10 +74,9 @@ decreasing_by
 
 /-! ## isqrt -/
 
-open PyOps in
-/-- The recursion depth `(n.bit_length() - 1) // 2` is nonneg for nonzero `n`. -/
+/-- The recursion depth `(n.bit_length() - 1) py// 2` is nonneg for nonzero `n`. -/
 private theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
-    0 ≤ (pyBitLength n - 1) // 2 :=
+    0 ≤ (pyBitLength n - 1) py// 2 :=
   pyFloorDiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
 
 /-- Integer square root, matching CPython's `math.isqrt`.
@@ -86,10 +84,10 @@ private theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
 Precondition: `0 ≤ n`.
 
 Returns the largest integer `a` such that `a² ≤ n`. -/
-def isqrt (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ := open PyOps in
+def isqrt (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ :=
   if _ : n = 0 then
     0
   else
-    let c := (pyBitLength n - 1) // 2
+    let c := (pyBitLength n - 1) py// 2
     let a := (isqrt_aux c n (isqrt_c_nonneg (by omega))).val
     if n < a * a then a - 1 else a

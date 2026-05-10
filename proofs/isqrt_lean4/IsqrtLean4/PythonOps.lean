@@ -45,14 +45,12 @@ def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
 
 These give `pyFloorDiv`, `pyRShift`, and `pyLShift` the same syntax as
 Python's `//`, `>>`, and `<<`, with relative precedence matching Python:
-`//` (70, same as `*`) binds tighter than `+` (65), which binds tighter
-than `>>` and `<<` (60). Scoped to avoid conflict with Lean's `>>`. -/
+`py//` (70, same as `*`) binds tighter than `+` (65), which binds tighter
+than `py>>` and `py<<` (60). -/
 
-namespace PyOps
-scoped infixl:70 " // " => pyFloorDiv
-scoped infixl:60 " >> " => pyRShift
-scoped infixl:60 " << " => pyLShift
-end PyOps
+infixl:70 " py// " => pyFloorDiv
+infixl:60 " py>> " => pyRShift
+infixl:60 " py<< " => pyLShift
 
 /-! ## Unfolding lemmas
 

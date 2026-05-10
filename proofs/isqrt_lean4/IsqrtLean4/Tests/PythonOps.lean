@@ -8,28 +8,25 @@ values. A failing #guard causes a build error.
 
 import IsqrtLean4.PythonOps
 
-open PyOps
-
-/-! ## pyFloorDiv (//) -/
+/-! ## pyFloorDiv (py//) -/
 
 -- positive denominator
-#guard 7 // 2 == 3
-#guard (-7) // 2 == -4                       -- floor division rounds toward -∞
-#guard 0 // 3 == 0
+#guard 7 py// 2 == 3
+#guard (-7) py// 2 == -4                     -- floor division rounds toward -∞
+#guard 0 py// 3 == 0
 
 -- negative denominator
-#guard 7 // (-2) == -4                       -- 7 // (-2) == -4 in Python
-#guard (-7) // (-2) == 3                     -- (-7) // (-2) == 3 in Python
+#guard 7 py// (-2) == -4                     -- 7 // (-2) == -4 in Python
+#guard (-7) py// (-2) == 3                   -- (-7) // (-2) == 3 in Python
 
-/-! ## pyRShift (>>) -/
+/-! ## pyRShift (py>>) -/
 
--- Use pyRShift directly here to avoid ambiguity with Lean's built-in >>
-#guard pyRShift 100 3 == 12                  -- 100 >> 3 == 100 // 8
-#guard pyRShift (-100) 3 == -13              -- (-100) >> 3 == -100 // 8 == -13 in Python
+#guard 100 py>> 3 == 12                      -- 100 >> 3 == 100 // 8
+#guard (-100) py>> 3 == -13                  -- (-100) >> 3 == -100 // 8 == -13 in Python
 
-/-! ## pyLShift (<<) -/
+/-! ## pyLShift (py<<) -/
 
-#guard 3 << 4 == 48                          -- 3 << 4 == 3 * 16
+#guard 3 py<< 4 == 48                        -- 3 << 4 == 3 * 16
 
 /-! ## pyBitLength -/
 
