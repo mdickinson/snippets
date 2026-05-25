@@ -51,7 +51,7 @@ private theorem isqrt_aux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
 For `0 < n` satisfying the size condition `4^c ≤ n < 4^(c+1)`, the value
 returned by `isqrt_aux c n` is a near square root of `n`:
 `(a - 1)² < n ∧ n < (a + 1)²`. -/
-theorem isqrt_aux_correctness :
+private theorem isqrt_aux_correctness :
     ∀ (cn : ℕ) {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n),
       c.toNat = cn → hasSizeCondition c n →
       isNearSqrt (isqrt_aux c n hc hn.le).val n := by
