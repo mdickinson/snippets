@@ -22,7 +22,8 @@ proofs/isqrt_lean4/
     BitLengthLemmas.lean -- natBitLength / pyBitLength properties
     KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt predicate
     SizeConditions.lean  -- size-condition lemmas (ℕ core + ℤ wrappers)
-    Algorithm.lean       -- isqrt_aux, isqrt + correctness proof
+    Algorithm.lean       -- isqrt_aux and isqrt definitions
+    Correctness.lean     -- correctness proofs (isqrt_aux_correctness, isqrt_is_sqrt)
     Tests/
       PythonOps.lean
       Isqrt.lean
@@ -80,6 +81,8 @@ proofs/isqrt_lean4/
 
 ### `Algorithm.lean` — Algorithm definitions
 
+(Correctness proofs split into `Correctness.lean`.)
+
 - Termination on `c.toNat`. The decrease lemma `fdiv_two_decreasing` is a
   `private` helper.
 - Positivity of the return value is proved once in `isqrt_aux_return_pos`, so
@@ -115,7 +118,7 @@ proofs/isqrt_lean4/
   identity connecting the algorithm's `k = (c-1) py// 2` with the recursive
   `c/2`. Provable by `omega`.
 
-### `Algorithm.lean` (continued) — Correctness
+### `Correctness.lean` — Correctness
 
 - Strong induction via `Nat.strong_induction_on` on a `cn : ℕ` parameter, with
   `c.toNat = cn` threaded through. Well-founded recursion on `c : ℤ` directly

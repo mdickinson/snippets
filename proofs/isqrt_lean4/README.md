@@ -40,7 +40,8 @@ Isqrt/
   BitLengthLemmas.lean     -- natBitLength / pyBitLength properties
   KeyLemma.lean            -- key algebraic lemma; isNearSqrt predicate
   SizeConditions.lean      -- size-condition invariants carried through the recursion
-  Algorithm.lean           -- isqrt algorithm definition and correctness proof
+  Algorithm.lean           -- isqrt_aux and isqrt definitions
+  Correctness.lean         -- correctness proofs (isqrt_aux_correctness, isqrt_is_sqrt)
   Tests/
     PythonOps.lean         -- #guard checks for the Python operations
     Isqrt.lean             -- #guard checks for isqrt on concrete values
