@@ -287,13 +287,44 @@ Tie everything together with strong induction on `c` and derive the main theorem
 
 **File:** `IsqrtLean4/Isqrt.lean`
 
+**Implementer notes (Phase 6 pickup):**
+
+- **Use `hasSizeCondition` (Phase 5)** as the precondition shape:
+  `hasSizeCondition c n := (4:ℤ)^c.toNat ≤ n ∧ n < (4:ℤ)^(c.toNat + 1)`.
+  Phase 5 provides `size_condition_initial`, `size_condition_step`, and
+  `M_bound_from_size` directly at ℤ. Don't re-derive in ℕ.
+- **Strong induction on `c.toNat`.** Since `c : ℤ` with `0 ≤ c`, induct
+  on `c.toNat` via `Nat.strong_induction_on` (or write an auxiliary
+  ∀-quantified helper indexed by a `ck : ℕ` with `hck : c.toNat = ck`).
+  Well-founded recursion on `c` directly works for the definition but is
+  awkward for the proof.
+- **`pyRShift`'s default `by omega` can't see through `pyFloorDiv`.**
+  When the goal contains `n py>> (2 * ((c - 1) py// 2) + 2)`, the default
+  tactic for the `0 ≤ ...` precondition will fail. Spell out the proof
+  inline (see `size_condition_step` for the pattern), or pre-bind
+  `k := (c - 1) py// 2` with `hk_nn : 0 ≤ k` via `pyFloorDiv_nonneg`
+  before the `py>>` use.
+- **`pyFloorDiv_nonneg` needs a type-annotated context.** `have h : 0 ≤
+  (a py// b) := pyFloorDiv_nonneg ...` works; bare `have := ...` does
+  not (the implicit `hb : b ≠ 0` can't be resolved without the goal type).
+- **Bridging the algorithm and `key_isqrt_lemma`.** The algorithm
+  computes `n py>> (2*k + 2) = n.fdiv (2^(2k+2))`. The key lemma needs
+  `n.fdiv (4*M²)` with `M = 2^k`. These match since
+  `4 * (2^k)² = 2^(2k+2)` — a `pow` identity, no `Phase 5` lemma needed.
+- **`Int.fdiv_fdiv_eq_fdiv_mul`** (step (d) below). Check Mathlib first;
+  if absent, prove via `Int.fdiv_eq_ediv_of_nonneg` and the analogous
+  `Int.ediv_ediv_eq_ediv_mul` (or directly from the floor-div definition).
+- **`isqrt_aux` returns `{ a : ℤ // 0 < a }`.** Unwrap with `.val` and
+  `.property` (or destructure with `⟨a, ha⟩`). Definition is in
+  `Isqrt.lean`; do not redefine.
+
 **Key theorems:**
 
-1. **`isqrt_aux_correctness`**: By strong induction on `c` (via `c.toNat` or the
-   ℤ value directly):
+1. **`isqrt_aux_correctness`**: By strong induction on `c.toNat`:
 
-   For `0 < n` and `4^c ≤ n < 4^(c+1)` (the size condition),
-   `let d = isqrt_aux c n` satisfies `(d - 1)^2 < n ∧ n < (d + 1)^2`.
+   For `0 < n` and `hasSizeCondition c n` (i.e. `4^c.toNat ≤ n < 4^(c.toNat+1)`),
+   the value `d = (isqrt_aux c n hc hn.le).val` satisfies
+   `isNearSqrt d n`, i.e. `(d - 1)^2 < n ∧ n < (d + 1)^2`.
 
    - **Base case** (`c ≤ 0`): `isqrt_aux c n = 1`. Size condition gives
      `1 ≤ n < 4`, so `0 = (1-1)² < n` and `n < 4 = (1+1)²`. ✓
