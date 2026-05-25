@@ -53,3 +53,10 @@ theorem Int.fdiv_le_iff_lt_mul_add {x y k : ℤ} (hk : 0 < k) :
     x.fdiv k ≤ y ↔ x < y * k + k := by
   rw [Int.fdiv_eq_ediv_of_nonneg x (Int.le_of_lt hk)]
   exact Int.ediv_le_iff_le_mul hk
+
+/-- `x < (x.fdiv k + 1) * k` when `0 < k`. The next multiple of `k` above
+`x.fdiv k * k` is strictly greater than `x`. -/
+theorem Int.lt_fdiv_add_one_mul {x k : ℤ} (hk : 0 < k) :
+    x < (x.fdiv k + 1) * k := by
+  rw [add_mul, one_mul]
+  exact (Int.fdiv_le_iff_lt_mul_add hk).mp le_rfl
