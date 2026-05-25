@@ -6,14 +6,15 @@ Port `proofs/isqrt/src/isqrt.lean` (a ~780-line correctness proof of CPython's r
 
 ## Status
 
-**Phases 1–5 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16).
+**Phases 1–6 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16).
 
 - Phase 1 (project setup) — done.
 - Phase 2 (`PythonOps`, `FDivLemmas`, `BitLengthLemmas`) — done.
 - Phase 3 (`isqrt_aux`, `isqrt` definitions + `#guard` tests) — done.
 - Phase 4 (`key_isqrt_lemma`) — done (see implementation notes inline below).
 - Phase 5 (`SizeConditions`) — done (see implementation notes inline below).
-- **Phase 6** picks up next.
+- Phase 6 (`isqrt_aux_correctness`, `isqrt_is_sqrt`) — done (see implementation notes inline below).
+- **Phase 7** (final verification) picks up next.
 
 **First step for the next session:** `cd proofs/isqrt_lean4 && lake build` to confirm a green starting state.
 
@@ -286,6 +287,29 @@ i.e., `2^(2c) ≤ n < 2^(2c+2)`. Since `4^c = 2^(2c)`, this connects to
 Tie everything together with strong induction on `c` and derive the main theorem.
 
 **File:** `IsqrtLean4/Isqrt.lean`
+
+**Implementation notes (post-Phase 6):**
+
+- **Strong induction on `c.toNat`** via `Nat.strong_induction_on`, with the
+  numeric witness `cn : ℕ` passed as the first argument and `c.toNat = cn`
+  threaded as a hypothesis. The recursion-decrease step uses
+  `Int.toNat_fdiv_of_nonneg` to bridge `(c py// 2).toNat = c.toNat / 2`.
+- **Unfolding `isqrt_aux` in the inductive case.** Hidden in a private
+  helper `isqrt_aux_step_val` that exposes the algorithm's return value as
+  `a * 2^k.toNat + (n.fdiv (2^(k+2).toNat)).fdiv a`. The tactic recipe is
+  `unfold isqrt_aux; simp [hc_pos.ne']; rfl`. The `rfl` is essential — `simp`
+  unfolds the `dif_neg` but leaves the `let`-bindings, which `rfl` then
+  closes against the let-bound RHS.
+- **Bridge to `key_isqrt_lemma`.** Two `toNat`-on-`ℤ` lemmas `toNat_add_two`
+  and `toNat_two_mul_add_two` reduce the shift-amount `.toNat` expressions
+  to ℕ arithmetic. `4 * M² = 2^(2k+2)` and `4 * M = 2^(k+2)` are then `ring`
+  identities (after `pow_add`).
+- **`Int.fdiv_fdiv_eq_fdiv_mul`** exists in Mathlib (`Mathlib.Data.Int.DivMod`)
+  with signature `(m : Int) {n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) :
+  (m.fdiv n).fdiv k = m.fdiv (n * k)`. No new lemma needed.
+- **`isqrt_is_sqrt`** unfolds `isqrt` directly with `simp only [hn0, ↓reduceDIte]`
+  and `simp only [h_lt, ↓reduceIte]`. The split on `n < a * a` uses
+  `not_lt.mp` (cleaner than the deprecated `push_neg`).
 
 **Implementer notes (Phase 6 pickup):**
 
