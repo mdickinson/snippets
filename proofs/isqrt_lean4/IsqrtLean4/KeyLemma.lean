@@ -14,6 +14,12 @@ import IsqrtLean4.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
+/-! ## Near square roots -/
+
+/-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
+For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
+def isNearSqrt (a n : ℤ) : Prop := (a - 1)^2 < n ∧ n < (a + 1)^2
+
 /-! ## Algebraic helpers
 
 The Lean 3 versions of these required `sub_elimination` and friends to
@@ -70,15 +76,13 @@ private theorem n_lower {n M a : ℤ} (hM : 0 < M)
 
 /-! ## The key lemma -/
 
-/-- Given `a` satisfying `(a-1)² < n // (4M²) < (a+1)²` and `4M⁴ ≤ n`,
-the combined value `d = M·a + n // (4·M·a)` satisfies
-`(d-1)² < n < (d+1)²`. -/
+/-- If `a` is a near square root of `⌊n / 4M²⌋` and `4M⁴ ≤ n`, then
+`Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 theorem key_isqrt_lemma {n M a : ℤ}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
-    (ha_lo : (a - 1)^2 < n.fdiv (4 * M^2))
-    (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
-    (M * a + n.fdiv (4 * M * a) - 1)^2 < n ∧
-    n < (M * a + n.fdiv (4 * M * a) + 1)^2 := by
+    (h_near : isNearSqrt a (n.fdiv (4 * M^2))) :
+    isNearSqrt (M * a + n.fdiv (4 * M * a)) n := by
+  obtain ⟨ha_lo, ha_hi⟩ := h_near
   set q := n.fdiv (4 * M * a)
   have hMa_pos : 0 < 4 * M * a := by positivity
   have hMa_one : 1 ≤ M * a := by linarith [mul_pos hM ha]
