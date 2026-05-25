@@ -36,8 +36,8 @@ private theorem isqrt_aux_return_pos {a n k : ℤ}
     (k_nonneg : 0 ≤ k) :
     0 < (a py<< k) + (n py>> (k + 2)) py// a := by
   simp [pyLShift_def, pyFloorDiv_def, pyRShift_def]
-  have : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
-  have : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
+  have h_shift_pos : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
+  have h_div_nonneg : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
     Int.fdiv_nonneg (Int.fdiv_nonneg n_nonneg (by positivity)) (le_of_lt a_pos)
   omega
 
