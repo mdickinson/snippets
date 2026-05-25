@@ -6,7 +6,7 @@ the same results as the corresponding Python operations on concrete
 values. A failing #guard causes a build error.
 -/
 
-import IsqrtLean4.PythonOps
+import Isqrt.PythonOps
 
 /-! ## pyFloorDiv (py//) -/
 

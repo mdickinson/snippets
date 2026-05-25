@@ -21,11 +21,11 @@ subtype `{ a : ℤ // 0 < a }` so that the positivity of the result is
 available for the `// a` division in the recursive case.
 -/
 
-import IsqrtLean4.PythonOps
-import IsqrtLean4.FDivLemmas
-import IsqrtLean4.BitLengthLemmas
-import IsqrtLean4.KeyLemma
-import IsqrtLean4.SizeConditions
+import Isqrt.PythonOps
+import Isqrt.FDivLemmas
+import Isqrt.BitLengthLemmas
+import Isqrt.KeyLemma
+import Isqrt.SizeConditions
 
 /-! ## isqrt_aux -/
 

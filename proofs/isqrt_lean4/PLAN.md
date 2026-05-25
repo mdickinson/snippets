@@ -14,15 +14,15 @@ complete; `lake build --wfail` clean locally and in CI.
 proofs/isqrt_lean4/
   lakefile.lean
   lean-toolchain
-  IsqrtLean4.lean        -- library root (implementation only)
-  IsqrtLean4Tests.lean   -- tests root (imports Tests/*)
-  IsqrtLean4/
+  Isqrt.lean             -- library root (implementation only)
+  IsqrtTests.lean        -- tests root (imports Tests/*)
+  Isqrt/
     PythonOps.lean       -- pyFloorDiv, pyRShift, pyLShift, pyBitLength
     FDivLemmas.lean      -- Int.fdiv ordering lemmas + Int↔ℕ bridge
     BitLengthLemmas.lean -- natBitLength / pyBitLength properties
     KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt predicate
     SizeConditions.lean  -- size-condition lemmas (ℕ core + ℤ wrappers)
-    Isqrt.lean           -- isqrt_aux, isqrt + correctness proof
+    Algorithm.lean       -- isqrt_aux, isqrt + correctness proof
     Tests/
       PythonOps.lean
       Isqrt.lean
@@ -78,7 +78,7 @@ proofs/isqrt_lean4/
   `two_pow_pred_natBitLength_le`, `lt_two_pow_natBitLength`. Used by
   `SizeConditions.lean`.
 
-### `Isqrt.lean` — Algorithm definitions
+### `Algorithm.lean` — Algorithm definitions
 
 - Termination on `c.toNat`. The decrease lemma `fdiv_two_decreasing` is a
   `private` helper.
@@ -115,7 +115,7 @@ proofs/isqrt_lean4/
   identity connecting the algorithm's `k = (c-1) py// 2` with the recursive
   `c/2`. Provable by `omega`.
 
-### `Isqrt.lean` (continued) — Correctness
+### `Algorithm.lean` (continued) — Correctness
 
 - Strong induction via `Nat.strong_induction_on` on a `cn : ℕ` parameter, with
   `c.toNat = cn` threaded through. Well-founded recursion on `c : ℤ` directly

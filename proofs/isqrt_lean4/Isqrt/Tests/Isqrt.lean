@@ -6,7 +6,7 @@ square root for a selection of concrete values. A failing #guard causes
 a build error.
 -/
 
-import IsqrtLean4.Isqrt
+import Isqrt.Algorithm
 
 /-! ## isqrt -/
 

@@ -32,15 +32,15 @@ all of Mathlib from source, which takes several hours.
 ```
 lakefile.lean              -- project configuration and dependencies
 lean-toolchain             -- Lean version pin
-IsqrtLean4.lean            -- library root (implementation modules)
-IsqrtLean4Tests.lean       -- tests root (imports the #guard files)
-IsqrtLean4/
+Isqrt.lean                 -- library root (implementation modules)
+IsqrtTests.lean            -- tests root (imports the #guard files)
+Isqrt/
   PythonOps.lean           -- Lean definitions matching Python's //, >>, <<, bit_length
   FDivLemmas.lean          -- Int.fdiv ordering lemmas and Int↔ℕ bridge
   BitLengthLemmas.lean     -- natBitLength / pyBitLength properties
   KeyLemma.lean            -- key algebraic lemma; isNearSqrt predicate
   SizeConditions.lean      -- size-condition invariants carried through the recursion
-  Isqrt.lean               -- isqrt algorithm definition and correctness proof
+  Algorithm.lean           -- isqrt algorithm definition and correctness proof
   Tests/
     PythonOps.lean         -- #guard checks for the Python operations
     Isqrt.lean             -- #guard checks for isqrt on concrete values

@@ -10,7 +10,7 @@ if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
 near square root of `n`.
 -/
 
-import IsqrtLean4.FDivLemmas
+import Isqrt.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 

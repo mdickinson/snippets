@@ -13,8 +13,8 @@ infrastructure. ℤ-level corollaries are provided at the end, packaged as
 `hasSizeCondition`, for direct use in Phase 6.
 -/
 
-import IsqrtLean4.BitLengthLemmas
-import IsqrtLean4.FDivLemmas
+import Isqrt.BitLengthLemmas
+import Isqrt.FDivLemmas
 
 /-! ## Helper arithmetic identity -/
 

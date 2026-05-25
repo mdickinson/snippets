@@ -7,11 +7,11 @@ package «isqrt-lean4» where
   ]
 
 @[default_target]
-lean_lib «IsqrtLean4» where
+lean_lib «Isqrt» where
   srcDir := "."
 
 @[default_target]
-lean_lib «IsqrtLean4Tests» where
+lean_lib «IsqrtTests» where
   srcDir := "."
 
 require mathlib from git

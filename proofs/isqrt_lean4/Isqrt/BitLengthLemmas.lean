@@ -6,7 +6,7 @@ power-of-two bounds, providing the ℕ and ℤ infrastructure for
 reasoning about Python's `int.bit_length()`.
 -/
 
-import IsqrtLean4.PythonOps
+import Isqrt.PythonOps
 
 /-! ## natBitLength: basic properties -/
 
