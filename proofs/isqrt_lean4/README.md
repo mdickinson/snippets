@@ -32,7 +32,8 @@ all of Mathlib from source, which takes several hours.
 ```
 lakefile.lean              -- project configuration and dependencies
 lean-toolchain             -- Lean version pin
-IsqrtLean4.lean            -- root module (imports everything)
+IsqrtLean4.lean            -- library root (implementation modules)
+IsqrtLean4Tests.lean       -- tests root (imports the #guard files)
 IsqrtLean4/
   PythonOps.lean           -- Lean definitions matching Python's //, >>, <<, bit_length
   FDivLemmas.lean          -- Int.fdiv ordering lemmas and Int↔ℕ bridge
@@ -44,6 +45,9 @@ IsqrtLean4/
     PythonOps.lean         -- #guard checks for the Python operations
     Isqrt.lean             -- #guard checks for isqrt on concrete values
 ```
+
+Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
+the `#guard` checks. The implementation library does not import the tests.
 
 ## Related files
 

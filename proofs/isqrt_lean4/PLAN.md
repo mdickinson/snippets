@@ -14,6 +14,8 @@ complete; `lake build --wfail` clean locally and in CI.
 proofs/isqrt_lean4/
   lakefile.lean
   lean-toolchain
+  IsqrtLean4.lean        -- library root (implementation only)
+  IsqrtLean4Tests.lean   -- tests root (imports Tests/*)
   IsqrtLean4/
     PythonOps.lean       -- pyFloorDiv, pyRShift, pyLShift, pyBitLength
     FDivLemmas.lean      -- Int.fdiv ordering lemmas + Int↔ℕ bridge
