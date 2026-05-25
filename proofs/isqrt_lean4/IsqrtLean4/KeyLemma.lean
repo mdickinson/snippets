@@ -1,15 +1,13 @@
 /-
 Key algebraic lemma for the isqrt correctness proof.
 
-Given an approximate square root `a` of `m = n // (4M²)`, the combined value
-`d = M·a + n // (4·M·a)` is an approximate square root of `n`, in the sense
-that `(d-1)² < n < (d+1)²`. This is the heart of the recursive correctness
-proof.
+We say that a positive integer `a` is a **near square root** of a positive
+integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
+`⌊√n⌋` or `⌈√n⌉`.
 
-The proof follows the Lean 3 strategy of multiplying through by `(4·M·a)²`
-to keep everything in ℤ, but without the ℕ-subtraction workarounds.
-
-Naming: `a` = recursive result, `d` = combined result, `M = 2^k`.
+This file proves: given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`,
+if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
+near square root of `n`.
 -/
 
 import IsqrtLean4.FDivLemmas
