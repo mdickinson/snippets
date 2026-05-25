@@ -1,7 +1,7 @@
 /-
 Definitions of `isqrt_aux` and `isqrt`, matching the Python code:
 
-    def isqrt_aux(c, n):
+    def isqrt_aux(c: int, n: int) -> int:
         if c == 0:
             return 1
         else:
@@ -9,11 +9,12 @@ Definitions of `isqrt_aux` and `isqrt`, matching the Python code:
             a = isqrt_aux(c // 2, n >> (2 * k + 2))
             return (a << k) + (n >> (k + 2)) // a
 
-    def isqrt(n):
+    def isqrt(n: int) -> int:
         if n == 0:
             return 0
         else:
-            a = isqrt_aux((n.bit_length() - 1) // 2, n)
+            c = (n.bit_length() - 1) // 2
+            a = isqrt_aux(c, n)
             return a - 1 if n < a * a else a
 
 Both functions carry proof-carrying preconditions. `isqrt_aux` returns a
