@@ -4,7 +4,7 @@ Lemmas about `Int.fdiv` (floor division) needed for the isqrt proof.
 Many of these are thin wrappers around existing `Int.ediv` lemmas,
 using `Int.fdiv_eq_ediv_of_nonneg` to convert when the divisor is
 nonneg. We state them for `Int.fdiv` so that proofs downstream can
-use them directly after unfolding `pyFloorDiv` / `pyRShift`.
+use them directly after unfolding `pyFloordiv` / `pyRshift`.
 -/
 
 import Mathlib.Tactic.Linarith

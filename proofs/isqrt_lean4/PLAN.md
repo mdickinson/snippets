@@ -17,7 +17,7 @@ proofs/isqrt_lean4/
   Isqrt.lean             -- library root (implementation only)
   IsqrtTests.lean        -- tests root (imports Tests/*)
   Isqrt/
-    PythonOps.lean       -- pyFloorDiv, pyRShift, pyLShift, pyBitLength
+    PythonOps.lean       -- pyFloordiv, pyRshift, pyLshift, pyBitLength
     FDivLemmas.lean      -- Int.fdiv ordering lemmas + Int↔ℕ bridge
     BitLengthLemmas.lean -- natBitLength / pyBitLength properties
     KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt predicate
@@ -43,8 +43,8 @@ proofs/isqrt_lean4/
 4. **`Int.fdiv`**, not `Int.ediv` (Lean's default `/` on `ℤ`), for Python-`//`
    semantics. They agree when dividing nonneg by positive — all `isqrt` does —
    but differ when signs disagree and the division isn't exact.
-5. **Proof-carrying Python wrappers.** `pyFloorDiv (a b) (hb : b ≠ 0)`,
-   `pyRShift (n k) (hk : 0 ≤ k)`, `pyLShift (n k) (hk : 0 ≤ k)`. Each call site
+5. **Proof-carrying Python wrappers.** `pyFloordiv (a b) (hb : b ≠ 0)`,
+   `pyRshift (n k) (hk : 0 ≤ k)`, `pyLshift (n k) (hk : 0 ≤ k)`. Each call site
    supplies the validity proof, so no exception can occur.
 6. **`isqrt_aux` returns `{ a : ℤ // 0 < a }`.** Positivity flows through the
    subtype so the `// a` division in the recursive case is safe.
@@ -91,7 +91,7 @@ proofs/isqrt_lean4/
 - The default-arg precondition tactic is `by omega`, which suffices at most
   call sites. Exception: when the goal contains `n py>> (... py// ...)`,
   `omega` can't see through `py//` — spell out the proof inline using
-  `pyFloorDiv_nonneg`.
+  `pyFloordiv_nonneg`.
 
 ### `KeyLemma.lean` — Key algebraic lemma
 

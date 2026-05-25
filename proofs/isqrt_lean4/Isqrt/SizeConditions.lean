@@ -126,9 +126,9 @@ theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
 theorem size_condition_step {c n : ℤ} (hc : 0 < c)
     (h : hasSizeCondition c n) :
     hasSizeCondition (c py// 2)
-      (pyRShift n (2 * ((c - 1) py// 2) + 2)
+      (pyRshift n (2 * ((c - 1) py// 2) + 2)
         (by have : 0 ≤ ((c - 1) py// 2) :=
-              pyFloorDiv_nonneg (by linarith) (by norm_num)
+              pyFloordiv_nonneg (by linarith) (by norm_num)
             linarith)) := by
   obtain ⟨h_lo, h_hi⟩ := h
   have hn_nonneg : 0 ≤ n := by
@@ -155,9 +155,9 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
     simp
   -- The shifted value equals the ℤ-cast of the ℕ-level shifted value.
   have h_shift :
-      pyRShift (↑nn : ℤ) (2 * ((↑cn - 1 : ℤ) py// 2) + 2) (by
+      pyRshift (↑nn : ℤ) (2 * ((↑cn - 1 : ℤ) py// 2) + 2) (by
         have : 0 ≤ ((↑cn - 1 : ℤ) py// 2) :=
-          pyFloorDiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
+          pyFloordiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
                                 linarith) (by norm_num)
         linarith)
         = ((nn / 2 ^ (2 * ((cn - 1) / 2) + 2) : ℕ) : ℤ) := by
@@ -165,7 +165,7 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
     have h_shamt : (2 * ((↑cn - 1 : ℤ) py// 2) + 2).toNat
                   = 2 * ((cn - 1) / 2) + 2 := by
       have h_k_nn : 0 ≤ ((↑cn - 1 : ℤ) py// 2) :=
-        pyFloorDiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
+        pyFloordiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
                               linarith)
                           (by norm_num)
       rw [← h_c12]; omega

@@ -8,7 +8,7 @@ values. A failing #guard causes a build error.
 
 import Isqrt.PythonOps
 
-/-! ## pyFloorDiv (py//) -/
+/-! ## pyFloordiv (py//) -/
 
 -- positive denominator
 #guard 7 py// 2 == 3
@@ -19,12 +19,12 @@ import Isqrt.PythonOps
 #guard 7 py// (-2) == -4                     -- 7 // (-2) == -4 in Python
 #guard (-7) py// (-2) == 3                   -- (-7) // (-2) == 3 in Python
 
-/-! ## pyRShift (py>>) -/
+/-! ## pyRshift (py>>) -/
 
 #guard 100 py>> 3 == 12                      -- 100 >> 3 == 100 // 8
 #guard (-100) py>> 3 == -13                  -- (-100) >> 3 == -100 // 8 == -13 in Python
 
-/-! ## pyLShift (py<<) -/
+/-! ## pyLshift (py<<) -/
 
 #guard 3 py<< 4 == 48                        -- 3 << 4 == 3 * 16
 

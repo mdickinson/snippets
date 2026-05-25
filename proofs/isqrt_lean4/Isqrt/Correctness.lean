@@ -33,11 +33,11 @@ algorithm's return value in terms of the recursive subproblem's value `a`. -/
 private theorem isqrt_aux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
     (hc_pos : 0 < c) :
     let k := (c - 1) py// 2
-    let kn : 0 ≤ k := pyFloorDiv_nonneg (by linarith) (by norm_num)
+    let kn : 0 ≤ k := pyFloordiv_nonneg (by linarith) (by norm_num)
     let d := c py// 2
-    let dn : 0 ≤ d := pyFloorDiv_nonneg hc (by norm_num)
-    let m := pyRShift n (2 * k + 2) (by linarith)
-    let mn : 0 ≤ m := pyRShift_nonneg hn
+    let dn : 0 ≤ d := pyFloordiv_nonneg hc (by norm_num)
+    let m := pyRshift n (2 * k + 2) (by linarith)
+    let mn : 0 ≤ m := pyRshift_nonneg hn
     let a := (isqrt_aux d m dn mn).val
     (isqrt_aux c n hc hn).val =
       a * 2 ^ k.toNat + (Int.fdiv n (2 ^ (k + 2).toNat)).fdiv a := by
@@ -73,12 +73,12 @@ private theorem isqrt_aux_correctness :
     · -- Inductive case: c > 0
       have hc_pos : 0 < c := lt_of_le_of_ne hc (Ne.symm hc0)
       set k := (c - 1) py// 2 with hk_def
-      have k_nn : 0 ≤ k := pyFloorDiv_nonneg (by linarith) (by norm_num)
+      have k_nn : 0 ≤ k := pyFloordiv_nonneg (by linarith) (by norm_num)
       set d := c py// 2 with hd_def
-      have d_nn : 0 ≤ d := pyFloorDiv_nonneg hc (by norm_num)
+      have d_nn : 0 ≤ d := pyFloordiv_nonneg hc (by norm_num)
       have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
-      set m := pyRShift n (2 * k + 2) h2k2_nn with hm_def
-      have m_nn : 0 ≤ m := pyRShift_nonneg hn.le
+      set m := pyRshift n (2 * k + 2) h2k2_nn with hm_def
+      have m_nn : 0 ≤ m := pyRshift_nonneg hn.le
       -- Size condition is preserved by the recursive step.
       have hsc_step : hasSizeCondition d m :=
         size_condition_step hc_pos ⟨h_lo, h_hi⟩

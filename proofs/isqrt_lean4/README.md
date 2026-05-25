@@ -244,7 +244,7 @@ rigor we want, but threading `Except` values through every intermediate
 expression is much more painful than discharging a proof obligation at
 the call site.
 
-Concretely, the Lean side defines a function `pyFloorDiv` taking two
+Concretely, the Lean side defines a function `pyFloordiv` taking two
 integers `a` and `b` and a proof that `b` is nonzero. Each call site has
 to supply that proof before the division is allowed to happen.
 
@@ -254,7 +254,7 @@ To keep this ergonomically tolerable, we add two conveniences:
   whenever the surrounding context already knows the divisor is nonzero
   (which it usually does), the proof is discharged automatically and the
   caller writes the division as if it took only two arguments.
-- We define an infix operator `py//` that calls `pyFloorDiv`. It would
+- We define an infix operator `py//` that calls `pyFloordiv`. It would
   have been nicer to reuse `//` itself, but that symbol is already spoken
   for in Lean's parser. So `(c - 1) py// 2` reads as closely to Python's
   `(c - 1) // 2` as Lean's syntax allows.
@@ -270,7 +270,7 @@ Python's `<<` and `>>` operators raise a `ValueError` if their second
 argument is negative. We handle this exactly the way we handled
 division by zero:
 
-- Define Lean functions `pyLShift` and `pyRShift` that match Python's
+- Define Lean functions `pyLshift` and `pyRshift` that match Python's
   semantics on all inputs with nonnegative second argument — including
   the cases where the *first* argument is negative. (Python and Lean
   both define those uniformly: `<<` is multiplication by a power of
@@ -364,7 +364,7 @@ that Python's `math.isqrt` is correct, here's where to put your attention
 **Read carefully.** The fidelity of the translation lives in two places:
 
 - The Lean *definitions* of `isqrt` and `isqrt_aux` (in
-  `Isqrt/Algorithm.lean`) and the `pyFloorDiv` / `pyRShift` / `pyLShift`
+  `Isqrt/Algorithm.lean`) and the `pyFloordiv` / `pyRshift` / `pyLshift`
   / `pyBitLength` operations (in `Isqrt/PythonOps.lean`). These are the
   only places where a translation error could plausibly creep in: if a
   Lean function isn't actually computing the same thing as the Python
@@ -386,7 +386,7 @@ individual proof steps.
 
 **Sanity check.** Beyond the proofs, the repository contains
 `#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrt`,
-`pyFloorDiv`, `pyRShift`, `pyLShift`, and `pyBitLength` on concrete
+`pyFloordiv`, `pyRshift`, `pyLshift`, and `pyBitLength` on concrete
 inputs and verify the outputs against expected values. These tests are
 load-bearing in a way the proofs aren't: a proof can only ever talk
 about the Lean definitions, so if a Lean definition silently disagrees

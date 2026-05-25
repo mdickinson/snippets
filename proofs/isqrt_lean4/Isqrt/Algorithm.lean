@@ -38,7 +38,7 @@ private theorem isqrt_aux_return_pos {a n k : ℤ}
     (a_pos : 0 < a) (n_nonneg : 0 ≤ n)
     (k_nonneg : 0 ≤ k) :
     0 < (a py<< k) + (n py>> (k + 2)) py// a := by
-  simp [pyLShift_def, pyFloorDiv_def, pyRShift_def]
+  simp [pyLshift_def, pyFloordiv_def, pyRshift_def]
   have h_shift_pos : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
   have h_div_nonneg : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
     Int.fdiv_nonneg (Int.fdiv_nonneg n_nonneg (by positivity)) (le_of_lt a_pos)
@@ -64,11 +64,11 @@ def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n :
     ⟨1, by omega⟩
   else
     let k := (c - 1) py// 2
-    have k_nonneg : 0 ≤ k := pyFloorDiv_nonneg (by omega) (by omega)
+    have k_nonneg : 0 ≤ k := pyFloordiv_nonneg (by omega) (by omega)
     let d := c py// 2
-    have d_nonneg : 0 ≤ d := pyFloorDiv_nonneg c_nonneg (by omega)
+    have d_nonneg : 0 ≤ d := pyFloordiv_nonneg c_nonneg (by omega)
     let ⟨a, a_pos⟩ := isqrt_aux d (n py>> (2 * k + 2))
-                                 d_nonneg (pyRShift_nonneg n_nonneg)
+                                 d_nonneg (pyRshift_nonneg n_nonneg)
     let b := (a py<< k) + (n py>> (k + 2)) py// a
     have b_pos : 0 < b := isqrt_aux_return_pos a_pos n_nonneg k_nonneg
     ⟨b, b_pos⟩
@@ -82,7 +82,7 @@ decreasing_by
 /-- The recursion depth `(n.bit_length() - 1) py// 2` is nonneg for nonzero `n`. -/
 theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
     0 ≤ (pyBitLength n - 1) py// 2 :=
-  pyFloorDiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
+  pyFloordiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
 
 /-- Integer square root, matching CPython's `math.isqrt`.
 
