@@ -134,8 +134,8 @@ private theorem isqrt_aux_correctness :
 /-- Main correctness theorem: `isqrt n` is the floor of `√n`. -/
 theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     let a := isqrt n hn
-    a ^ 2 ≤ n ∧ n < (a + 1) ^ 2 := by
-  show isqrt n hn ^ 2 ≤ n ∧ n < (isqrt n hn + 1) ^ 2
+    a * a ≤ n ∧ n < (a + 1) * (a + 1) := by
+  show isqrt n hn * isqrt n hn ≤ n ∧ n < (isqrt n hn + 1) * (isqrt n hn + 1)
   unfold isqrt
   by_cases hn0 : n = 0
   · subst hn0
@@ -159,4 +159,4 @@ theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
       have h_le : a * a ≤ n := not_lt.mp h_lt
       refine ⟨?_, ?_⟩
       · nlinarith [h_le]
-      · exact h_hi
+      · nlinarith [h_hi]
