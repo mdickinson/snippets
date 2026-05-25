@@ -6,7 +6,7 @@ Port `proofs/isqrt/src/isqrt.lean` (a ~780-line correctness proof of CPython's r
 
 ## Status
 
-**Phases 1–6 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16).
+**All phases complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16).
 
 - Phase 1 (project setup) — done.
 - Phase 2 (`PythonOps`, `FDivLemmas`, `BitLengthLemmas`) — done.
@@ -14,9 +14,7 @@ Port `proofs/isqrt/src/isqrt.lean` (a ~780-line correctness proof of CPython's r
 - Phase 4 (`key_isqrt_lemma`) — done (see implementation notes inline below).
 - Phase 5 (`SizeConditions`) — done (see implementation notes inline below).
 - Phase 6 (`isqrt_aux_correctness`, `isqrt_is_sqrt`) — done (see implementation notes inline below).
-- **Phase 7** (final verification) picks up next.
-
-**First step for the next session:** `cd proofs/isqrt_lean4 && lake build` to confirm a green starting state.
+- Phase 7 (final verification) — done: `lake build --wfail` clean locally and in CI, PR description updated.
 
 ## Scope
 
