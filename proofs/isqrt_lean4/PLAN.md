@@ -4,6 +4,18 @@
 
 Port `proofs/isqrt/src/isqrt.lean` (a ~780-line correctness proof of CPython's recursive `math.isqrt` algorithm) from Lean 3 to Lean 4, switching from `ℕ` to `ℤ` for the main values to match Python and simplify subtraction handling. Use Mathlib 4 (pinned version) for `ring`, `omega`, and standard lemmas. Focus on the recursive algorithm only (not the iterative variant).
 
+## Status
+
+**Phases 1–4 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16). Latest commit: `e359fe1`.
+
+- Phase 1 (project setup) — done.
+- Phase 2 (`PythonOps`, `FDivLemmas`, `BitLengthLemmas`) — done.
+- Phase 3 (`isqrt_aux`, `isqrt` definitions + `#guard` tests) — done.
+- Phase 4 (`key_isqrt_lemma`) — done (see implementation notes inline below).
+- **Phase 5** picks up next.
+
+**First step for the next session:** `cd proofs/isqrt_lean4 && lake build` to confirm a green starting state.
+
 ## Scope
 
 - **In scope:** Recursive `isqrt_aux` + `isqrt`, correctness proof (`isqrt_is_sqrt`), project setup
@@ -119,6 +131,23 @@ proof structure. Working in `ℤ` eliminates `sub_elimination`, `exists_add_of_l
 
 **File:** `IsqrtLean4/KeyLemma.lean`
 
+**Implementation notes (post-Phase 4):**
+
+- `isNearSqrt a n := (a - 1)² < n ∧ n < (a + 1)²` is now an actual Lean
+  `def` in `KeyLemma.lean`. `key_isqrt_lemma` is stated as
+  `isNearSqrt a (n.fdiv (4*M²)) → isNearSqrt (M*a + n.fdiv (4*M*a)) n`
+  (with the obvious positivity / `4·M⁴ ≤ n` side conditions). Phase 5/6
+  lemma statements should use `isNearSqrt` where it fits.
+- `Int.lt_fdiv_add_one_mul` (plan's `Int.lt_fdiv_add_one_mul_self`) was
+  added to `FDivLemmas.lean`. It gives `x < (x.fdiv k + 1) * k` for `0 < k`.
+- No `section`/`variable` block was used; the sub-lemmas (`M_le_a`,
+  `n_upper`, `n_lower`) take hypotheses explicitly. The "Setup (section
+  parameters)" framing below is descriptive of the math, not the file
+  structure.
+- `close_to` and `square_squeeze` were implemented as `private` helpers
+  with `nlinarith [mul_nonneg ...]` proofs. The "Fallback" pure-`nlinarith`
+  approach below was not attempted; the helpers were used as planned.
+
 **Setup (section parameters):**
 - `n M a : ℤ` with `hM : 0 < M`, `ha : 0 < a`
 - `hM4 : 4 * M ^ 4 ≤ n`
@@ -185,6 +214,25 @@ hypotheses (Phase 4). These ensure the initial and recursive calls to `isqrt_aux
 maintain the "size condition".
 
 **File:** Extend `IsqrtLean4/BitLengthLemmas.lean` or new `IsqrtLean4/SizeConditions.lean`
+
+**Implementer notes (Phase 5 pickup):**
+
+- **ℕ vs ℤ choice — open decision.** The lemmas below are sketched at
+  ℕ level. Phase 6 callers will work at ℤ (since `key_isqrt_lemma` uses
+  `n M a : ℤ`). Two viable approaches: (a) prove the lemmas at ℕ and
+  bridge in Phase 6 via `Int.toNat` / `Int.natAbs` coercions; (b) state
+  them directly at ℤ. Pick whichever leads to cleaner downstream proofs.
+- **Phase 6 hookup.** Whatever Phase 5 produces should be enough for
+  Phase 6 to discharge `key_isqrt_lemma`'s two non-trivial hypotheses:
+  `4·M⁴ ≤ n` and `isNearSqrt a (n.fdiv (4·M²))` (the latter being the
+  inductive hypothesis from the recursive call). Stating Phase 5
+  results in terms of `isNearSqrt` directly is encouraged where it fits.
+- **Infrastructure already in place** (from `BitLengthLemmas.lean`):
+  `natBitLength_eq_zero_iff`, `natBitLength_pos_iff`, `natBitLength_le_iff`,
+  `lt_natBitLength_iff`, `lt_two_pow_natBitLength`,
+  `two_pow_pred_natBitLength_le`, `natBitLength_div_two_pow`,
+  `pyBitLength_nonneg`, `pyBitLength_eq_zero_iff`, `pyBitLength_pos`,
+  `pyBitLength_of_nonneg`.
 
 **Key definition:** The "size condition" for `(c, n)` is `4^c ≤ n < 4^(c+1)`,
 i.e., `2^(2c) ≤ n < 2^(2c+2)`. Since `4^c = 2^(2c)`, this connects to
