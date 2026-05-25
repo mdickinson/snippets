@@ -5,9 +5,8 @@ CPython's recursive `math.isqrt`) to Lean 4 with Mathlib 4, switching from `ℕ`
 to `ℤ` to match Python's integer semantics and eliminate truncating-subtraction
 gymnastics. Recursive algorithm only; the iterative variant is out of scope.
 
-PR: [#16](https://github.com/mdickinson/snippets/pull/16). Branch:
-`isqrt-lean4-proof`. All seven phases complete; `lake build --wfail` clean
-locally and in CI.
+PR: [#16](https://github.com/mdickinson/snippets/pull/16). All seven phases
+complete; `lake build --wfail` clean locally and in CI.
 
 ## File structure
 

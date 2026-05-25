@@ -35,7 +35,14 @@ lean-toolchain             -- Lean version pin
 IsqrtLean4.lean            -- root module (imports everything)
 IsqrtLean4/
   PythonOps.lean           -- Lean definitions matching Python's //, >>, <<, bit_length
+  FDivLemmas.lean          -- Int.fdiv ordering lemmas and Int↔ℕ bridge
+  BitLengthLemmas.lean     -- natBitLength / pyBitLength properties
+  KeyLemma.lean            -- key algebraic lemma; isNearSqrt predicate
+  SizeConditions.lean      -- size-condition invariants carried through the recursion
   Isqrt.lean               -- isqrt algorithm definition and correctness proof
+  Tests/
+    PythonOps.lean         -- #guard checks for the Python operations
+    Isqrt.lean             -- #guard checks for isqrt on concrete values
 ```
 
 ## Related files
