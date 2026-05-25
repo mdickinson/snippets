@@ -60,3 +60,14 @@ theorem Int.lt_fdiv_add_one_mul {x k : ℤ} (hk : 0 < k) :
     x < (x.fdiv k + 1) * k := by
   rw [add_mul, one_mul]
   exact (Int.fdiv_le_iff_lt_mul_add hk).mp le_rfl
+
+/-! ## ℤ ↔ ℕ bridging -/
+
+/-- For nonneg `x` and nonneg `y`, `Int.fdiv` and `Nat` division agree
+under `toNat`. -/
+theorem Int.toNat_fdiv_of_nonneg {x y : ℤ} (hx : 0 ≤ x) (hy : 0 ≤ y) :
+    (x.fdiv y).toNat = x.toNat / y.toNat := by
+  obtain ⟨a, rfl⟩ := Int.eq_ofNat_of_zero_le hx
+  obtain ⟨b, rfl⟩ := Int.eq_ofNat_of_zero_le hy
+  rw [Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg b)]
+  rfl

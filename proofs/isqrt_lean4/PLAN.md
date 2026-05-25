@@ -6,13 +6,14 @@ Port `proofs/isqrt/src/isqrt.lean` (a ~780-line correctness proof of CPython's r
 
 ## Status
 
-**Phases 1–4 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16). Latest commit: `e359fe1`.
+**Phases 1–5 complete.** Branch: `isqrt-lean4-proof`. PR: [#16](https://github.com/mdickinson/snippets/pull/16).
 
 - Phase 1 (project setup) — done.
 - Phase 2 (`PythonOps`, `FDivLemmas`, `BitLengthLemmas`) — done.
 - Phase 3 (`isqrt_aux`, `isqrt` definitions + `#guard` tests) — done.
 - Phase 4 (`key_isqrt_lemma`) — done (see implementation notes inline below).
-- **Phase 5** picks up next.
+- Phase 5 (`SizeConditions`) — done (see implementation notes inline below).
+- **Phase 6** picks up next.
 
 **First step for the next session:** `cd proofs/isqrt_lean4 && lake build` to confirm a green starting state.
 
@@ -213,26 +214,31 @@ Bridge between `natBitLength`/`pyBitLength` (Phase 2c) and the key lemma's
 hypotheses (Phase 4). These ensure the initial and recursive calls to `isqrt_aux`
 maintain the "size condition".
 
-**File:** Extend `IsqrtLean4/BitLengthLemmas.lean` or new `IsqrtLean4/SizeConditions.lean`
+**File:** `IsqrtLean4/SizeConditions.lean`
 
-**Implementer notes (Phase 5 pickup):**
+**Implementation notes (post-Phase 5):**
 
-- **ℕ vs ℤ choice — open decision.** The lemmas below are sketched at
-  ℕ level. Phase 6 callers will work at ℤ (since `key_isqrt_lemma` uses
-  `n M a : ℤ`). Two viable approaches: (a) prove the lemmas at ℕ and
-  bridge in Phase 6 via `Int.toNat` / `Int.natAbs` coercions; (b) state
-  them directly at ℤ. Pick whichever leads to cleaner downstream proofs.
-- **Phase 6 hookup.** Whatever Phase 5 produces should be enough for
-  Phase 6 to discharge `key_isqrt_lemma`'s two non-trivial hypotheses:
-  `4·M⁴ ≤ n` and `isNearSqrt a (n.fdiv (4·M²))` (the latter being the
-  inductive hypothesis from the recursive call). Stating Phase 5
-  results in terms of `isNearSqrt` directly is encouraged where it fits.
-- **Infrastructure already in place** (from `BitLengthLemmas.lean`):
-  `natBitLength_eq_zero_iff`, `natBitLength_pos_iff`, `natBitLength_le_iff`,
-  `lt_natBitLength_iff`, `lt_two_pow_natBitLength`,
-  `two_pow_pred_natBitLength_le`, `natBitLength_div_two_pow`,
-  `pyBitLength_nonneg`, `pyBitLength_eq_zero_iff`, `pyBitLength_pos`,
-  `pyBitLength_of_nonneg`.
+- **Chose hybrid ℕ/ℤ approach.** The three core lemmas
+  (`size_condition_initial_nat`, `size_condition_step_nat`,
+  `M_bound_from_size_nat`) are stated and proved at ℕ level using the
+  `natBitLength` infrastructure. ℤ-level corollaries
+  (`size_condition_initial`, `size_condition_step`, `M_bound_from_size`)
+  are then proved by reduction to ℕ via `Int.eq_ofNat_of_zero_le`.
+- **`hasSizeCondition (c n : ℤ) : Prop`** is introduced as
+  `(4:ℤ)^c.toNat ≤ n ∧ n < (4:ℤ)^(c.toNat + 1)`. Phase 6 can carry this
+  around the strong induction. (Not stated in terms of `isNearSqrt` since
+  the shape is `4^c`, not `(c-1)^2`.)
+- **Bridging helper.** Added `Int.toNat_fdiv_of_nonneg` to
+  `FDivLemmas.lean`: for nonneg `x, y : ℤ`, `(x.fdiv y).toNat = x.toNat / y.toNat`.
+- **`pyRShift`'s default `by omega`** can't see through `pyFloorDiv`, so
+  the shift amount's nonnegativity proof in `size_condition_step` is
+  spelled out inline. Phase 6 will face the same pattern.
+- **Phase 6 hookup.** Phase 6 will call `size_condition_initial` (from
+  `isqrt_is_sqrt`), and `size_condition_step` + `M_bound_from_size` (in
+  the inductive step of `isqrt_aux_correctness`). The `4·M²` /
+  `4·(2^k)²` rewrite needed to match `key_isqrt_lemma`'s `n.fdiv (4·M²)`
+  with the algorithm's `n py>> (2k+2)` is left for Phase 6 (a `ring` /
+  `pow` identity, not a Phase 5 concern).
 
 **Key definition:** The "size condition" for `(c, n)` is `4^c ≤ n < 4^(c+1)`,
 i.e., `2^(2c) ≤ n < 2^(2c+2)`. Since `4^c = 2^(2c)`, this connects to
