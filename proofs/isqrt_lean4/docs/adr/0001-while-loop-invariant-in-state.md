@@ -89,3 +89,37 @@ scope — so the two layers are synergistic. The loop postcondition assembles as
 - We get the explicit-invariant design's main benefit (Hoare-style invariant
   reasoning) without paying its cost (a heavier combinator signature): the
   invariant rule is a *derived lemma*, not a parameter of `pyWhile`.
+
+## Implementation notes (from building `Isqrt/While.lean`)
+
+Status: `pyWhile`, the `.val` equation lemmas `pyWhile_pos`/`pyWhile_neg`, and
+`pyWhile_invariant` are implemented and tested (toys in `Isqrt/Tests/While.lean`,
+including a subtype-`σ` toy whose body re-derives its invariant). Gotchas learned
+that the *iterative isqrt* work will hit:
+
+- **`σ` must carry `0 ≤ s` (the variant's nonnegativity), not just the py-op
+  preconditions.** The measure is `μ : σ → ℕ`, but the isqrt variant `s` is an
+  `ℤ` that stays `≥ 0`, so `μ := fun st => st.val.s.toNat`. Proving `hμ`
+  (strict decrease) needs `0 ≤ s` *and* `0 ≤ s'` in scope to reason about
+  `.toNat` ordering — `omega` only relates `toNat`s when it knows both are
+  nonneg. So `0 ≤ s` belongs in `σ`'s **well-definedness** invariant. This
+  widens "minimal `σ`" slightly beyond the py-op preconditions; the near-√
+  property still stays out (post-hoc via `pyWhile_invariant`).
+- **The body's precondition proof must be a named lemma**, à la
+  `isqrt_aux_return_pos`, *not* an inline `by …` inside the `⟨val, proof⟩`
+  subtype constructor passed to `pyWhile`. An inline tactic block there hits an
+  elaboration-order bug (the proof metavariable entangles with `hμ`'s goal,
+  surfacing as a spurious "no goals to be solved"). The toy `countDownPos` uses
+  a named `double_pos`; isqrt should follow the same shape.
+- **Applying `pyWhile_invariant` needs two hints.** (a) Annotate `P`'s binder
+  type — `(P := fun s : σ => …)`; the bare `fun s => …` leaves `σ` a metavar,
+  the projections in `P` fail to resolve, and `DecidablePred` instance search
+  gets stuck. (b) Expose the `pyWhile` application first (`unfold <caller-def>`)
+  so the conclusion unifies. With those, `exact pyWhile_invariant (P := …) s₀ …`
+  infers `guard`/`body`/`μ`/`hμ` from the goal — no need to spell them out.
+- **Equation lemmas: `rw [pyWhile.eq_def, dif_pos/dif_neg h]`.** WF recursion
+  doesn't `rfl`/`rw`-unfold, but the generated `pyWhile.eq_def` does the job and
+  `rw` touches only the LHS occurrence (the recursive RHS has a different `s`
+  argument). This keeps `While.lean`'s imports to just `Mathlib.Data.Nat.Init`
+  (for `ℕ`/`Nat.strong_induction_on`); it avoids `conv_lhs` (Mathlib-only) and
+  the heavy `import Mathlib.Tactic`.
