@@ -15,6 +15,7 @@ second reads its postcondition straight off the return subtype's `¬ condition`.
 -/
 
 import Isqrt.While
+import Mathlib.Data.Prod.Lex
 
 /-! ## Plain state: count a counter down to zero, accumulating in the second slot
 
@@ -23,7 +24,7 @@ decrements `counter` and bumps `acc`; the measure is `counter`. -/
 
 private def countDown (initial : ℕ × ℕ) : { s : ℕ × ℕ // ¬ 0 < s.1 } :=
   pyWhile initial (fun s => 0 < s.1) (fun s _ => (s.1 - 1, s.2 + 1))
-    (fun s => s.1) (fun s h => by dsimp only; omega)
+    (fun s => s.1) (fun s h => by simp_wf; omega)
 
 -- The counter is drained to 0 and everything it held ends up in `acc`.
 #guard (countDown (0, 0)).val == (0, 0)
@@ -59,7 +60,7 @@ private def countDownPos (initial : { p : ℕ × ℕ // 0 < p.2 }) :
     { s : { p : ℕ × ℕ // 0 < p.2 } // ¬ 0 < s.val.1 } :=
   pyWhile initial (fun s => 0 < s.val.1)
     (fun s _ => ⟨(s.val.1 - 1, s.val.2 * 2), double_pos s.property⟩)
-    (fun s => s.val.1) (fun s h => by dsimp only; omega)
+    (fun s => s.val.1) (fun s h => by simp_wf; omega)
 
 -- The first component drains to 0; the second stays positive (doubling each step).
 #guard (countDownPos ⟨(3, 7), by decide⟩).val.val == (0, 56)
@@ -69,3 +70,44 @@ subtype, no induction needed. -/
 example (h : 0 < (7 : ℕ)) : (countDownPos ⟨(3, 7), h⟩).val.val.1 = 0 := by
   have := (countDownPos ⟨(3, 7), h⟩).property
   omega
+
+/-! ## Non-ℕ measure: a lexicographic variant for a two-counter loop
+
+The two toys above use an `ℕ` measure; this one exercises the generalisation to
+an arbitrary `[WellFoundedRelation α]` by measuring into `ℕ ×ₗ ℕ`
+(`Lex (ℕ × ℕ)`, the lexicographic order on pairs).
+
+`odometer` counts a two-digit "odometer" `(major, minor)` down to `(0, 0)`: each
+step decrements `minor`, and when `minor` is already 0 it borrows from `major`,
+resetting `minor` to `base`. The natural variant is the *pair* ordered
+lexicographically — `major` drops on a borrow (with `minor` jumping back up), and
+`minor` drops otherwise — which is exactly `μ := toLex`. (A weighted single-`ℕ`
+measure like `4·major + minor` also works here, since `minor` stays `≤ 3`: a
+weight strictly above that bound makes each borrow a net decrease. The point is
+to drive a measure into a non-`ℕ` `α`.) -/
+
+private def odometer (initial : ℕ × ℕ) : { s : ℕ × ℕ // ¬ (0 < s.1 ∨ 0 < s.2) } :=
+  pyWhile initial (fun s => 0 < s.1 ∨ 0 < s.2)
+    (fun s _ => if 0 < s.2 then (s.1, s.2 - 1) else (s.1 - 1, 3))  -- 3 = base
+    (fun s => toLex s)
+    (fun s h => by
+      -- The measure lives in `ℕ ×ₗ ℕ`, so the decrease is a lexicographic `<`.
+      show toLex _ < toLex _
+      rw [Prod.Lex.lt_iff]
+      -- Strip the `ofLex (toLex …)` round-trips and β-reduce the body lambda, so
+      -- `split` sees the `if` and `omega` sees plain projections.
+      simp only [ofLex_toLex]
+      -- Borrow branch: `major` drops (needs `0 < major`, from `h` since `minor = 0`).
+      -- Decrement branch: `major` equal, `minor` drops.
+      split <;> omega)
+
+-- Whatever the seed, the odometer winds down to (0, 0).
+#guard (odometer (0, 0)).val == (0, 0)
+#guard (odometer (2, 0)).val == (0, 0)
+#guard (odometer (1, 2)).val == (0, 0)
+
+/-- Both components end at zero — read straight off the return subtype. -/
+example : (odometer (2, 1)).val = (0, 0) := by
+  have := (odometer (2, 1)).property
+  -- `¬ (0 < major ∨ 0 < minor)` forces both to 0; `Prod.ext` then closes it.
+  exact Prod.ext (by omega) (by omega)

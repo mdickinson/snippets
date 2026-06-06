@@ -15,8 +15,13 @@ loop, then `while <condition>:`, then the body):
 
 followed by the termination evidence (which has no Python analogue):
 
-  - a measure `μ : σ → ℕ` that strictly decreases each iteration, and
+  - a measure `μ : σ → α` into any well-founded-ordered type `α` that strictly
+    decreases (under `α`'s well-founded relation) each iteration, and
   - the decrease proof `hμ`.
+
+`α` is most often `ℕ` (where the relation is just `<`), but allowing any
+`[WellFoundedRelation α]` admits lexicographic or ordinal measures when no
+single `ℕ` will do.
 
 It returns `{ s : σ // ¬ condition s }`: the final state, packaged with the
 proof that the condition is now false.
@@ -36,14 +41,15 @@ import Mathlib.Data.Nat.Init
 
 Runs `body` while `condition` holds, starting from `initial`, and returns the
 final state bundled with a proof that `condition` is false there. `μ` is a
-measure that `hμ` shows strictly decreases on every iteration, witnessing
+measure into a well-founded-ordered type `α` that `hμ` shows strictly decreases
+on every iteration (under `α`'s well-founded relation), witnessing
 termination. -/
-def pyWhile {σ : Type}
+def pyWhile {σ : Type} {α : Type} [WellFoundedRelation α]
     (initial : σ)
     (condition : σ → Prop) [DecidablePred condition]
     (body : (s : σ) → condition s → σ)
-    (μ : σ → ℕ)
-    (hμ : ∀ (s : σ) (h : condition s), μ (body s h) < μ s) :
+    (μ : σ → α)
+    (hμ : ∀ (s : σ) (h : condition s), WellFoundedRelation.rel (μ (body s h)) (μ s)) :
     { s : σ // ¬ condition s } :=
   if h : condition initial then pyWhile (body initial h) condition body μ hμ
   else ⟨initial, h⟩
@@ -57,9 +63,10 @@ and `rw [pyWhile]` does not unfold it; the proofs below go through the generated
 `pyWhile.eq_def`. These `.val` equations expose its step/stop behaviour; they
 are the form that `pyWhile_invariant` and the tests consume. -/
 
-variable {σ : Type} {condition : σ → Prop} [DecidablePred condition]
-  {body : (s : σ) → condition s → σ} {μ : σ → ℕ}
-  {hμ : ∀ (s : σ) (h : condition s), μ (body s h) < μ s}
+variable {σ : Type} {α : Type} [WellFoundedRelation α]
+  {condition : σ → Prop} [DecidablePred condition]
+  {body : (s : σ) → condition s → σ} {μ : σ → α}
+  {hμ : ∀ (s : σ) (h : condition s), WellFoundedRelation.rel (μ (body s h)) (μ s)}
 
 /-- Stop step: when the condition is already false, `pyWhile` returns
 `initial`. -/
@@ -82,21 +89,24 @@ theorem pyWhile_pos (initial : σ) (h : condition initial) :
 the initial state and is preserved by `body` holds at `pyWhile`'s result.
 
 Combined with the result subtype's `¬ condition`, this gives the loop
-postcondition `P result ∧ ¬ condition result`. Proved by strong induction on
-the measure `μ`. -/
+postcondition `P result ∧ ¬ condition result`. Proved by well-founded induction
+on the measure `μ`. -/
 theorem pyWhile_invariant {P : σ → Prop} (initial : σ)
     (hinit : P initial)
     (hstep : ∀ (s : σ) (h : condition s), P s → P (body s h)) :
     P (pyWhile initial condition body μ hμ).val := by
-  -- Strong induction on the measure value, generalised over the start state.
-  suffices h : ∀ (n : ℕ) (s : σ), μ s = n → P s → P (pyWhile s condition body μ hμ).val by
-    exact h (μ initial) initial rfl hinit
-  intro n
-  induction n using Nat.strong_induction_on with
-  | _ n ih =>
-    intro s hμs hP
+  -- The inverse image of `α`'s well-founded relation along `μ` well-orders the
+  -- states, so we may do well-founded induction on the start state directly.
+  have wf : WellFounded fun s₁ s₂ : σ => WellFoundedRelation.rel (μ s₁) (μ s₂) :=
+    InvImage.wf μ WellFoundedRelation.wf
+  suffices h : ∀ (s : σ), P s → P (pyWhile s condition body μ hμ).val from
+    h initial hinit
+  intro s
+  induction s using wf.induction with
+  | _ s ih =>
+    intro hP
     by_cases hg : condition s
     · rw [pyWhile_pos s hg]
-      exact ih (μ (body s hg)) (hμs ▸ hμ s hg) (body s hg) rfl (hstep s hg hP)
+      exact ih (body s hg) (hμ s hg) (hstep s hg hP)
     · rw [pyWhile_neg s hg]
       exact hP

@@ -129,14 +129,14 @@ that the *iterative isqrt* work will hit:
   (for `ℕ`/`Nat.strong_induction_on`); it avoids `conv_lhs` (Mathlib-only) and
   the heavy `import Mathlib.Tactic`.
 
-## Planned next step: generalise the measure beyond ℕ
+## Generalised the measure beyond ℕ (implemented)
 
-Decided direction (implementation pending): relax the termination evidence from
-an ℕ measure to a measure into **any well-founded-ordered type** — `μ : σ → α`
-with `[WellFoundedRelation α]` — rather than an arbitrary relation on `σ`. This
-keeps the equation-compiler definition, the measure ergonomics, and (for ℕ
-measures) the existing call sites essentially unchanged, while admitting
-lexicographic / ordinal measures when a single `ℕ` won't do. Sketch:
+The termination evidence was relaxed from an ℕ measure to a measure into **any
+well-founded-ordered type** — `μ : σ → α` with `[WellFoundedRelation α]` —
+rather than an arbitrary relation on `σ`. This keeps the equation-compiler
+definition, the measure ergonomics, and (for ℕ measures) the existing call sites
+essentially unchanged, while admitting lexicographic / ordinal measures when a
+single `ℕ` won't do. The shipped signature matches the sketch:
 
 ```lean
 def pyWhile {σ : Type} {α : Type} [WellFoundedRelation α]
@@ -149,24 +149,42 @@ termination_by μ initial
 decreasing_by exact hμ initial h
 ```
 
-Findings from the scoping pass (the "arbitrary relation on `σ` via
-`WellFounded.fix`" alternative was considered and rejected — it taxes every call
-site with a `WellFounded` proof and needs a `#guard`-computability check):
+(The "arbitrary relation on `σ` via `WellFounded.fix`" alternative was considered
+and rejected — it taxes every call site with a `WellFounded` proof and needs a
+`#guard`-computability check.)
 
-- **Def + equation lemmas: ~no change** — the equation compiler is retained, so
-  `pyWhile_pos`/`pyWhile_neg` stay `rw [pyWhile.eq_def, dif_pos/dif_neg h]`.
-- **`pyWhile_invariant` simplifies** — induct on the state directly (via
-  `‹WellFoundedRelation α›.wf.induction`), dropping today's `μ s = n` bookkeeping
-  (the `suffices … (μ initial) initial rfl …` + `hμs ▸` plumbing goes away).
-- **Test complication ≈ zero** — `countDown`/`countDownPos` keep `μ := (·.1)`
-  into `ℕ` and the same `by omega` decrease proof, since `Nat.lt_wfRel.rel` is
-  defeq to `<`.
+Findings from implementing it:
 
-To verify when implementing:
-
-- `decreasing_by` may need a leading `simp_wf` to line `hμ` up with the
-  `invImage`-wrapped goal; state `hμ` via `WellFoundedRelation.rel` (defeq to
-  `<` for `ℕ`).
-- Put the well-founded order on the *measure codomain* `α`, as above. Do **not**
-  thread a `[WellFoundedRelation σ]` on the state itself: instance search can
-  silently pick the default `SizeOf`/`Prod.lex` instance over the intended one.
+- **Def + equation lemmas: no change** — the equation compiler is retained, so
+  `pyWhile_pos`/`pyWhile_neg` stay `rw [pyWhile.eq_def, dif_pos/dif_neg h]`, and
+  `decreasing_by exact hμ initial h` works **without** a leading `simp_wf`
+  (the equation compiler hands `decreasing_by` the goal in `WellFoundedRelation.rel`
+  form, which `hμ` matches directly).
+- **`pyWhile_invariant` simplifies, as predicted** — well-founded induction on
+  the state directly via `InvImage.wf μ WellFoundedRelation.wf` then
+  `induction … using wf.induction`. Today's `μ s = n` bookkeeping (the
+  `suffices … (μ initial) initial rfl …` + `hμs ▸` plumbing) is gone; only a
+  trivial `suffices ∀ s, P s → …` to generalise the start state remains.
+- **ℕ test decrease proofs needed one small nudge, not zero.** The earlier
+  scoping pass guessed "≈ zero", which was slightly optimistic. The default
+  `WellFoundedRelation ℕ` instance is `sizeOfWFRel` (SizeOf-based —
+  *not* `Nat.lt_wfRel`), so the decrease goal reads `WellFoundedRelation.rel a b`,
+  which `omega` treats as an opaque atom. `WellFoundedRelation.rel a b` *is*
+  defeq to `a < b`, but a type-pinned `show (_ : ℕ) < _` only unfolds the `rel`
+  projection to `sizeOf a < sizeOf b` — still opaque to `omega`. The fix is
+  `simp_wf` (the very tactic `Algorithm.lean`'s `decreasing_by` uses), which
+  unfolds `rel` *and* `sizeOf` to a plain `<`: the toy decrease proofs went from
+  `by dsimp only; omega` to `by simp_wf; omega`. One token of friction per call
+  site, no structural change.
+- **A non-ℕ toy now exercises the generality.** `odometer` in
+  `Isqrt/Tests/While.lean` measures into `ℕ ×ₗ ℕ` (lexicographic) for a
+  two-counter borrow loop. Its decrease proof discharges a lexicographic `<` via
+  `show toLex _ < toLex _; rw [Prod.Lex.lt_iff]; simp only [ofLex_toLex]; split <;> omega`.
+  Gotcha: the `simp only [ofLex_toLex]` is load-bearing *before* `split` — it both
+  strips the `ofLex (toLex …)` round-trips `Prod.Lex.lt_iff` introduces and
+  β-reduces the body, which reaches `hμ` as an un-β-reduced `(fun s _ => if …) s h`;
+  without it `split` can't find the `if`.
+- **Put the well-founded order on the measure codomain `α`, not the state.** Do
+  **not** thread a `[WellFoundedRelation σ]`: instance search can silently pick
+  the default `SizeOf`/`Prod.lex` instance over the intended one (the same
+  `sizeOfWFRel`-vs-intended hazard the ℕ nudge above is a symptom of).

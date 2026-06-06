@@ -28,9 +28,12 @@ loop state of running the suite once. Mirrors part (c) of the design.
 _Avoid_: step, update function, state updater, iteration
 
 **Measure**:
-The ℕ-valued function of the loop state that strictly decreases on every
-iteration, witnessing termination. The chosen form of evidence (d). For isqrt
-the measure is essentially `s`.
+The function of the loop state, into some well-founded-ordered type `α`
+(`[WellFoundedRelation α]`), that strictly decreases on every iteration,
+witnessing termination. The chosen form of evidence (d). `α` is usually `ℕ` (so
+the decrease is just `<`); for isqrt the measure is essentially `s` (into `ℕ`
+via `.toNat`). A non-`ℕ` `α` (e.g. `ℕ ×ₗ ℕ`, lexicographic) is available when no
+single `ℕ` fits.
 _Avoid_: variant, rank, ranking function, fuel, bound
 
 **Well-definedness invariant**:
