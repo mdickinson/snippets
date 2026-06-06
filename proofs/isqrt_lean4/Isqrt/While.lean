@@ -31,9 +31,10 @@ amounts nonneg, …) is carried by making the caller's `σ` a subtype that bundl
 it — `pyWhile` itself never mentions an invariant. Richer loop properties are
 proved after the fact about the result via `pyWhile_invariant`. See
 `docs/adr/0001-while-loop-invariant-in-state.md` for the design.
--/
 
-import Mathlib.Data.Nat.Init
+This module depends only on core Lean (well-founded recursion and
+`WellFoundedRelation`) — it imports nothing.
+-/
 
 /-! ## The combinator -/
 

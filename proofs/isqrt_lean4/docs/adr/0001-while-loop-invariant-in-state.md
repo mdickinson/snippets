@@ -125,9 +125,11 @@ that the *iterative isqrt* work will hit:
 - **Equation lemmas: `rw [pyWhile.eq_def, dif_pos/dif_neg h]`.** WF recursion
   doesn't `rfl`/`rw`-unfold, but the generated `pyWhile.eq_def` does the job and
   `rw` touches only the LHS occurrence (the recursive RHS has a different `s`
-  argument). This keeps `While.lean`'s imports to just `Mathlib.Data.Nat.Init`
-  (for `ℕ`/`Nat.strong_induction_on`); it avoids `conv_lhs` (Mathlib-only) and
-  the heavy `import Mathlib.Tactic`.
+  argument). It avoids `conv_lhs` (Mathlib-only) and the heavy
+  `import Mathlib.Tactic`. (Originally this left `While.lean` importing only
+  `Mathlib.Data.Nat.Init`, for `ℕ`/`Nat.strong_induction_on`; the measure
+  generalisation below dropped `Nat.strong_induction_on`, so the module now
+  imports *nothing* — it is pure core Lean.)
 
 ## Generalised the measure beyond ℕ (implemented)
 
