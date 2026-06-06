@@ -51,7 +51,7 @@ abbrev IterSigma (c : ℤ) := { st : IterState // iterInv c st }
 /-! ## Arithmetic helper -/
 
 /-- Floor-dividing a nonneg integer by a positive integer cannot increase it. -/
-private theorem fdiv_le_self_of_nonneg {c m : ℤ} (hc : 0 ≤ c) (hm : 0 < m) :
+theorem fdiv_le_self_of_nonneg {c m : ℤ} (hc : 0 ≤ c) (hm : 0 < m) :
     c.fdiv m ≤ c := by
   have h0 : 0 ≤ c.fdiv m := Int.fdiv_nonneg hc hm.le
   have h1 : c.fdiv m * m ≤ c := Int.fdiv_mul_le_self hm
@@ -75,6 +75,15 @@ theorem seed_d_eq {c : ℤ} (hc : 0 ≤ c) :
 
 /-! ## Body precondition lemmas (named, per ADR 0001 gotcha) -/
 
+/-- The depth halves each iteration: `c >> s = (c >> (s-1)) // 2` for `0 < s`.
+This is the body's `e = d // 2` link (the recursion's `c ↦ c // 2`). Shared by
+`iter_lshift_nonneg` and the correctness proof's preservation step. (No sign
+hypothesis on `c` is needed — only the divisors must be nonneg.) -/
+theorem iter_d_halving {c s : ℤ} (hs_pos : 0 < s) :
+    Int.fdiv c (2 ^ s.toNat) = Int.fdiv (Int.fdiv c (2 ^ (s - 1).toNat)) 2 := by
+  have hsuc : s.toNat = (s - 1).toNat + 1 := by omega
+  rw [hsuc, pow_succ, ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num)]
+
 /-- The left-shift amount `d' - d - 1` is nonneg, where `d' = c >> (s-1)` and
 `d = c >> s` for `0 < s ≤ c.bit_length()`. The body's hardest precondition: it
 needs `d' ≥ 1` (from `s ≤ L`, via `2^(L-1) ≤ c`) and `d = d' // 2`. -/
@@ -82,11 +91,8 @@ theorem iter_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_pos : 0 < s)
     (hs_le : s ≤ pyBitLength c) (hd : d = Int.fdiv c (2 ^ s.toNat)) :
     0 ≤ Int.fdiv c (2 ^ (s - 1).toNat) - d - 1 := by
   set d' := Int.fdiv c (2 ^ (s - 1).toNat) with hd'
-  have hsuc : s.toNat = (s - 1).toNat + 1 := by omega
   -- d = d' // 2
-  have hd2 : d = Int.fdiv d' 2 := by
-    rw [hd, hsuc, pow_succ,
-        ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num), ← hd']
+  have hd2 : d = Int.fdiv d' 2 := by rw [hd, hd']; exact iter_d_halving hs_pos
   -- d' ≥ 1, from 2^(s-1).toNat ≤ c
   have hd'_ge1 : 1 ≤ d' := by
     rw [hd', Int.le_fdiv_iff_mul_le (by positivity), one_mul]
@@ -163,24 +169,46 @@ def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
     {st : IterSigma c} {h : 0 < st.val.s} :
     (iterBody c n hc hn st h).val.d = Int.fdiv c (2 ^ (st.val.s - 1).toNat) := rfl
 
+/-- The body's new `a`, in raw `Int.fdiv`/`*` form (the py-ops unfolded). With
+`d' = c >> (s-1)` the new `a` is `a·2^(d'-d-1) + ⌊⌊n/2^(2c-d'-d+1)⌋/a⌋`; the
+correctness proof rewrites this into one `key_isqrt_lemma` step. -/
+@[simp] theorem iterBody_a {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
+    {st : IterSigma c} {h : 0 < st.val.s} :
+    (iterBody c n hc hn st h).val.a =
+      st.val.a * 2 ^ (Int.fdiv c (2 ^ (st.val.s - 1).toNat) - st.val.d - 1).toNat
+        + Int.fdiv (Int.fdiv n
+            (2 ^ (2 * c - Int.fdiv c (2 ^ (st.val.s - 1).toNat) - st.val.d + 1).toNat))
+            st.val.a := rfl
+
 /-! ## The iterative isqrt -/
+
+/-- The `while s > 0` loop of `isqrtIterative`, factored out as a standalone def
+returning the final loop state (bundled with `¬ 0 < s`, i.e. the loop has
+stopped). Extracting it lets the correctness proof `unfold` this name and hand
+the bare `pyWhile` application to `pyWhile_invariant` — exactly the
+`countDownPos` pattern in `Tests/While.lean` — without having to reproduce the
+opaque measure-decrease proof term. -/
+def isqrtIterativeLoop (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n) :
+    { st : IterSigma c // ¬ (0 < st.val.s) } :=
+  pyWhile
+    (⟨{ s := pyBitLength c, d := 0, a := 1 },
+      ⟨pyBitLength_nonneg c, le_refl _, (seed_d_eq hc).symm, one_pos⟩⟩ : IterSigma c)
+    (fun st => 0 < st.val.s)
+    (iterBody c n hc hn)
+    (fun st => st.val.s.toNat)
+    (fun st h => by simp_wf; omega)
 
 /-- Integer square root, iterative form (`isqrt_iterative.py`).
 
 Precondition `0 ≤ n`. `n = 0` is special-cased to `0` (the loop would otherwise
 shift by a negative amount), mirroring the recursive `isqrt`. For `n ≥ 1` the
-`while s > 0` loop is the faithful `pyWhile` translation; the final line returns
-`a` or `a - 1` exactly as the Python `return a if a*a <= n else a - 1`. -/
+`while s > 0` loop (`isqrtIterativeLoop`) is the faithful `pyWhile` translation;
+the final line returns `a` or `a - 1` exactly as the Python
+`return a if a*a <= n else a - 1`. -/
 def isqrtIterative (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ :=
   if _ : n = 0 then 0
   else
     let c := (pyBitLength n - 1) py// 2
     have hc : 0 ≤ c := isqrt_c_nonneg (by omega)
-    let seed : IterSigma c :=
-      ⟨{ s := pyBitLength c, d := 0, a := 1 },
-       ⟨pyBitLength_nonneg c, le_refl _, (seed_d_eq hc).symm, one_pos⟩⟩
-    let result := pyWhile seed (fun st => 0 < st.val.s) (iterBody c n hc n_nonneg)
-                    (fun st => st.val.s.toNat)
-                    (fun st h => by simp_wf; omega)
-    let a := result.val.val.a
+    let a := (isqrtIterativeLoop c n hc n_nonneg).val.val.a
     if a * a ≤ n then a else a - 1

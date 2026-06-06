@@ -9,7 +9,9 @@ see [Iterative variant](#iterative-variant).
 
 PR: [#16](https://github.com/mdickinson/snippets/pull/16). All seven phases of
 the recursive proof complete; `lake build --wfail` clean locally and in CI. The
-iterative variant is in progress on the same branch.
+iterative variant is also complete on the same branch: `isqrtIterative_is_sqrt`
+(`Isqrt/IterativeCorrectness.lean`) proves the same statement as
+`isqrt_is_sqrt`.
 
 ## File structure
 
@@ -189,6 +191,25 @@ The near-√ property and the size condition are deliberately **not** in `σ`.
 well-definedness invariant — is in scope in the preservation step). Near-√
 **only**; the size condition is pulled fresh from `size_condition_at_depth` (a
 `(c,n)`-only fact) at both seed and step rather than threaded through the loop.
+
+**The loop is a named `def`.** `isqrtIterative` calls `isqrtIterativeLoop`
+(returning the post-loop `{ st : IterSigma c // ¬ 0 < st.s }`); the `while` body
+is no longer inline. This is what makes `pyWhile_invariant` usable: the proof
+`unfold`s `isqrtIterativeLoop` to expose the bare `pyWhile` application, then
+`refine pyWhile_invariant (P := …) _ ?hinit ?hstep` unifies the goal to fill the
+implicit `condition`/`body`/`μ`/`hμ` — so the opaque measure-decrease proof term
+never has to be written out. (This is the `countDownPos` pattern from
+`Tests/While.lean`.) `fdiv_le_self_of_nonneg` was un-`private`d for reuse in the
+step (depth bounds `d_old, d_new ≤ c`).
+
+The `hstep` algebra rewrites the body's new `a` (via `iterBody_a`) into the
+`key_isqrt_lemma` output `M·a + ⌊N_new/4Ma⌋` with `M = 2^k`, `k = (d_new−1)//2`.
+The two exponent bridges — divisor `4^(c−d_new)·4M² = 4^(c−d_old)` and
+`4^(c−d_new)·4M = 2^(2c−d_new−d_old+1)` — are each discharged by rewriting all
+powers to base 2 (`4 = 2^2`, `M = 2^k`), collapsing with
+`simp only [← pow_mul, ← pow_add]`, then `congr 1; omega` on the ℕ exponents
+(`omega` handles the `.toNat`s given `k = d_new − d_old − 1`, itself proved by
+`fdiv→ediv` + `omega` from `d_old = d_new // 2`).
 
 - Seed `d = 0`: `isNearSqrt 1 ⌊n/4^c⌋`, true since `⌊n/4^c⌋ ∈ {1,2,3}` — the
   recursion's base case `isqrt_aux 0 m = 1`.
