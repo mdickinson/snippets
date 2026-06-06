@@ -11,18 +11,18 @@ Two toy loops exercise the combinator end to end:
 
 Each `#guard` runs the compiled combinator on a concrete seed (a failing
 `#guard` is a build error). The first `example` drives `pyWhile_invariant`; the
-second reads its postcondition straight off the return subtype's `¬ guard`.
+second reads its postcondition straight off the return subtype's `¬ condition`.
 -/
 
 import Isqrt.While
 
 /-! ## Plain state: count a counter down to zero, accumulating in the second slot
 
-`σ := ℕ × ℕ` as `(counter, acc)`. The guard is `0 < counter`; each step
+`σ := ℕ × ℕ` as `(counter, acc)`. The condition is `0 < counter`; each step
 decrements `counter` and bumps `acc`; the measure is `counter`. -/
 
-private def countDown (s₀ : ℕ × ℕ) : { s : ℕ × ℕ // ¬ 0 < s.1 } :=
-  pyWhile (fun s => 0 < s.1) (fun s _ => (s.1 - 1, s.2 + 1)) s₀
+private def countDown (initial : ℕ × ℕ) : { s : ℕ × ℕ // ¬ 0 < s.1 } :=
+  pyWhile initial (fun s => 0 < s.1) (fun s _ => (s.1 - 1, s.2 + 1))
     (fun s => s.1) (fun s h => by dsimp only; omega)
 
 -- The counter is drained to 0 and everything it held ends up in `acc`.
@@ -44,21 +44,21 @@ example (N : ℕ) : (countDown (N, 0)).val.2 = N := by
 /-! ## Subtype state: the body consumes the bundled invariant
 
 `σ := { p : ℕ × ℕ // 0 < p.2 }` carries the well-definedness invariant
-`0 < second`. The guard is `0 < first`; each step decrements `first` and
+`0 < second`. The condition is `0 < first`; each step decrements `first` and
 *changes* `second` (here doubling it), so the body must re-derive `0 < second`
 for the new value from the incoming `s.property` — the proof-carrying pattern
 the isqrt body will use to discharge its py-op preconditions (e.g. proving
 `0 < a'` for the updated `a` à la `isqrt_aux_return_pos`). The invariant is
-genuinely load-bearing: `0 < second * 2` does not follow from the guard alone. -/
+genuinely load-bearing: `0 < second * 2` does not follow from the condition. -/
 
 /-- The doubled second component stays positive — a toy stand-in for the
 isqrt body's `isqrt_aux_return_pos`. -/
 private theorem double_pos {m : ℕ} (hm : 0 < m) : 0 < m * 2 := by omega
 
-private def countDownPos (s₀ : { p : ℕ × ℕ // 0 < p.2 }) :
+private def countDownPos (initial : { p : ℕ × ℕ // 0 < p.2 }) :
     { s : { p : ℕ × ℕ // 0 < p.2 } // ¬ 0 < s.val.1 } :=
-  pyWhile (fun s => 0 < s.val.1)
-    (fun s _ => ⟨(s.val.1 - 1, s.val.2 * 2), double_pos s.property⟩) s₀
+  pyWhile initial (fun s => 0 < s.val.1)
+    (fun s _ => ⟨(s.val.1 - 1, s.val.2 * 2), double_pos s.property⟩)
     (fun s => s.val.1) (fun s h => by dsimp only; omega)
 
 -- The first component drains to 0; the second stays positive (doubling each step).

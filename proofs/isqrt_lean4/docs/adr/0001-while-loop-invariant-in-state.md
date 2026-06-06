@@ -2,11 +2,12 @@
 
 To faithfully represent a simple Python `while` loop in Lean (for the iterative
 `isqrt`), we define a generic combinator `pyWhile` (in `Isqrt/While.lean`) that
-takes a guard, a body, an ℕ-valued measure, and a measure-decrease proof, and
-returns `{ s : σ // ¬ guard s }`. The loop body cannot be a total `σ → σ` over
-raw integers: it evaluates `py<<`, `py>>`, and `py//`, each of which demands a
-precondition proof that holds only under the loop invariant (`a > 0`, shift
-amounts nonneg, …) and not from the guard alone. **We decided to carry that
+takes the initial state, a condition, a body, an ℕ-valued measure, and a
+measure-decrease proof, and returns `{ s : σ // ¬ condition s }`. The loop body
+cannot be a total `σ → σ` over raw integers: it evaluates `py<<`, `py>>`, and
+`py//`, each of which demands a precondition proof that holds only under the
+loop invariant (`a > 0`, shift amounts nonneg, …) and not from the condition
+alone. **We decided to carry that
 invariant by making the caller's `σ` a subtype that bundles it** — exactly as
 `isqrt_aux` returns `{ a : ℤ // 0 < a }` — rather than threading an explicit
 invariant predicate through `pyWhile`.
@@ -15,21 +16,25 @@ invariant predicate through `pyWhile`.
 
 ```lean
 def pyWhile {σ : Type}
-    (guard : σ → Prop) [DecidablePred guard]
-    (body  : (s : σ) → guard s → σ)
-    (s₀    : σ)
-    (μ     : σ → ℕ)
-    (hμ    : ∀ (s : σ) (h : guard s), μ (body s h) < μ s) :
-    { s : σ // ¬ guard s } :=
-  if h : guard s₀ then pyWhile guard body (body s₀ h) μ hμ
-  else ⟨s₀, h⟩
-termination_by μ s₀
-decreasing_by exact hμ s₀ h
+    (initial   : σ)
+    (condition : σ → Prop) [DecidablePred condition]
+    (body      : (s : σ) → condition s → σ)
+    (μ         : σ → ℕ)
+    (hμ        : ∀ (s : σ) (h : condition s), μ (body s h) < μ s) :
+    { s : σ // ¬ condition s } :=
+  if h : condition initial then pyWhile (body initial h) condition body μ hμ
+  else ⟨initial, h⟩
+termination_by μ initial
+decreasing_by exact hμ initial h
 ```
 
-The non-proof arguments `guard`, `body`, `s₀` are grouped first; the termination
-evidence `μ`, `hμ` trails as part (d). To be paired with explicit `pyWhile_pos`
-(step) and `pyWhile_neg` (stop) equation lemmas, which drive the `#guard` tests.
+The non-evidence arguments `initial`, `condition`, `body` are grouped first and
+ordered to mirror a Python `while` loop (the state is set up before the loop,
+then `while <condition>:`, then the body); the termination evidence `μ`, `hμ`
+(which has no Python analogue) trails as part (d). The names `condition` /
+`initial` were chosen over `guard` / `s₀` for the Python-aware audience. To be
+paired with explicit `pyWhile_pos` (step) and `pyWhile_neg` (stop) equation
+lemmas, which drive the `#guard` tests.
 
 ### Companion lemma: post-hoc invariants
 
@@ -41,33 +46,33 @@ notably the near-√ property — is proved after the fact via a generic compani
 lemma, the standard partial-correctness while rule:
 
 ```lean
-theorem pyWhile_invariant {σ : Type} {guard : σ → Prop} [DecidablePred guard]
-    {body : (s : σ) → guard s → σ} {μ : σ → ℕ}
-    {hμ : ∀ s (h : guard s), μ (body s h) < μ s}
-    {P : σ → Prop} (s₀ : σ)
-    (hinit : P s₀)
-    (hstep : ∀ s (h : guard s), P s → P (body s h)) :
-    P (pyWhile guard body s₀ μ hμ).val
+theorem pyWhile_invariant {σ : Type} {condition : σ → Prop} [DecidablePred condition]
+    {body : (s : σ) → condition s → σ} {μ : σ → ℕ}
+    {hμ : ∀ s (h : condition s), μ (body s h) < μ s}
+    {P : σ → Prop} (initial : σ)
+    (hinit : P initial)
+    (hstep : ∀ s (h : condition s), P s → P (body s h)) :
+    P (pyWhile initial condition body μ hμ).val
 ```
 
 Provable directly from `pyWhile_pos`/`pyWhile_neg` by well-founded induction on
-`μ s₀` (or via the generated `pyWhile.induct`). Because `P` ranges over the
+`μ initial` (or via the generated `pyWhile.induct`). Because `P` ranges over the
 subtype `σ`, proving `hstep` has the minimal in-`σ` invariant (`s.property`) in
 scope — so the two layers are synergistic. The loop postcondition assembles as
-`P (result) ∧ ¬ guard (result)`, the latter from the return subtype's proof.
+`P (result) ∧ ¬ condition (result)`, the latter from the return subtype's proof.
 
 ## Considered options
 
 - **Invariant bundled into `σ` (chosen).** `pyWhile` stays fully generic and
-  never mentions an invariant; `body : (s : σ) → guard s → σ` gets its op
+  never mentions an invariant; `body : (s : σ) → condition s → σ` gets its op
   preconditions from the proof riding inside `σ`, and the returned
-  `{ s : σ // ¬ guard s }` carries both the invariant and guard-falsity, so the
-  caller proves the loop correct with *no induction of their own* — only
+  `{ s : σ // ¬ condition s }` carries both the invariant and condition-falsity,
+  so the caller proves the loop correct with *no induction of their own* — only
   `Inv` at the seed and `Inv`-preservation inside `body`. Consistent with the
   existing `isqrt_aux` subtype-return idiom.
 - **Explicit invariant parameter (rejected).** A Hoare-style `pyWhile` taking
   `I : σ → Prop`, a seed proof, a preservation proof, and a body
-  `(s : σ) → I s → guard s → σ`. More textbook and arguably more reusable, but a
+  `(s : σ) → I s → condition s → σ`. More textbook and arguably more reusable, but a
   longer argument list, a `σ` whose type depends on `I` in the body signature,
   and a second invariant concept living outside `σ`. Rejected for consistency
   and for the cleaner "postcondition falls out of the return type" story.
@@ -115,8 +120,8 @@ that the *iterative isqrt* work will hit:
   type — `(P := fun s : σ => …)`; the bare `fun s => …` leaves `σ` a metavar,
   the projections in `P` fail to resolve, and `DecidablePred` instance search
   gets stuck. (b) Expose the `pyWhile` application first (`unfold <caller-def>`)
-  so the conclusion unifies. With those, `exact pyWhile_invariant (P := …) s₀ …`
-  infers `guard`/`body`/`μ`/`hμ` from the goal — no need to spell them out.
+  so the conclusion unifies. With those, `exact pyWhile_invariant (P := …) initial …`
+  infers `condition`/`body`/`μ`/`hμ` from the goal — no need to spell them out.
 - **Equation lemmas: `rw [pyWhile.eq_def, dif_pos/dif_neg h]`.** WF recursion
   doesn't `rfl`/`rw`-unfold, but the generated `pyWhile.eq_def` does the job and
   `rw` touches only the LHS occurrence (the recursive RHS has a different `s`
