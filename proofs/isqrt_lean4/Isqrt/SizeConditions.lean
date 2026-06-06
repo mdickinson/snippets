@@ -87,6 +87,28 @@ theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
     _ = 4 ^ c := by rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
     _ ≤ n := h_lo
 
+/-- Size condition at any depth `d ≤ c`: given `4^c ≤ n < 4^(c+1)`, the
+depth-`d` value `n / 4^(c-d)` satisfies `4^d ≤ · < 4^(d+1)`. Unlike
+`size_condition_step_nat`, this is proved directly from the top condition
+(it cannot be iterated bottom-up, since floor division loses information). -/
+theorem size_condition_at_depth_nat {c n d : ℕ} (hd : d ≤ c)
+    (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
+    4 ^ d ≤ n / 4 ^ (c - d) ∧ n / 4 ^ (c - d) < 4 ^ (d + 1) := by
+  have hpos : 0 < 4 ^ (c - d) := by positivity
+  refine ⟨?_, ?_⟩
+  · -- 4^d ≤ n / 4^(c-d)  ⟺  4^d · 4^(c-d) ≤ n
+    rw [Nat.le_div_iff_mul_le hpos]
+    calc 4 ^ d * 4 ^ (c - d)
+        = 4 ^ (d + (c - d)) := by rw [← pow_add]
+      _ = 4 ^ c := by rw [Nat.add_sub_cancel' hd]
+      _ ≤ n := h_lo
+  · -- n / 4^(c-d) < 4^(d+1)  ⟺  n < 4^(d+1) · 4^(c-d)
+    rw [Nat.div_lt_iff_lt_mul hpos]
+    calc n
+        < 4 ^ (c + 1) := h_hi
+      _ = 4 ^ (d + 1 + (c - d)) := by rw [show d + 1 + (c - d) = c + 1 from by omega]
+      _ = 4 ^ (d + 1) * 4 ^ (c - d) := by rw [pow_add]
+
 /-! ## ℤ-level size condition
 
 `hasSizeCondition c n` means `4^c ≤ n < 4^(c+1)`, the invariant maintained
@@ -209,3 +231,44 @@ theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
     have := h_lo; rw [hcN] at this; exact_mod_cast this
   have h_nat := M_bound_from_size_nat hcn_pos h_lo_nat
   exact_mod_cast h_nat
+
+/-- Size condition at any depth `0 ≤ d ≤ c`: derived directly from
+`hasSizeCondition c n`, the value `n` takes at depth `d`,
+`⌊n / 4^(c-d)⌋ = n >> 2(c-d)`, again satisfies the size condition (now for `d`).
+This is the `(c,n)`-only fact the iterative isqrt's loop property leans on at
+both its seed and its preservation step. -/
+theorem size_condition_at_depth {c n d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c)
+    (h : hasSizeCondition c n) :
+    hasSizeCondition d (Int.fdiv n (4 ^ (c - d).toNat)) := by
+  obtain ⟨h_lo, h_hi⟩ := h
+  have hn_nonneg : 0 ≤ n := by
+    have : (0 : ℤ) ≤ (4 : ℤ) ^ c.toNat := by positivity
+    linarith
+  obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le hn_nonneg
+  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le (le_trans hd_lo hd_hi)
+  obtain ⟨dn, rfl⟩ := Int.eq_ofNat_of_zero_le hd_lo
+  have hcN : (↑cn : ℤ).toNat = cn := Int.toNat_natCast cn
+  have hdN : (↑dn : ℤ).toNat = dn := Int.toNat_natCast dn
+  have hdc : dn ≤ cn := by exact_mod_cast hd_hi
+  -- (c - d).toNat = cn - dn
+  have h_cd : ((↑cn - ↑dn : ℤ)).toNat = cn - dn := by
+    rw [show ((↑cn : ℤ) - ↑dn) = ((cn - dn : ℕ) : ℤ) from (Nat.cast_sub hdc).symm]
+    exact Int.toNat_natCast _
+  -- The fdiv of nonneg-nat casts is the natCast of the ℕ division.
+  have h_bridge : Int.fdiv (↑nn : ℤ) ((4 : ℤ) ^ (cn - dn))
+                    = ((nn / 4 ^ (cn - dn) : ℕ) : ℤ) := by
+    rw [show ((4 : ℤ) ^ (cn - dn)) = ((4 ^ (cn - dn) : ℕ) : ℤ) from by push_cast; rfl,
+        Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
+    rfl
+  -- Apply the ℕ-level lemma.
+  have h_lo_nat : 4 ^ cn ≤ nn := by
+    have := h_lo; rw [hcN] at this; exact_mod_cast this
+  have h_hi_nat : nn < 4 ^ (cn + 1) := by
+    have := h_hi; rw [hcN] at this; exact_mod_cast this
+  obtain ⟨step_lo, step_hi⟩ := size_condition_at_depth_nat hdc h_lo_nat h_hi_nat
+  -- Assemble the ℤ-level conclusion.
+  unfold hasSizeCondition
+  rw [hdN, h_cd, h_bridge]
+  refine ⟨?_, ?_⟩
+  · exact_mod_cast step_lo
+  · exact_mod_cast step_hi

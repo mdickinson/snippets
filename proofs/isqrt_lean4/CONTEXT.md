@@ -49,8 +49,17 @@ A richer invariant (notably the near-√ property) proved *after the fact* about
 `pyWhile`'s result via the `pyWhile_invariant` companion lemma — the standard
 partial-correctness while rule. Not bundled into `σ`; established from a seed
 case plus a body-preservation step. Combined with the return subtype's
-`¬ condition` to give the loop postcondition.
+`¬ condition` to give the loop postcondition. For the iterative isqrt it is
+`isNearSqrt a (n at depth d)` and nothing more — the size condition is kept out.
 _Avoid_: invariant (unqualified)
+
+**n at depth d**:
+The value `n` takes in the recursion subproblem whose `c`-argument is `d`:
+`⌊n / 4^(c−d)⌋ = n >> 2(c−d)` (written `N_d`). The iterative loop climbs `d` up
+the chain `c >> j` that the recursion descends; at each step `a` is tracked as a
+near square root of `N_d`. At loop exit `d = c`, so `N_c = n`. The pair `(d, N_d)`
+is a size-condition pair of the recursive proof.
+_Avoid_: residual, remainder, subproblem input
 
 **pyWhile**:
 The generic Lean combinator (in `Isqrt/While.lean`) that represents a simple
