@@ -128,3 +128,45 @@ that the *iterative isqrt* work will hit:
   argument). This keeps `While.lean`'s imports to just `Mathlib.Data.Nat.Init`
   (for `ℕ`/`Nat.strong_induction_on`); it avoids `conv_lhs` (Mathlib-only) and
   the heavy `import Mathlib.Tactic`.
+
+## Planned next step: generalise the measure beyond ℕ
+
+Decided direction (implementation pending): relax the termination evidence from
+an ℕ measure to a measure into **any well-founded-ordered type** — `μ : σ → α`
+with `[WellFoundedRelation α]` — rather than an arbitrary relation on `σ`. This
+keeps the equation-compiler definition, the measure ergonomics, and (for ℕ
+measures) the existing call sites essentially unchanged, while admitting
+lexicographic / ordinal measures when a single `ℕ` won't do. Sketch:
+
+```lean
+def pyWhile {σ : Type} {α : Type} [WellFoundedRelation α]
+    (initial : σ) (condition : σ → Prop) [DecidablePred condition]
+    (body : (s : σ) → condition s → σ)
+    (μ : σ → α)
+    (hμ : ∀ (s : σ) (h : condition s), WellFoundedRelation.rel (μ (body s h)) (μ s)) :
+    { s : σ // ¬ condition s } := …
+termination_by μ initial
+decreasing_by exact hμ initial h
+```
+
+Findings from the scoping pass (the "arbitrary relation on `σ` via
+`WellFounded.fix`" alternative was considered and rejected — it taxes every call
+site with a `WellFounded` proof and needs a `#guard`-computability check):
+
+- **Def + equation lemmas: ~no change** — the equation compiler is retained, so
+  `pyWhile_pos`/`pyWhile_neg` stay `rw [pyWhile.eq_def, dif_pos/dif_neg h]`.
+- **`pyWhile_invariant` simplifies** — induct on the state directly (via
+  `‹WellFoundedRelation α›.wf.induction`), dropping today's `μ s = n` bookkeeping
+  (the `suffices … (μ initial) initial rfl …` + `hμs ▸` plumbing goes away).
+- **Test complication ≈ zero** — `countDown`/`countDownPos` keep `μ := (·.1)`
+  into `ℕ` and the same `by omega` decrease proof, since `Nat.lt_wfRel.rel` is
+  defeq to `<`.
+
+To verify when implementing:
+
+- `decreasing_by` may need a leading `simp_wf` to line `hμ` up with the
+  `invImage`-wrapped goal; state `hμ` via `WellFoundedRelation.rel` (defeq to
+  `<` for `ℕ`).
+- Put the well-founded order on the *measure codomain* `α`, as above. Do **not**
+  thread a `[WellFoundedRelation σ]` on the state itself: instance search can
+  silently pick the default `SizeOf`/`Prod.lex` instance over the intended one.
