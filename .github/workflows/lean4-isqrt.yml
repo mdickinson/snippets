@@ -21,4 +21,5 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           build-args: "--wfail"
+          lint: "true"
           lake-package-directory: proofs/isqrt_lean4

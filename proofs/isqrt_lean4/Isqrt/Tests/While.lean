@@ -49,11 +49,11 @@ example (N : ℕ) : (countDown (N, 0)).val.2 = N := by
 *changes* `second` (here doubling it), so the body must re-derive `0 < second`
 for the new value from the incoming `s.property` — the proof-carrying pattern
 the isqrt body will use to discharge its py-op preconditions (e.g. proving
-`0 < a'` for the updated `a` à la `isqrt_aux_return_pos`). The invariant is
+`0 < a'` for the updated `a` à la `isqrtAux_return_pos`). The invariant is
 genuinely load-bearing: `0 < second * 2` does not follow from the condition. -/
 
 /-- The doubled second component stays positive — a toy stand-in for the
-isqrt body's `isqrt_aux_return_pos`. -/
+isqrt body's `isqrtAux_return_pos`. -/
 private theorem double_pos {m : ℕ} (hm : 0 < m) : 0 < m * 2 := by omega
 
 private def countDownPos (initial : { p : ℕ × ℕ // 0 < p.2 }) :

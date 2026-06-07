@@ -5,6 +5,9 @@ package «isqrt-lean4» where
   leanOptions := #[
     ⟨`autoImplicit, false⟩
   ]
+  -- `lake lint` runs Batteries' environment linter (the `#lint` suite) on our
+  -- default-target roots. CI invokes this via `leanprover/lean-action`'s `lint`.
+  lintDriver := "batteries/runLinter"
 
 @[default_target]
 lean_lib «Isqrt» where

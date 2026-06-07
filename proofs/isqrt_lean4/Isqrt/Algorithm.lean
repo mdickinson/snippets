@@ -1,5 +1,5 @@
 /-
-Definitions of `isqrt_aux` and `isqrt`, matching the Python code:
+Definitions of `isqrtAux` and `isqrt`, matching the Python code:
 
     def isqrt_aux(c: int, n: int) -> int:
         if c == 0:
@@ -17,7 +17,7 @@ Definitions of `isqrt_aux` and `isqrt`, matching the Python code:
             a = isqrt_aux(c, n)
             return a - 1 if n < a * a else a
 
-Both functions carry proof-carrying preconditions. `isqrt_aux` returns a
+Both functions carry proof-carrying preconditions. `isqrtAux` returns a
 subtype `{ a : ℤ // 0 < a }` so that the positivity of the result is
 available for the `// a` division in the recursive case.
 
@@ -31,12 +31,12 @@ import Isqrt.RecursionDepth
 import Isqrt.KeyLemma
 import Isqrt.SizeConditions
 
-/-! ## isqrt_aux -/
+/-! ## isqrtAux -/
 
 /-- The return expression `(a py<< k) + (n py>> (k+2)) py// a` is positive
 when `a > 0`, `n ≥ 0`, and `k ≥ 0` — the `K = k`, `J = k+2` specialization of
 `pyLshift_add_pyFloordiv_pos`. -/
-private theorem isqrt_aux_return_pos {a n k : ℤ}
+private theorem isqrtAux_return_pos {a n k : ℤ}
     (a_pos : 0 < a) (n_nonneg : 0 ≤ n) (k_nonneg : 0 ≤ k) :
     0 < (a py<< k) + (n py>> (k + 2)) py// a :=
   pyLshift_add_pyFloordiv_pos a_pos n_nonneg k_nonneg (by omega)
@@ -56,7 +56,7 @@ Preconditions:
 
 Returns `{ a : ℤ // 0 < a }`: the result is always positive, which is
 needed for the `// a` division in the recursive case. -/
-def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n := by omega) : { a : ℤ // 0 < a } :=
+def isqrtAux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n := by omega) : { a : ℤ // 0 < a } :=
   if _ : c = 0 then
     ⟨1, by omega⟩
   else
@@ -64,10 +64,10 @@ def isqrt_aux (c n : ℤ) (c_nonneg : 0 ≤ c := by omega) (n_nonneg : 0 ≤ n :
     have k_nonneg : 0 ≤ k := pyFloordiv_nonneg (by omega) (by omega)
     let d := c py// 2
     have d_nonneg : 0 ≤ d := pyFloordiv_nonneg c_nonneg (by omega)
-    let ⟨a, a_pos⟩ := isqrt_aux d (n py>> (2 * k + 2))
+    let ⟨a, a_pos⟩ := isqrtAux d (n py>> (2 * k + 2))
                                  d_nonneg (pyRshift_nonneg n_nonneg)
     let b := (a py<< k) + (n py>> (k + 2)) py// a
-    have b_pos : 0 < b := isqrt_aux_return_pos a_pos n_nonneg k_nonneg
+    have b_pos : 0 < b := isqrtAux_return_pos a_pos n_nonneg k_nonneg
     ⟨b, b_pos⟩
 termination_by c.toNat
 decreasing_by
@@ -86,5 +86,5 @@ def isqrt (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ :=
     0
   else
     let c := (pyBitLength n - 1) py// 2
-    let a := (isqrt_aux c n (isqrt_c_nonneg (by omega))).val
+    let a := (isqrtAux c n (isqrt_c_nonneg (by omega))).val
     if n < a * a then a - 1 else a

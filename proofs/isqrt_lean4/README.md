@@ -43,7 +43,7 @@ Isqrt/
   RecursionDepth.lean        -- isqrt_c_nonneg, shared by both algorithm variants
   KeyLemma.lean              -- key algebraic lemma; isNearSqrt / isIntegerSqrt predicates
   SizeConditions.lean        -- size-condition invariants carried through the recursion
-  Algorithm.lean             -- recursive isqrt_aux and isqrt definitions
+  Algorithm.lean             -- recursive isqrtAux and isqrt definitions
   Correctness.lean           -- recursive correctness proof (isqrt_is_sqrt)
   While.lean                 -- generic pyWhile combinator + partial-correctness while rule
   Iterative.lean             -- iterative isqrtIterative definition (pyWhile-based)
@@ -192,7 +192,7 @@ Python's `==` takes two integers, compares them, and returns a Python
 `bool`; that `bool` is then used by `if` to pick a branch. Lean has a
 `==` operator that works similarly (returning something of type `Bool`),
 but the Lean definitions in this project use `=` rather than `==` — for
-example `if _ : c = 0 then ...` in `isqrt_aux`. The `c = 0` here has
+example `if _ : c = 0 then ...` in `isqrtAux`. The `c = 0` here has
 type `Prop`, which lives in proof-world rather than in the
 concrete-computational-object world. At first glance that looks like the
 wrong tool for a runtime conditional.
@@ -319,13 +319,13 @@ algorithm itself, where Lean requires things Python doesn't.
 
 The first of these is at the function-signature level. The algorithm's
 top-level functions carry their own preconditions: `isqrt` takes a
-proof `0 ≤ n`, and `isqrt_aux` takes proofs `0 ≤ c` and `0 ≤ n`. (Both
+proof `0 ≤ n`, and `isqrtAux` takes proofs `0 ≤ c` and `0 ≤ n`. (Both
 default to `by omega`, the same convenience used for the Python
 operators.) These nonnegativity hypotheses are needed to discharge the proof
 obligations on the operators and on the recursive call inside the
 body.
 
-`isqrt_aux` adds one more twist that doesn't appear anywhere else in
+`isqrtAux` adds one more twist that doesn't appear anywhere else in
 the proof: it doesn't return a plain integer. Its return type is the
 subtype `{ a : ℤ // 0 < a }` — a pair of an integer together with a
 proof that it's strictly positive. The reason is the recursive case,
@@ -333,21 +333,21 @@ which contains an expression of the form `... + (n py>> (k + 2)) py// a`.
 The `py// a` requires a proof that `a ≠ 0`, and since `a` is the
 result of a recursive call, that proof has to come out of the
 recursion. The cleanest way to thread it through is to bundle the
-proof into the return type itself: every `isqrt_aux` result comes with
+proof into the return type itself: every `isqrtAux` result comes with
 a witness that it's positive, and a caller writes
-`let ⟨a, a_pos⟩ := isqrt_aux ...` to unpack both pieces.
+`let ⟨a, a_pos⟩ := isqrtAux ...` to unpack both pieces.
 
-### Termination of `isqrt_aux`
+### Termination of `isqrtAux`
 
 The other thing Lean asks for that Python doesn't is that every
 recursive function be proved to terminate on all inputs. Python's
-`isqrt_aux` is recursive, but Python doesn't require any such
+`isqrtAux` is recursive, but Python doesn't require any such
 guarantee — in principle a recursive Python function could call
 itself forever; in practice it eventually hits the interpreter's
 recursion limit and raises `RecursionError`. Either way, "this
 terminates" isn't part of the language's contract.
 
-This has visible cost in the Lean definition of `isqrt_aux`. At the
+This has visible cost in the Lean definition of `isqrtAux`. At the
 end of the `def` you'll find two extra clauses:
 
 ```
@@ -373,7 +373,7 @@ that Python's `math.isqrt` is correct, here's where to put your attention
 
 **Read carefully.** The fidelity of the translation lives in two places:
 
-- The Lean *definitions* of `isqrt` and `isqrt_aux` (in
+- The Lean *definitions* of `isqrt` and `isqrtAux` (in
   `Isqrt/Algorithm.lean`) and the `pyFloordiv` / `pyRshift` / `pyLshift`
   / `pyBitLength` operations (in `Isqrt/PythonOps.lean`). These are the
   only places where a translation error could plausibly creep in: if a

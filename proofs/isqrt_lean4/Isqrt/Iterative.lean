@@ -62,7 +62,7 @@ point of view). Key changes:
 
 This rewritten version is our target for translation into Lean.
 
-This is `isqrt_aux` unrolled bottom-up: the loop's `d` climbs the chain
+This is `isqrtAux` unrolled bottom-up: the loop's `d` climbs the chain
 `c >> j` that the recursion descends, and each iteration is one recursive step.
 The translation uses the generic `pyWhile` combinator (`Isqrt.While`). The
 persistent loop state `(s, d, a)` lives in a subtype carrying the minimal
@@ -86,8 +86,13 @@ import Isqrt.While
 /-- Persistent loop state of the iterative isqrt: the Python locals `s, d, a`
 that survive across iterations (`e` is loop-local). -/
 structure IterState where
+  /-- Python local `s`: the bit index of `c` being processed, counting down
+  from `c.bit_length() - 1` to `0`. -/
   s : ℤ
+  /-- Python local `d`: equal to `c >> s` within the loop, climbing toward `c`
+  as `s` descends. -/
   d : ℤ
+  /-- Python local `a`: the running integer-square-root approximation. -/
   a : ℤ
 
 /-- The well-definedness invariant bundled into the loop-state subtype: the

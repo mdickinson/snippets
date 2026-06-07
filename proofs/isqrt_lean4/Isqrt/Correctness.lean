@@ -1,10 +1,10 @@
 /-
 Correctness of `isqrt n`: it returns the floor of `√n`.
 
-Strategy: strong induction on `c.toNat` for `isqrt_aux`, where the
+Strategy: strong induction on `c.toNat` for `isqrtAux`, where the
 size-condition invariant `4^c ≤ n < 4^(c+1)` (from `Isqrt.SizeConditions`)
 is preserved by each recursive step. The inductive step combines
-`isqrt_aux_step_val` (unfolds the recursion) with `key_isqrt_lemma`
+`isqrtAux_step_val` (unfolds the recursion) with `key_isqrt_lemma`
 (the algebraic correctness statement from `Isqrt.KeyLemma`). The main
 result is `isqrt_is_sqrt`.
 -/
@@ -14,7 +14,7 @@ import Isqrt.FDivLemmas
 import Isqrt.KeyLemma
 import Isqrt.SizeConditions
 
-/-! ## Correctness of `isqrt_aux` -/
+/-! ## Correctness of `isqrtAux` -/
 
 /-- Helper: `(j + 2).toNat = j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_add_two {j : ℤ} (hj : 0 ≤ j) :
@@ -28,9 +28,9 @@ private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
   obtain ⟨j0, rfl⟩ := Int.eq_ofNat_of_zero_le hj
   rw [Int.toNat_natCast]; omega
 
-/-- Unfolding lemma for the recursive case of `isqrt_aux`. Exposes the
+/-- Unfolding lemma for the recursive case of `isqrtAux`. Exposes the
 algorithm's return value in terms of the recursive subproblem's value `a`. -/
-private theorem isqrt_aux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
+private theorem isqrtAux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
     (hc_pos : 0 < c) :
     let k := (c - 1) py// 2
     let kn : 0 ≤ k := pyFloordiv_nonneg (by linarith) (by norm_num)
@@ -38,23 +38,23 @@ private theorem isqrt_aux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
     let dn : 0 ≤ d := pyFloordiv_nonneg hc (by norm_num)
     let m := pyRshift n (2 * k + 2) (by linarith)
     let mn : 0 ≤ m := pyRshift_nonneg hn
-    let a := (isqrt_aux d m dn mn).val
-    (isqrt_aux c n hc hn).val =
+    let a := (isqrtAux d m dn mn).val
+    (isqrtAux c n hc hn).val =
       a * 2 ^ k.toNat + (Int.fdiv n (2 ^ (k + 2).toNat)).fdiv a := by
   intro k kn d dn m mn a
-  unfold isqrt_aux
+  unfold isqrtAux
   simp [hc_pos.ne']
   rfl
 
 /-- The aux function is a near square root for any size-conformant `(c, n)`.
 
 For `0 < n` satisfying the size condition `4^c ≤ n < 4^(c+1)`, the value
-returned by `isqrt_aux c n` is a near square root of `n`:
+returned by `isqrtAux c n` is a near square root of `n`:
 `(a - 1)² < n ∧ n < (a + 1)²`. -/
-private theorem isqrt_aux_correctness :
+private theorem isqrtAux_correctness :
     ∀ (cn : ℕ) {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n),
       c.toNat = cn → hasSizeCondition c n →
-      isNearSqrt (isqrt_aux c n hc hn.le).val n := by
+      isNearSqrt (isqrtAux c n hc hn.le).val n := by
   intro cn
   induction cn using Nat.strong_induction_on with
   | _ cn ih =>
@@ -62,13 +62,13 @@ private theorem isqrt_aux_correctness :
     by_cases hc0 : c = 0
     · -- Base case: c = 0, size condition gives 1 ≤ n < 4
       subst hc0
-      have h_val : (isqrt_aux 0 n hc hn.le).val = 1 := by
-        unfold isqrt_aux; rfl
+      have h_val : (isqrtAux 0 n hc hn.le).val = 1 := by
+        unfold isqrtAux; rfl
       simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
       refine ⟨?_, ?_⟩
-      · show ((isqrt_aux 0 n hc hn.le).val - 1) * ((isqrt_aux 0 n hc hn.le).val - 1) < n
+      · show ((isqrtAux 0 n hc hn.le).val - 1) * ((isqrtAux 0 n hc hn.le).val - 1) < n
         rw [h_val]; ring_nf; linarith
-      · show n < ((isqrt_aux 0 n hc hn.le).val + 1) * ((isqrt_aux 0 n hc hn.le).val + 1)
+      · show n < ((isqrtAux 0 n hc hn.le).val + 1) * ((isqrtAux 0 n hc hn.le).val + 1)
         rw [h_val]; ring_nf; linarith
     · -- Inductive case: c > 0
       have hc_pos : 0 < c := lt_of_le_of_ne hc (Ne.symm hc0)
@@ -97,8 +97,8 @@ private theorem isqrt_aux_correctness :
         omega
       -- Apply induction hypothesis to the recursive call.
       have ih_result := ih d.toNat hd_toNat_lt d_nn m_pos rfl hsc_step
-      set a := (isqrt_aux d m d_nn m_pos.le).val with ha_def
-      have a_pos : 0 < a := (isqrt_aux d m d_nn m_pos.le).property
+      set a := (isqrtAux d m d_nn m_pos.le).val with ha_def
+      have a_pos : 0 < a := (isqrtAux d m d_nn m_pos.le).property
       set M := (2 : ℤ) ^ k.toNat with hM_def
       have M_pos : 0 < M := by positivity
       -- Bridge: `m = n.fdiv (4 * M²)`.
@@ -115,9 +115,9 @@ private theorem isqrt_aux_correctness :
       have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
       -- Unfold the algorithm to expose its return value, then rewrite to
       -- the form expected by `h_key`.
-      have val_eq : (isqrt_aux c n hc hn.le).val = M * a + n.fdiv (4 * M * a) := by
-        have step1 := isqrt_aux_step_val hc hn.le hc_pos
-        -- `step1` has the form  isqrt_aux c n = a * 2^k.toNat + ...
+      have val_eq : (isqrtAux c n hc hn.le).val = M * a + n.fdiv (4 * M * a) := by
+        have step1 := isqrtAux_step_val hc hn.le hc_pos
+        -- `step1` has the form  isqrtAux c n = a * 2^k.toNat + ...
         simp only at step1
         rw [step1, toNat_add_two k_nn]
         have h_pow : (2 : ℤ) ^ (k.toNat + 2) = 4 * M := by
@@ -125,7 +125,7 @@ private theorem isqrt_aux_correctness :
         rw [h_pow]
         rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity : (0 : ℤ) ≤ 4 * M) a_pos.le]
         ring
-      show isNearSqrt (isqrt_aux c n hc hn.le).val n
+      show isNearSqrt (isqrtAux c n hc hn.le).val n
       rw [val_eq]
       exact h_key
 
@@ -143,10 +143,10 @@ theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     have hn_pos : 0 < n := lt_of_le_of_ne hn (Ne.symm hn0)
     set c := (pyBitLength n - 1) py// 2 with hc_def
     have hc_nn : 0 ≤ c := isqrt_c_nonneg hn0
-    set a := (isqrt_aux c n hc_nn hn_pos.le).val with ha_def
-    -- Apply isqrt_aux_correctness with the initial size condition.
+    set a := (isqrtAux c n hc_nn hn_pos.le).val with ha_def
+    -- Apply isqrtAux_correctness with the initial size condition.
     have hsc := size_condition_initial hn_pos
     have h_near : isNearSqrt a n :=
-      isqrt_aux_correctness c.toNat hc_nn hn_pos rfl hsc
+      isqrtAux_correctness c.toNat hc_nn hn_pos rfl hsc
     -- Final return adjustment: `a - 1 if n < a*a else a` is the integer sqrt.
     exact h_near.toIntegerSqrt

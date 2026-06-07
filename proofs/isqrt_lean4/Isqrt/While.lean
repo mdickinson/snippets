@@ -29,7 +29,7 @@ proof that the condition is now false.
 The well-definedness invariant a loop body needs (for isqrt: `a > 0`, shift
 amounts nonneg, …) is carried by making the caller's `σ` a subtype that bundles
 it, rather than threading an explicit invariant predicate through `pyWhile` — so
-`pyWhile` itself never mentions an invariant, mirroring how `isqrt_aux` returns
+`pyWhile` itself never mentions an invariant, mirroring how `isqrtAux` returns
 `{ a : ℤ // 0 < a }`. Richer loop properties (notably the near-√ property) are
 proved after the fact about the result via `pyWhile_invariant`, the standard
 partial-correctness while rule.

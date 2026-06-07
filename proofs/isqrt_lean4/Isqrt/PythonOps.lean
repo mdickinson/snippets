@@ -27,14 +27,17 @@ import Isqrt.FDivLemmas
 /-- Python's `a // b` (floor division). Uses `Int.fdiv`, which rounds toward
 negative infinity — matching Python's `//` for all sign combinations.
 Note: this is NOT `Int.ediv` (Lean's default `/` on `ℤ`). -/
+@[nolint unusedArguments]
 def pyFloordiv (a b : ℤ) (_hb : b ≠ 0 := by omega) : ℤ := Int.fdiv a b
 
 /-- Python's `n >> k` (right shift by `k` bits). Equivalent to floor division
 by `2^k`. Requires a proof that the shift amount is nonneg. -/
+@[nolint unusedArguments]
 def pyRshift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := Int.fdiv n (2 ^ k.toNat)
 
 /-- Python's `n << k` (left shift by `k` bits). Equivalent to multiplication
 by `2^k`. Requires a proof that the shift amount is nonneg. -/
+@[nolint unusedArguments]
 def pyLshift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := n * (2 ^ k.toNat)
 
 /-- Bit length of a natural number: the number of bits needed to represent `n`,
@@ -55,9 +58,9 @@ Python's `//`, `>>`, and `<<`, with relative precedence matching Python:
 `py//` (70, same as `*`) binds tighter than `+` (65), which binds tighter
 than `py>>` and `py<<` (60). -/
 
-infixl:70 " py// " => pyFloordiv
-infixl:60 " py>> " => pyRshift
-infixl:60 " py<< " => pyLshift
+@[inherit_doc] infixl:70 " py// " => pyFloordiv
+@[inherit_doc] infixl:60 " py>> " => pyRshift
+@[inherit_doc] infixl:60 " py<< " => pyLshift
 
 /-! ## Unfolding lemmas
 
@@ -123,7 +126,7 @@ theorem pyFloordiv_mul_le_self (a b : ℤ) (hb : 0 < b) :
 /-- `(a << K) + (n >> J) // a` is positive when `a > 0`, `n ≥ 0`, and the shift
 amounts are nonneg: the left shift of a positive is positive and the
 floor-division term is nonneg. This is the shape of both the recursive
-`isqrt_aux` return and the iterative loop body's new `a`. -/
+`isqrtAux` return and the iterative loop body's new `a`. -/
 theorem pyLshift_add_pyFloordiv_pos {a n K J : ℤ}
     (ha : 0 < a) (hn : 0 ≤ n) (hK : 0 ≤ K) (hJ : 0 ≤ J) :
     0 < (a py<< K) + (n py>> J) py// a := by
