@@ -133,30 +133,38 @@ theorem isqrtIterative_body_pos {a n K J : ℤ}
 
 /-! ## The loop body -/
 
-/-- One execution of the loop body. Mirrors the Python suite
+/-- One execution of the loop body. Reads line-for-line with the Python suite
 
     e = d; s = s - 1; d = c >> s; a = (a << d-e-1) + (n >> 2c-d-e+1) // a
 
-(`e` is the incoming `d`, i.e. `st.val.d`). The shift-nonneg preconditions are
-discharged by the named lemmas above, and `iterInv` is re-established for the
-new state. Defined as a standalone `def` (not inline in the `pyWhile` call) so
-the precondition proofs don't entangle with the measure-decrease goal. -/
+The persistent locals `s, d, a` are unpacked from the loop state up front, and
+the four assignments follow in order (`e` is the incoming `d`; Lean
+`let`-shadowing of `s` and `d` mirrors Python's rebinding). The shift-nonneg
+facts `hK`, `hJ` (and `ha_pos`) are in scope, so the py-ops' default `by omega`
+discharges their preconditions. `iterInv` is re-established for the new state.
+Defined as a standalone `def` (not inline in the `pyWhile` call) so the
+precondition proofs don't entangle with the measure-decrease goal. -/
 def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
     (st : IterSigma c) (h : 0 < st.val.s) : IterSigma c :=
-  have hs'_nn : 0 ≤ st.val.s - 1 := by omega
-  have hd_eq : st.val.d = Int.fdiv c (2 ^ st.val.s.toNat) := st.property.2.2.1
-  have hs_le : st.val.s ≤ pyBitLength c := st.property.2.1
-  have ha_pos : 0 < st.val.a := st.property.2.2.2
-  let d' : ℤ := c py>> (st.val.s - 1)
-  have hK : 0 ≤ d' - st.val.d - 1 := iter_lshift_nonneg hc h hs_le hd_eq
-  have hJ : 0 ≤ 2 * c - d' - st.val.d + 1 := iter_rshift_nonneg hc hd_eq
-  -- `hK`, `hJ`, `ha_pos` are in scope, so the py-ops' default `by omega`
-  -- discharges the shift-nonneg / nonzero-divisor preconditions.
-  ⟨{ s := st.val.s - 1
-     d := d'
-     a := (st.val.a py<< (d' - st.val.d - 1))
-            + (n py>> (2 * c - d' - st.val.d + 1)) py// st.val.a },
-   ⟨hs'_nn, by show st.val.s - 1 ≤ pyBitLength c; omega, rfl,
+  -- the persistent Python locals, unpacked from the loop state
+  let s := st.val.s
+  let d := st.val.d
+  let a := st.val.a
+  -- invariant facts the body's preconditions consume
+  have hd_eq  : d = Int.fdiv c (2 ^ s.toNat) := st.property.2.2.1
+  have hs_le  : s ≤ pyBitLength c            := st.property.2.1
+  have ha_pos : 0 < a                        := st.property.2.2.2
+  -- one pass of the loop body, line for line with the Python:
+  --   e = d; s = s - 1; d = c >> s; a = (a << d-e-1) + (n >> 2*c-d-e+1) // a
+  let e := d
+  let s := s - 1
+  have hs_nn : 0 ≤ s := by omega
+  let d := c py>> s
+  have hK : 0 ≤ d - e - 1         := iter_lshift_nonneg hc h hs_le hd_eq
+  have hJ : 0 ≤ 2 * c - d - e + 1 := iter_rshift_nonneg hc hd_eq
+  let a := (a py<< (d - e - 1)) + (n py>> (2 * c - d - e + 1)) py// a
+  ⟨{ s := s, d := d, a := a },
+   ⟨by show (0 : ℤ) ≤ s; omega, by show s ≤ pyBitLength c; omega, rfl,
     isqrtIterative_body_pos ha_pos hn hK hJ⟩⟩
 
 /-- The body decrements `s`. (Drives the measure-decrease proof.) -/
