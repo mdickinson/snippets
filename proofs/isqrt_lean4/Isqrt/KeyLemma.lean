@@ -22,7 +22,9 @@ import Mathlib.Tactic.Positivity
 Both predicates are stated multiplicatively — `x * x`, never `x ^ 2`:
 `isIntegerSqrt` mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)`
 that the top-level theorems assert, and `isNearSqrt` follows suit for symmetry.
-(The doc-comment prose still writes squares as `x²`.) -/
+The doc-comment prose, by contrast, writes squares as `x²`: the `*` rule governs
+compiled statements that mirror Python source, while informal math in comments
+follows ordinary mathematical notation. -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
