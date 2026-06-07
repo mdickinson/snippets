@@ -11,6 +11,11 @@ Each operation that can raise an exception in Python requires a validity
 proof at the call site (e.g., nonzero divisor, nonneg shift amount).
 -/
 
+-- `Ring` and `Linarith` are not used directly in this file; downstream modules
+-- (`Iterative`, `SizeConditions`) call `ring`/`linarith`/`nlinarith` without
+-- importing those tactics and rely on this transitive re-export. Dropping them
+-- as "unused" breaks the downstream build under `--wfail`. (The cleaner fix is
+-- to import the tactics in the files that use them.)
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity

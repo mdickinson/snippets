@@ -19,6 +19,7 @@ From this directory:
 ```
 lake exe cache get   # download prebuilt Mathlib (avoids compiling from source)
 lake build           # build the project
+lake build --wfail   # build, failing on warnings too (matches CI)
 ```
 
 The first `lake` command you run will automatically download the correct
@@ -36,16 +37,22 @@ lean-toolchain             -- Lean version pin
 Isqrt.lean                 -- library root (implementation modules)
 IsqrtTests.lean            -- tests root (imports the #guard files)
 Isqrt/
-  PythonOps.lean           -- Lean definitions matching Python's //, >>, <<, bit_length
-  FDivLemmas.lean          -- Int.fdiv ordering lemmas and Int↔ℕ bridge
-  BitLengthLemmas.lean     -- natBitLength / pyBitLength properties
-  KeyLemma.lean            -- key algebraic lemma; isNearSqrt / isIntegerSqrt predicates
-  SizeConditions.lean      -- size-condition invariants carried through the recursion
-  Algorithm.lean           -- isqrt_aux and isqrt definitions
-  Correctness.lean         -- correctness proofs (isqrt_aux_correctness, isqrt_is_sqrt)
+  PythonOps.lean             -- Lean definitions matching Python's //, >>, <<, bit_length
+  FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
+  BitLengthLemmas.lean       -- natBitLength / pyBitLength properties
+  RecursionDepth.lean        -- isqrt_c_nonneg, shared by both algorithm variants
+  KeyLemma.lean              -- key algebraic lemma; isNearSqrt / isIntegerSqrt predicates
+  SizeConditions.lean        -- size-condition invariants carried through the recursion
+  Algorithm.lean             -- recursive isqrt_aux and isqrt definitions
+  Correctness.lean           -- recursive correctness proof (isqrt_is_sqrt)
+  While.lean                 -- generic pyWhile combinator + partial-correctness while rule
+  Iterative.lean             -- iterative isqrtIterative definition (pyWhile-based)
+  IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_is_sqrt)
   Tests/
-    PythonOps.lean         -- #guard checks for the Python operations
-    Isqrt.lean             -- #guard checks for isqrt on concrete values
+    PythonOps.lean           -- #guard checks for the Python operations
+    Isqrt.lean               -- #guard checks for isqrt on concrete values
+    While.lean               -- checks for the pyWhile combinator
+    Iterative.lean           -- #guard checks for isqrtIterative
 ```
 
 Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
@@ -113,7 +120,7 @@ is a faithful, lightly-rewritten transcription of the CPython source
 comment, and `isqrtIterative_is_sqrt` (`Isqrt/IterativeCorrectness.lean`)
 proves it meets the same specification as the recursive `isqrt`, reusing
 the recursive proof's algebra through a generic `while`-loop combinator
-(`Isqrt/While.lean`). See `PLAN.md` and `CONTEXT.md` for that development.
+(`Isqrt/While.lean`).
 
 [so-recursive]: https://stackoverflow.com/a/78076732
 [cpython-iterative]: https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211

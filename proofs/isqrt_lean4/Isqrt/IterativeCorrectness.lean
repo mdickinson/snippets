@@ -13,7 +13,7 @@ at seed and step) holds at the loop result via `pyWhile_invariant`, then read of
 return line `a if a*a ≤ n else a-1`, exactly as `isqrt_is_sqrt` does.
 
 The main result is `isqrtIterative_is_sqrt`, the same statement as
-`isqrt_is_sqrt`. See `PLAN.md` (Iterative variant) and `CONTEXT.md`.
+`isqrt_is_sqrt`.
 -/
 
 import Isqrt.Iterative

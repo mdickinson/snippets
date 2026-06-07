@@ -69,10 +69,11 @@ persistent loop state `(s, d, a)` lives in a subtype carrying the minimal
 well-definedness invariant `iterInv`; `e` is loop-local (the incoming `d`).
 
 This module holds the definition `isqrtIterative` and the named lemmas its body
-needs to typecheck (the py-op precondition proofs — kept out of the `pyWhile`
-call per the ADR 0001 elaboration-order gotcha). Correctness lives in
-`Isqrt.IterativeCorrectness`. See `PLAN.md` (Iterative variant) and
-`CONTEXT.md`.
+needs to typecheck. The py-op precondition proofs are kept out of the `pyWhile`
+call as top-level lemmas: an inline `by` inside the `⟨val, proof⟩` constructor
+hits an elaboration-order bug where the proof metavariable entangles with the
+measure-decrease goal (surfacing as a spurious "no goals to be solved").
+Correctness lives in `Isqrt.IterativeCorrectness`.
 -/
 
 import Isqrt.PythonOps
@@ -114,7 +115,7 @@ structure iterInv (c : ℤ) (st : IterState) : Prop where
 /-- The loop-state type handed to `pyWhile`: states carrying `iterInv c`. -/
 abbrev IterSigma (c : ℤ) := { st : IterState // iterInv c st }
 
-/-! ## Body precondition lemmas (named, per ADR 0001 gotcha) -/
+/-! ## Body precondition lemmas (top-level named lemmas, not inline `by`) -/
 
 /-- The left-shift amount `d' - d - 1` is nonneg, where `d' = c >> s` (the new
 `d`) and `d = c >> (s+1)` (the incoming `e`), for `0 ≤ s < c.bit_length()`. The
