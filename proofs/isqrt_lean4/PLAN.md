@@ -82,6 +82,12 @@ proofs/isqrt_lean4/
   the halving link), `pyFloordiv_mul_le_self`. These bridge to the `Int.fdiv`
   lemma library, so `PythonOps` now `import`s `FDivLemmas` (acyclic — `FDivLemmas`
   is pure `Int.fdiv`, naming no py-op) and `Mathlib.Data.Int.DivMod`.
+- `PythonOps` also `import`s `Mathlib.Tactic.Ring` and `Mathlib.Tactic.Linarith`
+  though it uses neither directly: downstream files (`Iterative`,
+  `SizeConditions`) call `ring`/`linarith`/`nlinarith` without importing those
+  tactics themselves and free-ride on this transitive re-export. Removing them as
+  "unused" breaks the downstream build under `--wfail` (a `/simplify` pass hit
+  this); the proper fix is to import the tactics in those files directly.
 
 ### `FDivLemmas.lean` — Floor-division lemmas
 
