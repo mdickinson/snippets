@@ -3,7 +3,10 @@ Key algebraic lemma for the isqrt correctness proof.
 
 We say that a positive integer `a` is a **near square root** of a positive
 integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
-`⌊√n⌋` or `⌈√n⌉`.
+`⌊√n⌋` or `⌈√n⌉`. The file also defines the companion predicate
+`isIntegerSqrt a n` (`a² ≤ n < (a + 1)²`), the exact `a = ⌊√n⌋` postcondition
+asserted by the top-level correctness theorems; the algorithm's final
+`a-1`/`a` choice is what turns a near square root into the integer square root.
 
 This file proves: given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`,
 if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
@@ -14,11 +17,18 @@ import Isqrt.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-/-! ## Near square roots -/
+/-! ## Square-root predicates -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
 def isNearSqrt (a n : ℤ) : Prop := (a - 1)^2 < n ∧ n < (a + 1)^2
+
+/-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
+`a = ⌊√n⌋` exactly — unlike `isNearSqrt`, which only pins `a` down to `⌊√n⌋`
+or `⌈√n⌉`. This is the postcondition the top-level correctness theorems
+assert. Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror Python's
+`a * a <= n < (a + 1) * (a + 1)`, since `**` is type-unsafe. -/
+def isIntegerSqrt (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
 /-! ## Algebraic helpers
 

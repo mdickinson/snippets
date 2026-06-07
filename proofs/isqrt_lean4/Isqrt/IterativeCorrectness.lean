@@ -137,8 +137,7 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
 /-- Main correctness theorem for the iterative form: `isqrtIterative n` is the
 floor of `√n`. Same statement as `isqrt_is_sqrt`. -/
 theorem isqrtIterative_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
-    let a := isqrtIterative n hn
-    a * a ≤ n ∧ n < (a + 1) * (a + 1) := by
+    isIntegerSqrt (isqrtIterative n hn) n := by
   show isqrtIterative n hn * isqrtIterative n hn ≤ n ∧
         n < (isqrtIterative n hn + 1) * (isqrtIterative n hn + 1)
   by_cases hn0 : n = 0

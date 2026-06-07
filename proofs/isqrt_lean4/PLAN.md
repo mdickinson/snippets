@@ -26,7 +26,7 @@ proofs/isqrt_lean4/
     FDivLemmas.lean      -- Int.fdiv ordering lemmas + Int↔ℕ bridge
     BitLengthLemmas.lean -- natBitLength / pyBitLength properties
     RecursionDepth.lean  -- isqrt_c_nonneg, shared by both algorithm modules
-    KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt predicate
+    KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt / isIntegerSqrt predicates
     SizeConditions.lean  -- size-condition lemmas (ℕ core + ℤ wrappers)
     Algorithm.lean       -- isqrt_aux and isqrt definitions
     Correctness.lean     -- correctness proofs (isqrt_aux_correctness, isqrt_is_sqrt)
@@ -130,6 +130,11 @@ proofs/isqrt_lean4/
 - `isNearSqrt a n := (a - 1)² < n ∧ n < (a + 1)²`. `key_isqrt_lemma` is stated
   as `isNearSqrt a (n.fdiv (4·M²)) → isNearSqrt (M·a + n.fdiv (4·M·a)) n`
   with positivity + `4·M⁴ ≤ n` side conditions.
+- Companion `isIntegerSqrt a n := a*a ≤ n ∧ n < (a+1)*(a+1)` — the exact
+  `a = ⌊√n⌋` postcondition the two `*_is_sqrt` theorems assert (multiplicative
+  form, mirroring Python). Lives here beside `isNearSqrt`; both correctness
+  modules already import `KeyLemma`. The `a-1`/`a` return adjustment is what
+  narrows `isNearSqrt` to `isIntegerSqrt`.
 - Sub-lemmas `M_le_a`, `n_upper`, `n_lower` take their hypotheses explicitly;
   no `section`/`variable` block.
 - Algebraic helpers `close_to` and `square_squeeze` are `private` and

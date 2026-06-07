@@ -39,7 +39,7 @@ Isqrt/
   PythonOps.lean           -- Lean definitions matching Python's //, >>, <<, bit_length
   FDivLemmas.lean          -- Int.fdiv ordering lemmas and Int↔ℕ bridge
   BitLengthLemmas.lean     -- natBitLength / pyBitLength properties
-  KeyLemma.lean            -- key algebraic lemma; isNearSqrt predicate
+  KeyLemma.lean            -- key algebraic lemma; isNearSqrt / isIntegerSqrt predicates
   SizeConditions.lean      -- size-condition invariants carried through the recursion
   Algorithm.lean           -- isqrt_aux and isqrt definitions
   Correctness.lean         -- correctness proofs (isqrt_aux_correctness, isqrt_is_sqrt)
@@ -375,10 +375,11 @@ that Python's `math.isqrt` is correct, here's where to put your attention
   different algorithm.
 - The *statement* of the correctness theorem `isqrt_is_sqrt` (in
   `Isqrt/Correctness.lean`). This is where we say what "correct" means.
-  Concretely, the theorem asserts that, with `a := isqrt n hn`,
-  `a * a ≤ n ∧ n < (a + 1) * (a + 1)` — i.e., `a` is the floor of √n.
-  If the statement is too weak, the proof being valid doesn't buy us
-  what we wanted.
+  Concretely, the theorem asserts `isIntegerSqrt (isqrt n hn) n`, where the
+  predicate `isIntegerSqrt a n` (in `Isqrt/KeyLemma.lean`) unfolds to
+  `a * a ≤ n ∧ n < (a + 1) * (a + 1)` — i.e., `a` is the floor of √n. If the
+  statement (or the predicate) is too weak, the proof being valid doesn't buy
+  us what we wanted.
 
 **Trust without rereading.** The proofs of theorems and lemmas don't
 require human verification. Lean's job is to check them, and if `lake
