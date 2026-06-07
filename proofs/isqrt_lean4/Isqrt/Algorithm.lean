@@ -27,6 +27,7 @@ Correctness proofs live in `Isqrt.Correctness`.
 import Isqrt.PythonOps
 import Isqrt.FDivLemmas
 import Isqrt.BitLengthLemmas
+import Isqrt.RecursionDepth
 import Isqrt.KeyLemma
 import Isqrt.SizeConditions
 
@@ -78,11 +79,6 @@ decreasing_by
   exact fdiv_two_decreasing c_nonneg ‹¬c = 0›
 
 /-! ## isqrt -/
-
-/-- The recursion depth `(n.bit_length() - 1) py// 2` is nonneg for nonzero `n`. -/
-theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
-    0 ≤ (pyBitLength n - 1) py// 2 :=
-  pyFloordiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
 
 /-- Integer square root, matching CPython's `math.isqrt`.
 

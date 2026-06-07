@@ -25,6 +25,7 @@ proofs/isqrt_lean4/
     PythonOps.lean       -- pyFloordiv, pyRshift, pyLshift, pyBitLength
     FDivLemmas.lean      -- Int.fdiv ordering lemmas + Int↔ℕ bridge
     BitLengthLemmas.lean -- natBitLength / pyBitLength properties
+    RecursionDepth.lean  -- isqrt_c_nonneg, shared by both algorithm modules
     KeyLemma.lean        -- key_isqrt_lemma + isNearSqrt predicate
     SizeConditions.lean  -- size-condition lemmas (ℕ core + ℤ wrappers)
     Algorithm.lean       -- isqrt_aux and isqrt definitions
@@ -101,6 +102,14 @@ proofs/isqrt_lean4/
   `one_le_pyRshift_of_lt_pyBitLength` (`0 ≤ s < c.bit_length() ⟹ 1 ≤ c >> s`)
   and `pyRshift_pyBitLength_eq_zero` (`c >> c.bit_length() = 0`, the loop seed
   value of `d`).
+
+### `RecursionDepth.lean` — Shared recursion depth
+
+- A one-lemma module holding `isqrt_c_nonneg` (`(n.bit_length() - 1) py// 2 ≥ 0`
+  for `n ≠ 0`). Both `Algorithm.lean` and `Iterative.lean` compute that depth `c`
+  and need it nonneg, so the fact lives here — neither algorithm module imports
+  the other (see [Iterative variant](#iterative-variant)). Imports only
+  `PythonOps` + `BitLengthLemmas`.
 
 ### `Algorithm.lean` — Algorithm definitions
 
@@ -310,16 +319,6 @@ to bare `omega`).
   and iterative proofs are green, review whether to derive `step` as a corollary
   of `at_depth` (or retire one). Deferred now to avoid destabilising the finished
   recursive proof.
-
-- **Decouple `Iterative.lean` from `Algorithm.lean`.** `Iterative.lean` currently
-  `import`s `Algorithm.lean` solely for `isqrt_c_nonneg` (the only Algorithm-defined
-  symbol it uses in code — the rest are prose references). Neither algorithm module
-  should depend on the other; move the shared piece — `isqrt_c_nonneg`, the
-  recursion-depth nonneg fact, which needs only `PythonOps` + `BitLengthLemmas` —
-  into a small new module that both `Algorithm.lean` and `Iterative.lean` import.
-  Adjust `Iterative.lean` to import `PythonOps`/`FDivLemmas`/`BitLengthLemmas`
-  directly instead of transitively via `Algorithm`, and update the file-structure
-  list above plus the `Isqrt.lean` root.
 
 ## Reference files
 

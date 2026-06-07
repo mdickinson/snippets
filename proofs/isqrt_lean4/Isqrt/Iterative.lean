@@ -75,7 +75,9 @@ call per the ADR 0001 elaboration-order gotcha). Correctness lives in
 `CONTEXT.md`.
 -/
 
-import Isqrt.Algorithm
+import Isqrt.PythonOps
+import Isqrt.BitLengthLemmas
+import Isqrt.RecursionDepth
 import Isqrt.While
 
 /-! ## Loop state and its well-definedness invariant -/
