@@ -278,6 +278,16 @@ to bare `omega`).
   of `at_depth` (or retire one). Deferred now to avoid destabilising the finished
   recursive proof.
 
+- **Decouple `Iterative.lean` from `Algorithm.lean`.** `Iterative.lean` currently
+  `import`s `Algorithm.lean` solely for `isqrt_c_nonneg` (the only Algorithm-defined
+  symbol it uses in code — the rest are prose references). Neither algorithm module
+  should depend on the other; move the shared piece — `isqrt_c_nonneg`, the
+  recursion-depth nonneg fact, which needs only `PythonOps` + `BitLengthLemmas` —
+  into a small new module that both `Algorithm.lean` and `Iterative.lean` import.
+  Adjust `Iterative.lean` to import `PythonOps`/`FDivLemmas`/`BitLengthLemmas`
+  directly instead of transitively via `Algorithm`, and update the file-structure
+  list above plus the `Isqrt.lean` root.
+
 ## Reference files
 
 - `proofs/isqrt/src/isqrt.lean` — original Lean 3 proof (780 lines); unchanged.
