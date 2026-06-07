@@ -152,9 +152,10 @@ proofs/isqrt_lean4/
 
 ## Iterative variant
 
-`isqrt_iterative.py` is the recursive `isqrt_aux` unrolled bottom-up into a
-`while s > 0` loop. It is proved correct — theorem `isqrtIterative_is_sqrt`, the
-same statement as `isqrt_is_sqrt` (standalone, not via equivalence to the
+The iterative form — CPython's bottom-up unrolling of the recursive `isqrt_aux`
+into a `while s >= 0` loop, transcribed (lightly rewritten) at the top of
+`Isqrt/Iterative.lean` — is proved correct — theorem `isqrtIterative_is_sqrt`,
+the same statement as `isqrt_is_sqrt` (standalone, not via equivalence to the
 recursive form) — by *reusing* the recursive proof's algebra (`key_isqrt_lemma`,
 the size-condition lemmas) through the generic `pyWhile` combinator
 (`Isqrt/While.lean`, ADR 0001) and its post-hoc invariant rule `pyWhile_invariant`.
@@ -164,9 +165,12 @@ the size-condition lemmas) through the generic `pyWhile` combinator
 Persistent loop state is `(s, d, a)`; `e` is loop-local (the incoming `d`);
 `c, n` are fixed (closure-captured). With `L = c.bit_length()`:
 
-- Invariant `d = c >> s`: the loop's `d` climbs the chain `c >> j` (`j = L … 0`)
-  that the recursion descends. Seed `s = L`, `d = c >> L = 0`.
-- In the body `e = d // 2` (the recursion's `c // 2` link), so the left-shift
+- Invariant `d = c >> (s+1)`: the loop variable `s` runs `L−1 … 0` (then `−1` at
+  exit), and the persistent `d` holds the *previous* iteration's shift
+  `c >> (s+1)`, climbing the chain `c >> j` that the recursion descends. Seed
+  `s = L−1`, `d = c >> L = 0`.
+- In the body `e = d` (the incoming `d`, `= c >> (s+1)`) then `d = c >> s` (the
+  new `d`), so `e = d // 2` (the recursion's `c // 2` link); the left-shift
   amount `d − e − 1 = (d−1)//2 = k` is the recursive `k`, and the right-shift
   amount is `2c − d − e + 1 = 2(c−d) + 2k + 2`.
 - One iteration is therefore one `key_isqrt_lemma` step at parent `d`, `M = 2^k`,
@@ -174,16 +178,19 @@ Persistent loop state is `(s, d, a)`; `e` is loop-local (the incoming `d`);
 
 ### State subtype σ (well-definedness invariant — minimal, per ADR 0001)
 
-`σ`'s invariant has four members, each discharging exactly one body obligation:
+`σ`'s invariant has three members, each discharging a body obligation:
 
-- `0 ≤ s` — the measure `s.toNat` strict decrease (`omega` orders `.toNat`s only
-  with both nonneg).
 - `0 < a` — the `py// a` precondition.
-- `d = c >> s` — left shift (gives `e = d // 2`) and `d ≤ c` for the right shift.
-- `s ≤ c.bit_length()` — forces `d_new = c >> (s−1) ≥ 1`, so `d − e − 1 ≥ 0`
+- `d = c >> (s+1)` — identifies the incoming `e = d` as `c >> (s+1)`, giving
+  `e = d_new // 2` (where `d_new = c >> s`) and `e, d_new ≤ c` for the right shift.
+- `s < c.bit_length()` — forces `d_new = c >> s ≥ 1`, so `d_new − e − 1 ≥ 0`
   (uses `2^(L−1) ≤ c`).
 
-The near-√ property and the size condition are deliberately **not** in `σ`.
+`0 ≤ s` is **not** in `σ`: the loop condition supplies it fresh wherever needed
+(the `c >> s` shift and the measure's strict decrease). The measure is
+`(s+1).toNat`, not `s.toNat` — the loop runs down to `s = −1`, where `s.toNat`
+would stall at the final `0 → −1` step. The near-√ property and the size
+condition are deliberately **not** in `σ` either.
 
 ### Loop property P (post-hoc, via `pyWhile_invariant`)
 
@@ -217,9 +224,10 @@ powers to base 2 (`4 = 2^2`, `M = 2^k`), collapsing with
   `size_condition_at_depth` then `M_bound_from_size`) and
   `isNearSqrt a (N_{d_new}.fdiv 4M²)` = `isNearSqrt a N_{d_old}` = old `P`
   (exponent bridge `c − d_new + k + 1 = c − d_old`, mirroring `isqrt_aux_step_val`).
-- Exit `s = 0 ⟹ d = c ⟹ N_c = n`: `P` collapses to `isNearSqrt a n`, then the
-  return line `a if a*a ≤ n else a − 1` picks `⌊√n⌋` exactly as `isqrt_is_sqrt`
-  does off its `n < a*a` branch (same function, branch phrased complementarily).
+- Exit `s < 0 ⟹ (s+1).toNat = 0 ⟹ d = c >> 0 = c ⟹ N_c = n`: `P` collapses to
+  `isNearSqrt a n`, then the return line `a − 1 if a*a > n else a` picks `⌊√n⌋`
+  exactly as `isqrt_is_sqrt` does off its `n < a*a` branch (same function, now
+  phrased identically).
 
 ### New lemma: `size_condition_at_depth`
 
@@ -265,9 +273,9 @@ to bare `omega`).
   it).
 - **`Int.fdiv_eq_ediv_of_nonneg x h`'s `h : 0 ≤ b` picks the *divisor* `b`**, not
   the dividend — passing the dividend's nonnegativity rewrites the wrong term.
-- With `iterBody_s`/`iterBody_d` marked `@[simp]`, `simp_wf` already reduces the
-  measure goal to `0 < st.val.s`, so the decrease proof is just `simp_wf; omega`
-  (no explicit `rw`).
+- With `iterBody_s` marked `@[simp]`, `simp_wf` reduces the measure goal (the
+  `(s+1).toNat` strict decrease) to something `omega` closes from the loop
+  condition `0 ≤ s`; the decrease proof is just `simp_wf; omega` (no explicit `rw`).
 
 ## Future work
 

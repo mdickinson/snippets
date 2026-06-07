@@ -51,12 +51,12 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     case hstep =>
       -- One iteration = one `key_isqrt_lemma` step at parent depth `d_new`.
       intro st h hPst
-      obtain ⟨_, hs_le, hd_old_eq, ha_old_pos⟩ := st.property
+      obtain ⟨hs_lt, hd_old_eq, ha_old_pos⟩ := st.property
       simp only [iterBody_a, iterBody_d]
       set s := st.val.s
       set d_old := st.val.d
       set a_old := st.val.a
-      set d_new := Int.fdiv c (2 ^ (s - 1).toNat) with hd_new_def
+      set d_new := Int.fdiv c (2 ^ s.toNat) with hd_new_def
       set N_new := Int.fdiv n (4 ^ (c - d_new).toNat) with hN_new_def
       -- Positivity / ordering of the depths. (d_old ≤ c is not needed: it
       -- follows from `hK` and `hd_new_le` wherever `omega` wants it.)
@@ -68,7 +68,7 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
         rw [hd_new_def]; exact fdiv_le_self_of_nonneg hc (by positivity)
       -- Left-shift amount nonneg, hence d_new ≥ 1.
       have hK : 0 ≤ d_new - d_old - 1 := by
-        rw [hd_new_def]; exact iter_lshift_nonneg hc h hs_le hd_old_eq
+        rw [hd_new_def]; exact iter_lshift_nonneg hc h hs_lt hd_old_eq
       have hd_new_pos : 0 < d_new := by omega
       -- d_old = d_new / 2 (the halving link).
       have h_halve : d_old = Int.fdiv d_new 2 := by
@@ -122,14 +122,11 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
           rw [hpow_a]; ring
       rw [hX]
       exact key_isqrt_lemma hM_pos ha_old_pos hM4 h_near
-  -- Exit: ¬ (0 < s) and 0 ≤ s force s = 0, hence d = c, hence the divisor is 1.
-  have hs0 : result.val.val.s = 0 := by
-    have h1 : ¬ 0 < result.val.val.s := result.property
-    have h2 : 0 ≤ result.val.val.s := result.val.property.1
-    omega
+  -- Exit: ¬ (0 ≤ s) forces s < 0, so (s+1).toNat = 0 and d = c >> 0 = c.
   have hd : result.val.val.d = c := by
-    have hdc := result.val.property.2.2.1
-    rw [hs0] at hdc
+    have hs_neg : result.val.val.s < 0 := by have := result.property; omega
+    have hdc := result.val.property.2.1
+    rw [show (result.val.val.s + 1).toNat = 0 by omega] at hdc
     simpa using hdc
   rw [hd] at hP
   simpa using hP
@@ -154,9 +151,10 @@ theorem isqrtIterative_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     simp only [hn0, ↓reduceDIte]
     set a := (isqrtIterativeLoop ((pyBitLength n - 1) py// 2) n hc hn_pos.le).val.val.a
     obtain ⟨h_lo, h_hi⟩ := h_near
-    by_cases h_le : a * a ≤ n
-    · rw [if_pos h_le]
-      exact ⟨h_le, by nlinarith [h_hi]⟩
-    · rw [if_neg h_le]
-      have h_lt : n < a * a := not_le.mp h_le
+    by_cases h_gt : a * a > n
+    · rw [if_pos h_gt]
+      have h_lt : n < a * a := h_gt
       exact ⟨by nlinarith [h_lo], by nlinarith [h_lt]⟩
+    · rw [if_neg h_gt]
+      have h_le : a * a ≤ n := not_lt.mp h_gt
+      exact ⟨h_le, by nlinarith [h_hi]⟩

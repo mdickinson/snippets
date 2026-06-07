@@ -17,7 +17,7 @@ _Avoid_: context, environment, accumulator
 
 **Condition**:
 The boolean test controlling whether the loop body runs again (Python's
-`while <condition>:`). For isqrt, `s > 0`. The `pyWhile` argument is named
+`while <condition>:`). For isqrt, `s >= 0`. The `pyWhile` argument is named
 `condition` — the most Python-idiomatic choice, despite overlapping in wording
 with the unrelated `hasSizeCondition` of the recursive proof.
 _Avoid_: guard, termination condition, predicate
@@ -31,9 +31,9 @@ _Avoid_: step, update function, state updater, iteration
 The function of the loop state, into some well-founded-ordered type `α`
 (`[WellFoundedRelation α]`), that strictly decreases on every iteration,
 witnessing termination. The chosen form of evidence (d). `α` is usually `ℕ` (so
-the decrease is just `<`); for isqrt the measure is essentially `s` (into `ℕ`
-via `.toNat`). A non-`ℕ` `α` (e.g. `ℕ ×ₗ ℕ`, lexicographic) is available when no
-single `ℕ` fits.
+the decrease is just `<`); for isqrt the measure is `(s + 1).toNat` (into `ℕ`;
+the `+1` keeps it strictly decreasing through the final `s = 0 → −1` step). A
+non-`ℕ` `α` (e.g. `ℕ ×ₗ ℕ`, lexicographic) is available when no single `ℕ` fits.
 _Avoid_: variant, rank, ranking function, fuel, bound
 
 **Well-definedness invariant**:
