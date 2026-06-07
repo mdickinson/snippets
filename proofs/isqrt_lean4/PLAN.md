@@ -296,6 +296,20 @@ to bare `omega`).
   directly instead of transitively via `Algorithm`, and update the file-structure
   list above plus the `Isqrt.lean` root.
 
+- **Express `Iterative.lean` entirely in Python operators, with no explicit
+  `Int.fdiv`.** A strengthening of the earlier "make `iterInv` Python-shaped"
+  item into a whole-module goal. The invariant, the seed/exit facts, and the
+  body precondition lemmas currently phrase intermediate results as
+  `Int.fdiv c (2 ^ …)` rather than `c py>> …`; rephrase them with `py//`, `py>>`,
+  `py<<` (e.g. `iterInv`'s `d = c py>> (s + 1)`), and push the simple supporting
+  facts about those operators — the `fdiv`↔`py>>` bridges, halving, monotonicity,
+  nonnegativity — out into `PythonOps`/`FDivLemmas`, so `Iterative.lean` reads as
+  a faithful Python translation with the `fdiv`-level reasoning factored away.
+  Subsumes the `fdiv_le_self_of_nonneg` relocation above. Known friction: the
+  py-operators are proof-carrying (shift amount `≥ 0`, divisor `≠ 0`), so using
+  them inside a `Prop` like `iterInv` means threading those side-conditions
+  (e.g. `−1 ≤ s`, so `0 ≤ s + 1`) into the invariant.
+
 ## Reference files
 
 - `proofs/isqrt/src/isqrt.lean` — original Lean 3 proof (780 lines); unchanged.
