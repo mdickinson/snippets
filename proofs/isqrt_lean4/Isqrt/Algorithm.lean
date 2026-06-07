@@ -34,16 +34,12 @@ import Isqrt.SizeConditions
 /-! ## isqrt_aux -/
 
 /-- The return expression `(a py<< k) + (n py>> (k+2)) py// a` is positive
-when `a > 0`, `n ≥ 0`, and `k ≥ 0`. -/
+when `a > 0`, `n ≥ 0`, and `k ≥ 0` — the `K = k`, `J = k+2` specialization of
+`pyLshift_add_pyFloordiv_pos`. -/
 private theorem isqrt_aux_return_pos {a n k : ℤ}
-    (a_pos : 0 < a) (n_nonneg : 0 ≤ n)
-    (k_nonneg : 0 ≤ k) :
-    0 < (a py<< k) + (n py>> (k + 2)) py// a := by
-  simp [pyLshift_def, pyFloordiv_def, pyRshift_def]
-  have h_shift_pos : 0 < a * 2 ^ k.toNat := Int.mul_pos a_pos (by positivity)
-  have h_div_nonneg : 0 ≤ (n.fdiv (2 ^ (k + 2).toNat)).fdiv a :=
-    Int.fdiv_nonneg (Int.fdiv_nonneg n_nonneg (by positivity)) (le_of_lt a_pos)
-  omega
+    (a_pos : 0 < a) (n_nonneg : 0 ≤ n) (k_nonneg : 0 ≤ k) :
+    0 < (a py<< k) + (n py>> (k + 2)) py// a :=
+  pyLshift_add_pyFloordiv_pos a_pos n_nonneg k_nonneg (by omega)
 
 /-- Floor-dividing a positive integer by 2 gives a strictly smaller
 positive result — in the form needed by the termination checker. -/

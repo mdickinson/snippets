@@ -37,6 +37,18 @@ or `⌈√n⌉`. This is the postcondition the top-level correctness theorems
 assert. -/
 def isIntegerSqrt (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
+/-- The algorithm's final return adjustment: a near square root `a` is either
+`⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
+yields the integer square root. Both correctness proofs close with this step. -/
+theorem isNearSqrt.toIntegerSqrt {a n : ℤ} (h : isNearSqrt a n) :
+    isIntegerSqrt (if n < a * a then a - 1 else a) n := by
+  obtain ⟨h_lo, h_hi⟩ := h
+  by_cases h_lt : n < a * a
+  · simp only [h_lt, ↓reduceIte]
+    exact ⟨by nlinarith [h_lo], by nlinarith [h_lt]⟩
+  · simp only [h_lt, ↓reduceIte]
+    exact ⟨not_lt.mp h_lt, by nlinarith [h_hi]⟩
+
 /-! ## Algebraic helpers
 
 The Lean 3 versions of these required `sub_elimination` and friends to

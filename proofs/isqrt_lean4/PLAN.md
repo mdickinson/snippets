@@ -117,9 +117,10 @@ proofs/isqrt_lean4/
 
 - Termination on `c.toNat`. The decrease lemma `fdiv_two_decreasing` is a
   `private` helper.
-- Positivity of the return value is proved once in `isqrt_aux_return_pos`, so
-  the recursive call destructure `⟨a, a_pos⟩ := isqrt_aux ...` cleanly carries
-  `0 < a` for the `// a` division.
+- Positivity of the return value comes from the shared
+  `pyLshift_add_pyFloordiv_pos` (in `PythonOps`), specialized here as
+  `isqrt_aux_return_pos`, so the recursive call destructure
+  `⟨a, a_pos⟩ := isqrt_aux ...` cleanly carries `0 < a` for the `// a` division.
 - The default-arg precondition tactic is `by omega`, which suffices at most
   call sites. Exception: when the goal contains `n py>> (... py// ...)`,
   `omega` can't see through `py//` — spell out the proof inline using
@@ -133,7 +134,8 @@ proofs/isqrt_lean4/
 - Companion `isIntegerSqrt a n := a*a ≤ n ∧ n < (a+1)*(a+1)` — the exact
   `a = ⌊√n⌋` postcondition the two `*_is_sqrt` theorems assert. Lives here beside
   `isNearSqrt`; both correctness modules already import `KeyLemma`. The `a-1`/`a`
-  return adjustment narrows `isNearSqrt` to `isIntegerSqrt`.
+  return adjustment that narrows `isNearSqrt` to `isIntegerSqrt` is the shared
+  lemma `isNearSqrt.toIntegerSqrt`, which closes both `*_is_sqrt` theorems.
 - Both predicates use the multiplicative form (parallel to each other, mirroring
   Python, sidestepping `^`). `key_isqrt_lemma`'s internal degree-4 algebra stays
   in `^2`; it bridges `*`↔`^2` (via `pow_two`) only at the predicate boundary —
@@ -300,9 +302,11 @@ precondition `0 ≤ n`. Every `n ≥ 1` runs the loop faithfully (`n ≤ 3` give
 
 The body's py-op preconditions and `0 < a_new` are discharged by **top-level
 named lemmas**, not inline `by` inside the `⟨val, proof⟩` constructor (that hits
-the elaboration-order metavar bug → spurious "no goals"). `isqrtIterative_body_pos`
-proves `0 < (a py<< K) + (n py>> J) py// a` for `a>0, n≥0, K≥0, J≥0` (parallels
-`isqrt_aux_return_pos` but with independent shift amounts). Measure decrease is
+the elaboration-order metavar bug → spurious "no goals"). The shared
+`pyLshift_add_pyFloordiv_pos` (`PythonOps`) proves
+`0 < (a py<< K) + (n py>> J) py// a` for `a>0, n≥0, K≥0, J≥0`; the iterative body
+uses it directly, and `isqrt_aux`'s recursive return is its `k`, `k+2`
+specialization (`isqrt_aux_return_pos`). Measure decrease is
 `by simp_wf; omega` (the default `WellFoundedRelation ℕ` is `sizeOfWFRel`, opaque
 to bare `omega`).
 

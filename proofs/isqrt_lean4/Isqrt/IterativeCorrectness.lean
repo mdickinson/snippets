@@ -150,11 +150,6 @@ theorem isqrtIterative_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     unfold isqrtIterative
     simp only [hn0, ↓reduceDIte]
     set a := (isqrtIterativeLoop ((pyBitLength n - 1) py// 2) n hc hn_pos.le).val.val.a
-    obtain ⟨h_lo, h_hi⟩ := h_near
-    by_cases h_gt : a * a > n
-    · rw [if_pos h_gt]
-      have h_lt : n < a * a := h_gt
-      exact ⟨by nlinarith [h_lo], by nlinarith [h_lt]⟩
-    · rw [if_neg h_gt]
-      have h_le : a * a ≤ n := not_lt.mp h_gt
-      exact ⟨h_le, by nlinarith [h_hi]⟩
+    -- Final return adjustment: `a - 1 if a*a > n else a` is the integer sqrt
+    -- (`a*a > n` is definitionally `n < a*a`, matching `toIntegerSqrt`).
+    exact h_near.toIntegerSqrt

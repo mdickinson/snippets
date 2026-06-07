@@ -148,14 +148,5 @@ theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     have hsc := size_condition_initial hn_pos
     have h_near : isNearSqrt a n :=
       isqrt_aux_correctness c.toNat hc_nn hn_pos rfl hsc
-    obtain ⟨h_lo, h_hi⟩ := h_near
-    by_cases h_lt : n < a * a
-    · simp only [h_lt, ↓reduceIte]
-      refine ⟨?_, ?_⟩
-      · nlinarith [h_lo]
-      · nlinarith [h_lt]
-    · simp only [h_lt, ↓reduceIte]
-      have h_le : a * a ≤ n := not_lt.mp h_lt
-      refine ⟨?_, ?_⟩
-      · nlinarith [h_le]
-      · nlinarith [h_hi]
+    -- Final return adjustment: `a - 1 if n < a*a else a` is the integer sqrt.
+    exact h_near.toIntegerSqrt

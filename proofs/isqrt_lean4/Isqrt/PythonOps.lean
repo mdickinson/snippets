@@ -114,3 +114,15 @@ theorem pyFloordiv_mul_le_self (a b : ℤ) (hb : 0 < b) :
     (a py// b) * b ≤ a := by
   simp only [pyFloordiv_def]
   exact Int.fdiv_mul_le_self hb
+
+/-- `(a << K) + (n >> J) // a` is positive when `a > 0`, `n ≥ 0`, and the shift
+amounts are nonneg: the left shift of a positive is positive and the
+floor-division term is nonneg. This is the shape of both the recursive
+`isqrt_aux` return and the iterative loop body's new `a`. -/
+theorem pyLshift_add_pyFloordiv_pos {a n K J : ℤ}
+    (ha : 0 < a) (hn : 0 ≤ n) (hK : 0 ≤ K) (hJ : 0 ≤ J) :
+    0 < (a py<< K) + (n py>> J) py// a := by
+  have h_shift_pos : 0 < a py<< K := by
+    simp only [pyLshift_def]; exact mul_pos ha (by positivity)
+  have h_div_nonneg : 0 ≤ (n py>> J) py// a := pyFloordiv_nonneg (pyRshift_nonneg hn) ha
+  omega

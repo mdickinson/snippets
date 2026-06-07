@@ -143,16 +143,6 @@ theorem iter_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
   have h2 : c py>> (s + 1) ≤ c := pyRshift_le_self hc (by omega)
   rw [hd]; omega
 
-/-- The body's new `a` is positive (parallels `isqrt_aux_return_pos`, but with
-independent shift amounts `K`, `J`). Used to re-establish `iterInv`. -/
-theorem isqrtIterative_body_pos {a n K J : ℤ}
-    (ha : 0 < a) (hn : 0 ≤ n) (hK : 0 ≤ K) (hJ : 0 ≤ J) :
-    0 < (a py<< K) + (n py>> J) py// a := by
-  have h_shift_pos : 0 < a py<< K := by
-    simp only [pyLshift_def]; exact mul_pos ha (by positivity)
-  have h_div_nonneg : 0 ≤ (n py>> J) py// a := pyFloordiv_nonneg (pyRshift_nonneg hn) ha
-  omega
-
 /-! ## The loop body -/
 
 /-- One execution of the loop body. Reads line-for-line with the Python suite
@@ -192,7 +182,7 @@ def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
        show c py>> st.val.s = c py>> (st.val.s - 1 + 1)
        simp only [pyRshift_def]
        rw [show (st.val.s - 1 + 1 : ℤ) = st.val.s from by ring]
-     ha_pos := isqrtIterative_body_pos ha_pos hn hK hJ }⟩
+     ha_pos := pyLshift_add_pyFloordiv_pos ha_pos hn hK hJ }⟩
 
 /-- The body decrements `s`. (Drives the measure-decrease proof.) -/
 @[simp] theorem iterBody_s {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
