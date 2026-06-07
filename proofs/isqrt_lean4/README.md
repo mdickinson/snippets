@@ -107,10 +107,13 @@ the same author who designed the algorithm and wrote CPython's
 `Isqrt/Algorithm.lean`.
 
 CPython itself ships an [iterative formulation][cpython-iterative] of
-the same algorithm, derived from the recursive one for efficiency. The
-two compute the same function on every input, but the iterative
-formulation is not formally verified here — a Lean proof of *that*
-formulation would be a natural follow-up.
+the same algorithm, derived from the recursive one for efficiency. That
+formulation is verified here too: `isqrtIterative` (`Isqrt/Iterative.lean`)
+is a faithful, lightly-rewritten transcription of the CPython source
+comment, and `isqrtIterative_is_sqrt` (`Isqrt/IterativeCorrectness.lean`)
+proves it meets the same specification as the recursive `isqrt`, reusing
+the recursive proof's algebra through a generic `while`-loop combinator
+(`Isqrt/While.lean`). See `PLAN.md` and `CONTEXT.md` for that development.
 
 [so-recursive]: https://stackoverflow.com/a/78076732
 [cpython-iterative]: https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211
