@@ -58,7 +58,7 @@ infixl:60 " py<< " => pyLshift
 
 These reduce our Python-facing definitions to their underlying Lean
 implementations, enabling use of Mathlib's `Int.fdiv` lemma library
-and core's `Nat.log2` lemma library. -/
+(and, via `natBitLength`, core's `Nat.log2` lemmas). -/
 
 @[simp]
 theorem pyFloordiv_def (a b : ℤ) (hb : b ≠ 0) :
