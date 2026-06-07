@@ -1,8 +1,8 @@
 # Correctness proof for CPython's `math.isqrt`
 
-A formal proof in Lean 4 of correctness for the original recursive
-formulation of the integer square root algorithm used by CPython's
-`math.isqrt`.
+A formal proof in Lean 4 of correctness for the integer square root
+algorithm behind CPython's `math.isqrt` — both the original recursive
+formulation and the iterative formulation that CPython ships.
 
 ## Prerequisites
 
