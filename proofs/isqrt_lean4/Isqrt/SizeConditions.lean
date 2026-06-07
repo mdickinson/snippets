@@ -46,51 +46,12 @@ theorem size_condition_initial_nat {n : ℕ} (hn : 0 < n) :
       _ ≤ 2 ^ (2 * (c + 1)) := Nat.pow_le_pow_right (by omega) (by omega)
       _ = 4 ^ (c + 1) := by rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
 
-/-- Size condition preserved by recursive step. Given `4^c ≤ n < 4^(c+1)`
-with `0 < c`, the recursive arguments `c' = c/2` and `m = n / 2^(2k+2)`
-(where `k = (c-1)/2`) satisfy `4^c' ≤ m < 4^(c'+1)`. -/
-theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
-    (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
-    4 ^ (c / 2) ≤ n / 2 ^ (2 * ((c - 1) / 2) + 2) ∧
-    n / 2 ^ (2 * ((c - 1) / 2) + 2) < 4 ^ (c / 2 + 1) := by
-  set k := (c - 1) / 2 with hk_def
-  set c' := c / 2 with hc'_def
-  have hsum : k + c' + 1 = c := big_half_little_half hc
-  refine ⟨?_, ?_⟩
-  · -- 4^c' ≤ n / 2^(2k+2)
-    rw [Nat.le_div_iff_mul_le (Nat.two_pow_pos _)]
-    calc 4 ^ c' * 2 ^ (2 * k + 2)
-        = 2 ^ (2 * c' + (2 * k + 2)) := by
-          rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul, ← pow_add]
-      _ = 2 ^ (2 * c) := by congr 1; omega
-      _ = 4 ^ c := by rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
-      _ ≤ n := h_lo
-  · -- n / 2^(2k+2) < 4^(c'+1)
-    rw [Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _)]
-    calc n
-        < 4 ^ (c + 1) := h_hi
-      _ = 2 ^ (2 * (c + 1)) := by
-          rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
-      _ = 2 ^ (2 * (c' + 1) + (2 * k + 2)) := by congr 1; omega
-      _ = 4 ^ (c' + 1) * 2 ^ (2 * k + 2) := by
-          rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul, ← pow_add]
-
-/-- `4·M⁴ ≤ n` from the size condition's lower bound, where `M = 2^((c-1)/2)`. -/
-theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
-    4 * (2 ^ ((c - 1) / 2)) ^ 4 ≤ n := by
-  set k := (c - 1) / 2 with hk_def
-  calc 4 * (2 ^ k) ^ 4
-      = 2 ^ (4 * k + 2) := by
-        rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul, ← pow_add]
-        congr 1; ring
-    _ ≤ 2 ^ (2 * c) := Nat.pow_le_pow_right (by omega) (by omega)
-    _ = 4 ^ c := by rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
-    _ ≤ n := h_lo
-
 /-- Size condition at any depth `d ≤ c`: given `4^c ≤ n < 4^(c+1)`, the
-depth-`d` value `n / 4^(c-d)` satisfies `4^d ≤ · < 4^(d+1)`. Unlike
-`size_condition_step_nat`, this is proved directly from the top condition
-(it cannot be iterated bottom-up, since floor division loses information). -/
+depth-`d` value `n / 4^(c-d)` satisfies `4^d ≤ · < 4^(d+1)`. Proved directly
+from the top condition — it cannot be obtained by iterating the single
+recursive step `size_condition_step_nat`, whose per-level floor shifts don't
+compose to `4^(c-d)` for arbitrary `d`. The step lemma is conversely just the
+`d = c/2` corollary of this one. -/
 theorem size_condition_at_depth_nat {c n d : ℕ} (hd : d ≤ c)
     (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
     4 ^ d ≤ n / 4 ^ (c - d) ∧ n / 4 ^ (c - d) < 4 ^ (d + 1) := by
@@ -108,6 +69,37 @@ theorem size_condition_at_depth_nat {c n d : ℕ} (hd : d ≤ c)
         < 4 ^ (c + 1) := h_hi
       _ = 4 ^ (d + 1 + (c - d)) := by rw [show d + 1 + (c - d) = c + 1 from by omega]
       _ = 4 ^ (d + 1) * 4 ^ (c - d) := by rw [pow_add]
+
+/-- Size condition preserved by recursive step. Given `4^c ≤ n < 4^(c+1)`
+with `0 < c`, the recursive arguments `c' = c/2` and `m = n / 2^(2k+2)`
+(where `k = (c-1)/2`) satisfy `4^c' ≤ m < 4^(c'+1)`.
+
+This is `size_condition_at_depth_nat` specialised to depth `d = c/2`: the
+step's divisor `2^(2k+2)` equals the depth-`c/2` divisor `4^(c − c/2)`,
+since `2k+2 = 2((c-1)/2) + 2 = 2(c − c/2)` by `big_half_little_half`. -/
+theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
+    (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
+    4 ^ (c / 2) ≤ n / 2 ^ (2 * ((c - 1) / 2) + 2) ∧
+    n / 2 ^ (2 * ((c - 1) / 2) + 2) < 4 ^ (c / 2 + 1) := by
+  -- Bridge the base-2 step divisor to the base-4 depth divisor at `d = c/2`.
+  have h_div : 2 ^ (2 * ((c - 1) / 2) + 2) = 4 ^ (c - c / 2) := by
+    rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
+    -- 2((c-1)/2) + 2 = 2(c − c/2), i.e. `big_half_little_half`, which omega knows.
+    congr 1; omega
+  rw [h_div]
+  exact size_condition_at_depth_nat (Nat.div_le_self c 2) h_lo h_hi
+
+/-- `4·M⁴ ≤ n` from the size condition's lower bound, where `M = 2^((c-1)/2)`. -/
+theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
+    4 * (2 ^ ((c - 1) / 2)) ^ 4 ≤ n := by
+  set k := (c - 1) / 2 with hk_def
+  calc 4 * (2 ^ k) ^ 4
+      = 2 ^ (4 * k + 2) := by
+        rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul, ← pow_add]
+        congr 1; ring
+    _ ≤ 2 ^ (2 * c) := Nat.pow_le_pow_right (by omega) (by omega)
+    _ = 4 ^ c := by rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
+    _ ≤ n := h_lo
 
 /-! ## ℤ-level size condition
 

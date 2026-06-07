@@ -139,10 +139,12 @@ proofs/isqrt_lean4/
 ### `SizeConditions.lean` — Size-condition lemmas
 
 - Hybrid ℕ/ℤ split. Core lemmas (`size_condition_initial_nat`,
-  `size_condition_step_nat`, `M_bound_from_size_nat`) live at ℕ using the
+  `size_condition_at_depth_nat`, `M_bound_from_size_nat`) live at ℕ using the
   `natBitLength` infrastructure. ℤ-level corollaries
-  (`size_condition_initial`, `size_condition_step`, `M_bound_from_size`)
-  bridge via `Int.eq_ofNat_of_zero_le`.
+  (`size_condition_initial`, `size_condition_at_depth`, `M_bound_from_size`)
+  bridge via `Int.eq_ofNat_of_zero_le`. `size_condition_step_nat` (and its ℤ
+  corollary `size_condition_step`) is in turn the `d = c/2` specialisation of
+  `size_condition_at_depth_nat` — see "New lemma" below.
 - `hasSizeCondition (c n : ℤ) : Prop := (4:ℤ)^c.toNat ≤ n ∧ n < (4:ℤ)^(c.toNat + 1)`
   packages the invariant carried through the recursion. Not stated in terms of
   `isNearSqrt` since the shape is `4^c`, not `(c-1)²`.
@@ -273,6 +275,11 @@ In `SizeConditions.lean`: from `hasSizeCondition c n` and `0 ≤ d ≤ c`, concl
 child's condition (floor division loses information), hence the direct proof from
 the top condition.
 
+The recursive proof's `size_condition_step_nat` is now derived as the `d = c/2`
+corollary of this lemma: its step divisor `2^(2k+2)` (`k = (c−1)/2`) equals the
+depth-`c/2` divisor `4^(c − c/2)`, since `2k+2 = 2(c − c/2)` by
+`big_half_little_half`. So the two size-preservation facts share one core proof.
+
 ### n = 0
 
 The snippet is unsound at `n = 0` (`c = −1` → negative shift). `isqrtIterative`
@@ -310,15 +317,6 @@ to bare `omega`).
 - With `iterBody_s` marked `@[simp]`, `simp_wf` reduces the measure goal (the
   `(s+1).toNat` strict decrease) to something `omega` closes from the loop
   condition `0 ≤ s`; the decrease proof is just `simp_wf; omega` (no explicit `rw`).
-
-## Future work
-
-- **Unify `size_condition_step` with `size_condition_at_depth`.** The recursive
-  proof's `size_condition_step` is exactly `size_condition_at_depth` specialised
-  to `d = c // 2` (its shift `2k+2` equals `2(c − c//2)`). Once both the recursive
-  and iterative proofs are green, review whether to derive `step` as a corollary
-  of `at_depth` (or retire one). Deferred now to avoid destabilising the finished
-  recursive proof.
 
 ## Reference files
 
