@@ -305,7 +305,10 @@ to bare `omega`).
   facts about those operators — the `fdiv`↔`py>>` bridges, halving, monotonicity,
   nonnegativity — out into `PythonOps`/`FDivLemmas`, so `Iterative.lean` reads as
   a faithful Python translation with the `fdiv`-level reasoning factored away.
-  Subsumes the `fdiv_le_self_of_nonneg` relocation above. Known friction: the
+  Subsumes the still-pending relocation of `fdiv_le_self_of_nonneg` — currently
+  public in `Iterative.lean`, used by `iter_rshift_nonneg` and the iterative
+  correctness proof — into `FDivLemmas` as `Int.fdiv_le_self_of_nonneg`. Known
+  friction: the
   py-operators are proof-carrying (shift amount `≥ 0`, divisor `≠ 0`), so using
   them inside a `Prop` like `iterInv` means threading those side-conditions
   (e.g. `−1 ≤ s`, so `0 ≤ s + 1`) into the invariant.
