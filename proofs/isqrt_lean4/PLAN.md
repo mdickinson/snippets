@@ -127,14 +127,18 @@ proofs/isqrt_lean4/
 
 ### `KeyLemma.lean` — Key algebraic lemma
 
-- `isNearSqrt a n := (a - 1)² < n ∧ n < (a + 1)²`. `key_isqrt_lemma` is stated
-  as `isNearSqrt a (n.fdiv (4·M²)) → isNearSqrt (M·a + n.fdiv (4·M·a)) n`
+- `isNearSqrt a n := (a-1)*(a-1) < n ∧ n < (a+1)*(a+1)`. `key_isqrt_lemma` is
+  stated as `isNearSqrt a (n.fdiv (4·M²)) → isNearSqrt (M·a + n.fdiv (4·M·a)) n`
   with positivity + `4·M⁴ ≤ n` side conditions.
 - Companion `isIntegerSqrt a n := a*a ≤ n ∧ n < (a+1)*(a+1)` — the exact
-  `a = ⌊√n⌋` postcondition the two `*_is_sqrt` theorems assert (multiplicative
-  form, mirroring Python). Lives here beside `isNearSqrt`; both correctness
-  modules already import `KeyLemma`. The `a-1`/`a` return adjustment is what
-  narrows `isNearSqrt` to `isIntegerSqrt`.
+  `a = ⌊√n⌋` postcondition the two `*_is_sqrt` theorems assert. Lives here beside
+  `isNearSqrt`; both correctness modules already import `KeyLemma`. The `a-1`/`a`
+  return adjustment narrows `isNearSqrt` to `isIntegerSqrt`.
+- Both predicates use the multiplicative form (parallel to each other, mirroring
+  Python, sidestepping `^`). `key_isqrt_lemma`'s internal degree-4 algebra stays
+  in `^2`; it bridges `*`↔`^2` (via `pow_two`) only at the predicate boundary —
+  destructuring the hypothesis and assembling the conclusion. The base/seed
+  cases in the two correctness proofs likewise `show` the `*` form.
 - Sub-lemmas `M_le_a`, `n_upper`, `n_lower` take their hypotheses explicitly;
   no `section`/`variable` block.
 - Algebraic helpers `close_to` and `square_squeeze` are `private` and

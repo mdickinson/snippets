@@ -17,17 +17,22 @@ import Isqrt.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-/-! ## Square-root predicates -/
+/-! ## Square-root predicates
+
+Both predicates are stated multiplicatively — `x * x`, never `x ^ 2`:
+`isIntegerSqrt` mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)`
+that the top-level theorems assert, and `isNearSqrt` follows suit for symmetry.
+(The doc-comment prose still writes squares as `x²`.) -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
-def isNearSqrt (a n : ℤ) : Prop := (a - 1)^2 < n ∧ n < (a + 1)^2
+def isNearSqrt (a n : ℤ) : Prop :=
+  (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
 
 /-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
 `a = ⌊√n⌋` exactly — unlike `isNearSqrt`, which only pins `a` down to `⌊√n⌋`
 or `⌈√n⌉`. This is the postcondition the top-level correctness theorems
-assert. Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror Python's
-`a * a <= n < (a + 1) * (a + 1)`, since `**` is type-unsafe. -/
+assert. -/
 def isIntegerSqrt (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
 /-! ## Algebraic helpers
@@ -93,6 +98,8 @@ theorem key_isqrt_lemma {n M a : ℤ}
     (h_near : isNearSqrt a (n.fdiv (4 * M^2))) :
     isNearSqrt (M * a + n.fdiv (4 * M * a)) n := by
   obtain ⟨ha_lo, ha_hi⟩ := h_near
+  -- `isNearSqrt` is multiplicative; recover the `^2` shape the algebra uses.
+  rw [← pow_two] at ha_lo ha_hi
   set q := n.fdiv (4 * M * a)
   have hMa_pos : 0 < 4 * M * a := by positivity
   have hMa_one : 1 ≤ M * a := by linarith [mul_pos hM ha]
@@ -148,4 +155,5 @@ theorem key_isqrt_lemma {n M a : ℤ}
     -- Cancel (4*M*a)²
     have h4Ma_sq_nonneg : (0 : ℤ) ≤ (4 * M * a)^2 := sq_nonneg _
     exact lt_of_mul_lt_mul_right h_squared h4Ma_sq_nonneg
-  exact ⟨lower, upper⟩
+  -- Convert the `^2`-form bounds back to the multiplicative `isNearSqrt`.
+  exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩

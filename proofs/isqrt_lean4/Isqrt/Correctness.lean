@@ -66,9 +66,9 @@ private theorem isqrt_aux_correctness :
         unfold isqrt_aux; rfl
       simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
       refine ⟨?_, ?_⟩
-      · show ((isqrt_aux 0 n hc hn.le).val - 1) ^ 2 < n
+      · show ((isqrt_aux 0 n hc hn.le).val - 1) * ((isqrt_aux 0 n hc hn.le).val - 1) < n
         rw [h_val]; ring_nf; linarith
-      · show n < ((isqrt_aux 0 n hc hn.le).val + 1) ^ 2
+      · show n < ((isqrt_aux 0 n hc hn.le).val + 1) * ((isqrt_aux 0 n hc hn.le).val + 1)
         rw [h_val]; ring_nf; linarith
     · -- Inductive case: c > 0
       have hc_pos : 0 < c := lt_of_le_of_ne hc (Ne.symm hc0)

@@ -46,8 +46,8 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       obtain ⟨hlo, hhi⟩ := size_condition_at_depth (d := 0) le_rfl hc hsc
       simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at hlo hhi
       refine ⟨?_, ?_⟩
-      · show (1 - 1) ^ 2 < Int.fdiv n (4 ^ (c - 0).toNat); nlinarith [hlo]
-      · show Int.fdiv n (4 ^ (c - 0).toNat) < (1 + 1) ^ 2; nlinarith [hhi]
+      · show (1 - 1) * (1 - 1) < Int.fdiv n (4 ^ (c - 0).toNat); nlinarith [hlo]
+      · show Int.fdiv n (4 ^ (c - 0).toNat) < (1 + 1) * (1 + 1); nlinarith [hhi]
     case hstep =>
       -- One iteration = one `key_isqrt_lemma` step at parent depth `d_new`.
       intro st h hPst
