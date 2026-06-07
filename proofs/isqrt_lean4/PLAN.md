@@ -75,13 +75,20 @@ proofs/isqrt_lean4/
 - `pyBitLength` is defined via `natBitLength n.natAbs`, where `natBitLength` is
   defined inductively in terms of `Nat.log2`; returns `ℤ`. Matches Python's
   `int.bit_length()` for all inputs.
+- Python-operator ordering/arithmetic lemmas that let downstream code reason
+  about `py>>`/`py//` without naming `Int.fdiv`: `pyRshift_le_self` (a right
+  shift of a nonneg can't grow it), `pyRshift_succ` (`n >> (k+1) = (n >> k) // 2`,
+  the halving link), `pyFloordiv_mul_le_self`. These bridge to the `Int.fdiv`
+  lemma library, so `PythonOps` now `import`s `FDivLemmas` (acyclic — `FDivLemmas`
+  is pure `Int.fdiv`, naming no py-op) and `Mathlib.Data.Int.DivMod`.
 
 ### `FDivLemmas.lean` — Floor-division lemmas
 
 - Thin wrappers around `Int.ediv` lemmas via `Int.fdiv_eq_ediv_of_nonneg`:
   `Int.le_fdiv_iff_mul_le`, `Int.fdiv_lt_iff_lt_mul`,
   `Int.lt_fdiv_add_one_mul`, `Int.fdiv_le_fdiv` (monotone in numerator),
-  `Int.fdiv_mul_le_self`.
+  `Int.fdiv_mul_le_self`, `Int.fdiv_le_self_of_nonneg` (a nonneg ÷ positive
+  can't grow).
 - `Int.toNat_fdiv_of_nonneg` bridges to ℕ: for nonneg `x, y`,
   `(x.fdiv y).toNat = x.toNat / y.toNat`.
 
@@ -90,6 +97,10 @@ proofs/isqrt_lean4/
 - `natBitLength_le_iff`, `lt_natBitLength_iff`, `natBitLength_div_two_pow`,
   `two_pow_pred_natBitLength_le`, `lt_two_pow_natBitLength`. Used by
   `SizeConditions.lean`.
+- Right-shift facts in py-op form for `Iterative.lean`:
+  `one_le_pyRshift_of_lt_pyBitLength` (`0 ≤ s < c.bit_length() ⟹ 1 ≤ c >> s`)
+  and `pyRshift_pyBitLength_eq_zero` (`c >> c.bit_length() = 0`, the loop seed
+  value of `d`).
 
 ### `Algorithm.lean` — Algorithm definitions
 
@@ -178,19 +189,33 @@ Persistent loop state is `(s, d, a)`; `e` is loop-local (the incoming `d`);
 
 ### State subtype σ (well-definedness invariant — minimal, per ADR 0001)
 
-`σ`'s invariant has three members, each discharging a body obligation:
+`σ`'s invariant `iterInv` is a `Prop`-valued **`structure`** (not a bare
+conjunction) with four fields, each discharging a body obligation:
 
-- `0 < a` — the `py// a` precondition.
-- `d = c >> (s+1)` — identifies the incoming `e = d` as `c >> (s+1)`, giving
-  `e = d_new // 2` (where `d_new = c >> s`) and `e, d_new ≤ c` for the right shift.
-- `s < c.bit_length()` — forces `d_new = c >> s ≥ 1`, so `d_new − e − 1 ≥ 0`
-  (uses `2^(L−1) ≤ c`).
+- `hs_lb : −1 ≤ s` — the loop variable's lower bound, so the shift amount `s + 1`
+  is nonneg. It is a `structure` precisely so this field is in scope when the
+  next field's `c py>> (s+1)` discharges its `0 ≤ s+1` precondition — a plain `∧`
+  cannot share a proof between conjuncts.
+- `hs_lt : s < c.bit_length()` — forces `d_new = c >> s ≥ 1`, so `d_new − e − 1 ≥ 0`
+  (uses `2^(L−1) ≤ c`, via `one_le_pyRshift_of_lt_pyBitLength`).
+- `hd_eq : d = c py>> (s+1)` — identifies the incoming `e = d` as `c >> (s+1)`,
+  giving `e = d_new // 2` (where `d_new = c >> s`, via `pyRshift_succ`) and
+  `e, d_new ≤ c` for the right shift (`pyRshift_le_self`).
+- `ha_pos : 0 < a` — the `py// a` precondition.
 
-`0 ≤ s` is **not** in `σ`: the loop condition supplies it fresh wherever needed
-(the `c >> s` shift and the measure's strict decrease). The measure is
-`(s+1).toNat`, not `s.toNat` — the loop runs down to `s = −1`, where `s.toNat`
-would stall at the final `0 → −1` step. The near-√ property and the size
-condition are deliberately **not** in `σ` either.
+The whole invariant — like all of `Iterative.lean` — is phrased in the Python
+operators `py//`/`py>>`/`py<<` with no explicit `Int.fdiv`; the `fdiv`-level
+facts are factored into `PythonOps`/`FDivLemmas`/`BitLengthLemmas`. A `structure`
+rather than an `Exists`-wrapped conjunction because `iterBody` *constructs data*
+(an `IterState`) while reading `hd_eq` off `st.property`, and one cannot project a
+witness out of `Exists` in a data context (large elimination) — whereas all-`Prop`
+structure fields project freely (like `And.left`).
+
+The full `0 ≤ s` is **not** in `σ` (only `−1 ≤ s` is): the loop condition supplies
+the strict bound fresh wherever needed (the `c >> s` shift and the measure's strict
+decrease). The measure is `(s+1).toNat`, not `s.toNat` — the loop runs down to
+`s = −1`, where `s.toNat` would stall at the final `0 → −1` step. The near-√
+property and the size condition are deliberately **not** in `σ` either.
 
 ### Loop property P (post-hoc, via `pyWhile_invariant`)
 
@@ -200,14 +225,14 @@ well-definedness invariant — is in scope in the preservation step). Near-√
 `(c,n)`-only fact) at both seed and step rather than threaded through the loop.
 
 **The loop is a named `def`.** `isqrtIterative` calls `isqrtIterativeLoop`
-(returning the post-loop `{ st : IterSigma c // ¬ 0 < st.s }`); the `while` body
-is no longer inline. This is what makes `pyWhile_invariant` usable: the proof
+(returning the post-loop `{ st : IterSigma c // ¬ (0 ≤ st.val.s) }` — `σ` is
+itself a subtype, hence `st.val.s`); the `while` body is no longer inline. This is what makes `pyWhile_invariant` usable: the proof
 `unfold`s `isqrtIterativeLoop` to expose the bare `pyWhile` application, then
 `refine pyWhile_invariant (P := …) _ ?hinit ?hstep` unifies the goal to fill the
 implicit `condition`/`body`/`μ`/`hμ` — so the opaque measure-decrease proof term
 never has to be written out. (This is the `countDownPos` pattern from
-`Tests/While.lean`.) `fdiv_le_self_of_nonneg` was un-`private`d for reuse in the
-step (depth bounds `d_old, d_new ≤ c`).
+`Tests/While.lean`.) The step's depth bounds `d_old, d_new ≤ c` come from
+`Int.fdiv_le_self_of_nonneg` (in `FDivLemmas`).
 
 The `hstep` algebra rewrites the body's new `a` (via `iterBody_a`) into the
 `key_isqrt_lemma` output `M·a + ⌊N_new/4Ma⌋` with `M = 2^k`, `k = (d_new−1)//2`.
@@ -295,23 +320,6 @@ to bare `omega`).
   Adjust `Iterative.lean` to import `PythonOps`/`FDivLemmas`/`BitLengthLemmas`
   directly instead of transitively via `Algorithm`, and update the file-structure
   list above plus the `Isqrt.lean` root.
-
-- **Express `Iterative.lean` entirely in Python operators, with no explicit
-  `Int.fdiv`.** A strengthening of the earlier "make `iterInv` Python-shaped"
-  item into a whole-module goal. The invariant, the seed/exit facts, and the
-  body precondition lemmas currently phrase intermediate results as
-  `Int.fdiv c (2 ^ …)` rather than `c py>> …`; rephrase them with `py//`, `py>>`,
-  `py<<` (e.g. `iterInv`'s `d = c py>> (s + 1)`), and push the simple supporting
-  facts about those operators — the `fdiv`↔`py>>` bridges, halving, monotonicity,
-  nonnegativity — out into `PythonOps`/`FDivLemmas`, so `Iterative.lean` reads as
-  a faithful Python translation with the `fdiv`-level reasoning factored away.
-  Subsumes the still-pending relocation of `fdiv_le_self_of_nonneg` — currently
-  public in `Iterative.lean`, used by `iter_rshift_nonneg` and the iterative
-  correctness proof — into `FDivLemmas` as `Int.fdiv_le_self_of_nonneg`. Known
-  friction: the
-  py-operators are proof-carrying (shift amount `≥ 0`, divisor `≠ 0`), so using
-  them inside a `Prop` like `iterInv` means threading those side-conditions
-  (e.g. `−1 ≤ s`, so `0 ≤ s + 1`) into the invariant.
 
 ## Reference files
 

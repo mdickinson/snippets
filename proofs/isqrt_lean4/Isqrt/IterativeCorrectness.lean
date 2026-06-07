@@ -51,8 +51,8 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     case hstep =>
       -- One iteration = one `key_isqrt_lemma` step at parent depth `d_new`.
       intro st h hPst
-      obtain ⟨hs_lt, hd_old_eq, ha_old_pos⟩ := st.property
-      simp only [iterBody_a, iterBody_d]
+      obtain ⟨hs_lb, hs_lt, hd_old_eq, ha_old_pos⟩ := st.property
+      simp only [iterBody_a, iterBody_d, pyLshift_def, pyRshift_def, pyFloordiv_def]
       set s := st.val.s
       set d_old := st.val.d
       set a_old := st.val.a
@@ -61,18 +61,18 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       -- Positivity / ordering of the depths. (d_old ≤ c is not needed: it
       -- follows from `hK` and `hd_new_le` wherever `omega` wants it.)
       have hd_old_nonneg : 0 ≤ d_old := by
-        rw [hd_old_eq]; exact Int.fdiv_nonneg hc (by positivity)
+        rw [hd_old_eq]; exact pyRshift_nonneg hc
       have hd_new_nonneg : 0 ≤ d_new := by
         rw [hd_new_def]; exact Int.fdiv_nonneg hc (by positivity)
       have hd_new_le : d_new ≤ c := by
-        rw [hd_new_def]; exact fdiv_le_self_of_nonneg hc (by positivity)
+        rw [hd_new_def]; exact Int.fdiv_le_self_of_nonneg hc (by positivity)
       -- Left-shift amount nonneg, hence d_new ≥ 1.
       have hK : 0 ≤ d_new - d_old - 1 := by
         rw [hd_new_def]; exact iter_lshift_nonneg hc h hs_lt hd_old_eq
       have hd_new_pos : 0 < d_new := by omega
       -- d_old = d_new / 2 (the halving link).
       have h_halve : d_old = Int.fdiv d_new 2 := by
-        rw [hd_old_eq, hd_new_def]; exact iter_d_halving h
+        rw [hd_old_eq, hd_new_def]; exact pyRshift_succ c s h
       -- k and M = 2^k.
       set k := (d_new - 1) py// 2 with hk_def
       have hk_eq : k = d_new - d_old - 1 := by
@@ -125,7 +125,8 @@ theorem isqrtIterativeLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
   -- Exit: ¬ (0 ≤ s) forces s < 0, so (s+1).toNat = 0 and d = c >> 0 = c.
   have hd : result.val.val.d = c := by
     have hs_neg : result.val.val.s < 0 := by have := result.property; omega
-    have hdc := result.val.property.2.1
+    have hdc := result.val.property.hd_eq
+    simp only [pyRshift_def] at hdc
     rw [show (result.val.val.s + 1).toNat = 0 by omega] at hdc
     simpa using hdc
   rw [hd] at hP

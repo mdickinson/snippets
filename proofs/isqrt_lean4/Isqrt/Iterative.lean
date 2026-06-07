@@ -91,87 +91,54 @@ structure IterState where
 minimal facts the body needs to discharge its py-op preconditions. `c` is the
 fixed recursion bound (closure-captured). With the loop variable `s` running
 `c.bit_length() - 1` down to `-1`, the persistent `d` holds `c >> (s + 1)` — the
-shift from the *previous* iteration. The variant's nonnegativity is supplied by
-the loop condition (`0 ≤ s`), so it is not bundled here; nor are the near-√
-property and the size condition. -/
-def iterInv (c : ℤ) (st : IterState) : Prop :=
-  st.s < pyBitLength c ∧ st.d = Int.fdiv c (2 ^ (st.s + 1).toNat) ∧ 0 < st.a
+shift from the *previous* iteration.
+
+This is a `structure` rather than a bare conjunction so that the `py>>` in
+`hd_eq` can discharge its `0 ≤ s + 1` precondition from the earlier `hs_lb`
+field (a plain `∧` cannot share a proof between conjuncts). `hs_lb` is the loop
+variable's lower bound, reached (`s = -1`) at loop exit; its full *nonnegativity*
+during the loop comes from the loop condition `0 ≤ s`, so that is not bundled
+here — nor are the near-√ property and the size condition. -/
+structure iterInv (c : ℤ) (st : IterState) : Prop where
+  /-- `s` never drops below `-1`, so the shift amount `s + 1` is nonneg. -/
+  hs_lb : -1 ≤ st.s
+  /-- `s` stays below `c.bit_length()`. -/
+  hs_lt : st.s < pyBitLength c
+  /-- `d` is `c` right-shifted by the previous iteration's amount. -/
+  hd_eq : st.d = c py>> (st.s + 1)
+  /-- `a` is positive (the `py// a` precondition). -/
+  ha_pos : 0 < st.a
 
 /-- The loop-state type handed to `pyWhile`: states carrying `iterInv c`. -/
 abbrev IterSigma (c : ℤ) := { st : IterState // iterInv c st }
 
-/-! ## Arithmetic helper -/
-
-/-- Floor-dividing a nonneg integer by a positive integer cannot increase it. -/
-theorem fdiv_le_self_of_nonneg {c m : ℤ} (hc : 0 ≤ c) (hm : 0 < m) :
-    c.fdiv m ≤ c := by
-  have h0 : 0 ≤ c.fdiv m := Int.fdiv_nonneg hc hm.le
-  have h1 : c.fdiv m * m ≤ c := Int.fdiv_mul_le_self hm
-  nlinarith [h1, mul_nonneg h0 (show (0 : ℤ) ≤ m - 1 by omega)]
-
-/-! ## Seed -/
-
-/-- At the seed `s = c.bit_length()`, the shift `c >> s` is `0` (since
-`c < 2^(c.bit_length())`). This makes the seed satisfy `iterInv`. -/
-theorem seed_d_eq {c : ℤ} (hc : 0 ≤ c) :
-    Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := by
-  rw [Int.fdiv_eq_ediv_of_nonneg c (by positivity)]
-  apply Int.ediv_eq_zero_of_lt hc
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-  have hbl : (pyBitLength (↑cn : ℤ)).toNat = natBitLength cn := by
-    rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
-          simp [pyBitLength]]
-    exact Int.toNat_natCast _
-  rw [hbl]
-  exact_mod_cast lt_two_pow_natBitLength cn
-
 /-! ## Body precondition lemmas (named, per ADR 0001 gotcha) -/
-
-/-- The depth halves each iteration: `c >> (s+1) = (c >> s) // 2` for `0 ≤ s`.
-This is the body's `e = d // 2` link (the recursion's `c ↦ c // 2`). Shared by
-`iter_lshift_nonneg` and the correctness proof's preservation step. (No sign
-hypothesis on `c` is needed — only the divisors must be nonneg.) -/
-theorem iter_d_halving {c s : ℤ} (hs_nn : 0 ≤ s) :
-    Int.fdiv c (2 ^ (s + 1).toNat) = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
-  have hsuc : (s + 1).toNat = s.toNat + 1 := by omega
-  rw [hsuc, pow_succ, ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num)]
 
 /-- The left-shift amount `d' - d - 1` is nonneg, where `d' = c >> s` (the new
 `d`) and `d = c >> (s+1)` (the incoming `e`), for `0 ≤ s < c.bit_length()`. The
-body's hardest precondition: it needs `d' ≥ 1` (from `s < L`, via `2^(L-1) ≤ c`)
-and `d = d' // 2`. -/
+body's hardest precondition: it needs `d' ≥ 1` (from `s < L`,
+`one_le_pyRshift_of_lt_pyBitLength`) and the halving link `d = d' // 2`
+(`pyRshift_succ`). -/
 theorem iter_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
-    (hs_lt : s < pyBitLength c) (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
-    0 ≤ Int.fdiv c (2 ^ s.toNat) - d - 1 := by
-  set d' := Int.fdiv c (2 ^ s.toNat) with hd'
-  -- d = d' // 2
-  have hd2 : d = Int.fdiv d' 2 := by rw [hd, hd']; exact iter_d_halving hs_nn
-  -- d' ≥ 1, from 2^s.toNat ≤ c
-  have hd'_ge1 : 1 ≤ d' := by
-    rw [hd', Int.le_fdiv_iff_mul_le (by positivity), one_mul]
-    obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-    rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
-          simp [pyBitLength]] at hs_lt
-    have hbl_pos : 0 < natBitLength cn := by omega
-    have hcn_pos : 0 < cn := natBitLength_pos_iff.mp hbl_pos
-    have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
-    have hexp : s.toNat ≤ natBitLength cn - 1 := by omega
-    calc (2 : ℤ) ^ s.toNat
-        ≤ (2 : ℤ) ^ (natBitLength cn - 1) := by
-          apply pow_le_pow_right₀ (by norm_num) hexp
-      _ = ((2 ^ (natBitLength cn - 1) : ℕ) : ℤ) := by push_cast; rfl
-      _ ≤ (↑cn : ℤ) := by exact_mod_cast hbound
-  rw [hd2, Int.fdiv_eq_ediv_of_nonneg d' (by norm_num : (0 : ℤ) ≤ 2)]
-  omega
+    (hs_lt : s < pyBitLength c) (hd : d = c py>> (s + 1)) :
+    0 ≤ (c py>> s) - d - 1 := by
+  -- d = (c >> s) // 2, the halving link
+  have hhalve : d = (c py>> s) py// 2 := by rw [hd]; exact pyRshift_succ c s hs_nn
+  -- c >> s ≥ 1, since s < c.bit_length()
+  have hge1 : 1 ≤ c py>> s := one_le_pyRshift_of_lt_pyBitLength hc hs_nn hs_lt
+  -- and a floor-half is bounded by its argument
+  have hmul : ((c py>> s) py// 2) * 2 ≤ c py>> s := pyFloordiv_mul_le_self (c py>> s) 2 (by norm_num)
+  have hnn : 0 ≤ (c py>> s) py// 2 := pyFloordiv_nonneg (by omega) (by norm_num)
+  rw [hhalve]; omega
 
 /-- The right-shift amount `2c - d' - d + 1` is nonneg, where `d' = c >> s` (the
 new `d`) and `d = c >> (s+1)` (the incoming `e`). Both shifts are `≤ c` (for
 `0 ≤ c`), so the amount is `≥ 1`. -/
-theorem iter_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c)
-    (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
-    0 ≤ 2 * c - Int.fdiv c (2 ^ s.toNat) - d + 1 := by
-  have h1 : Int.fdiv c (2 ^ s.toNat) ≤ c := fdiv_le_self_of_nonneg hc (by positivity)
-  have h2 : Int.fdiv c (2 ^ (s + 1).toNat) ≤ c := fdiv_le_self_of_nonneg hc (by positivity)
+theorem iter_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
+    (hd : d = c py>> (s + 1)) :
+    0 ≤ 2 * c - (c py>> s) - d + 1 := by
+  have h1 : c py>> s ≤ c := pyRshift_le_self hc hs_nn
+  have h2 : c py>> (s + 1) ≤ c := pyRshift_le_self hc (by omega)
   rw [hd]; omega
 
 /-- The body's new `a` is positive (parallels `isqrt_aux_return_pos`, but with
@@ -179,10 +146,9 @@ independent shift amounts `K`, `J`). Used to re-establish `iterInv`. -/
 theorem isqrtIterative_body_pos {a n K J : ℤ}
     (ha : 0 < a) (hn : 0 ≤ n) (hK : 0 ≤ K) (hJ : 0 ≤ J) :
     0 < (a py<< K) + (n py>> J) py// a := by
-  simp only [pyLshift_def, pyFloordiv_def, pyRshift_def]
-  have h_shift_pos : 0 < a * 2 ^ K.toNat := Int.mul_pos ha (by positivity)
-  have h_div_nonneg : 0 ≤ (n.fdiv (2 ^ J.toNat)).fdiv a :=
-    Int.fdiv_nonneg (Int.fdiv_nonneg hn (by positivity)) ha.le
+  have h_shift_pos : 0 < a py<< K := by
+    simp only [pyLshift_def]; exact mul_pos ha (by positivity)
+  have h_div_nonneg : 0 ≤ (n py>> J) py// a := pyFloordiv_nonneg (pyRshift_nonneg hn) ha
   omega
 
 /-! ## The loop body -/
@@ -205,23 +171,26 @@ def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
   let d := st.val.d
   let a := st.val.a
   -- invariant facts the body's preconditions consume
-  have hs_nn  : 0 ≤ s                              := h
-  have hd_eq  : d = Int.fdiv c (2 ^ (s + 1).toNat) := st.property.2.1
-  have hs_lt  : s < pyBitLength c                  := st.property.1
-  have ha_pos : 0 < a                              := st.property.2.2
+  have hs_nn  : 0 ≤ s              := h
+  have hd_eq  : d = c py>> (s + 1) := st.property.hd_eq
+  have hs_lt  : s < pyBitLength c  := st.property.hs_lt
+  have ha_pos : 0 < a              := st.property.ha_pos
   -- one pass of the loop body, line for line with the Python:
   --   e = d; d = c >> s; a = (a << d-e-1) + (n >> (2*c-d-e+1)) // a; s = s - 1
   let e := d
   let d := c py>> s
   have hK : 0 ≤ d - e - 1         := iter_lshift_nonneg hc hs_nn hs_lt hd_eq
-  have hJ : 0 ≤ 2 * c - d - e + 1 := iter_rshift_nonneg hc hd_eq
+  have hJ : 0 ≤ 2 * c - d - e + 1 := iter_rshift_nonneg hc hs_nn hd_eq
   let a := (a py<< (d - e - 1)) + (n py>> (2 * c - d - e + 1)) py// a
   let s := s - 1
   ⟨{ s := s, d := d, a := a },
-   ⟨by show st.val.s - 1 < pyBitLength c; omega,
-    by show Int.fdiv c (2 ^ st.val.s.toNat) = Int.fdiv c (2 ^ (st.val.s - 1 + 1).toNat);
-       rw [show (st.val.s - 1 + 1 : ℤ) = st.val.s by ring],
-    isqrtIterative_body_pos ha_pos hn hK hJ⟩⟩
+   { hs_lb := by show (-1 : ℤ) ≤ st.val.s - 1; omega,
+     hs_lt := by show st.val.s - 1 < pyBitLength c; omega,
+     hd_eq := by
+       show c py>> st.val.s = c py>> (st.val.s - 1 + 1)
+       simp only [pyRshift_def]
+       rw [show (st.val.s - 1 + 1 : ℤ) = st.val.s from by ring]
+     ha_pos := isqrtIterative_body_pos ha_pos hn hK hJ }⟩
 
 /-- The body decrements `s`. (Drives the measure-decrease proof.) -/
 @[simp] theorem iterBody_s {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
@@ -231,18 +200,22 @@ def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
 /-- The body sets `d` to `c >> s`. -/
 @[simp] theorem iterBody_d {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
     {st : IterSigma c} {h : 0 ≤ st.val.s} :
-    (iterBody c n hc hn st h).val.d = Int.fdiv c (2 ^ st.val.s.toNat) := rfl
+    (iterBody c n hc hn st h).val.d = c py>> st.val.s := rfl
 
-/-- The body's new `a`, in raw `Int.fdiv`/`*` form (the py-ops unfolded). With
-`d' = c >> s` the new `a` is `a·2^(d'-e-1) + ⌊⌊n/2^(2c-d'-e+1)⌋/a⌋` (`e` the old
-`d`); the correctness proof rewrites this into one `key_isqrt_lemma` step. -/
+/-- The body's new `a`, mirroring the Python `(a << d-e-1) + (n >> 2c-d-e+1) // a`
+with `d = c >> s` and `e` the old `d`. The shift/divisor preconditions are passed
+explicitly via the named lemmas (the infix operators' `by omega` default can't
+discharge them); the correctness proof unfolds the py-ops with `*_def` and
+rewrites the result into one `key_isqrt_lemma` step. -/
 @[simp] theorem iterBody_a {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
     {st : IterSigma c} {h : 0 ≤ st.val.s} :
     (iterBody c n hc hn st h).val.a =
-      st.val.a * 2 ^ (Int.fdiv c (2 ^ st.val.s.toNat) - st.val.d - 1).toNat
-        + Int.fdiv (Int.fdiv n
-            (2 ^ (2 * c - Int.fdiv c (2 ^ st.val.s.toNat) - st.val.d + 1).toNat))
-            st.val.a := rfl
+      pyLshift st.val.a ((c py>> st.val.s) - st.val.d - 1)
+          (iter_lshift_nonneg hc h st.property.hs_lt st.property.hd_eq)
+        + pyFloordiv
+            (pyRshift n (2 * c - (c py>> st.val.s) - st.val.d + 1)
+              (iter_rshift_nonneg hc h st.property.hd_eq))
+            st.val.a st.property.ha_pos.ne' := rfl
 
 /-! ## The iterative isqrt -/
 
@@ -258,10 +231,17 @@ def isqrtIterativeLoop (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n) :
     { st : IterSigma c // ¬ (0 ≤ st.val.s) } :=
   pyWhile
     (⟨{ s := pyBitLength c - 1, d := 0, a := 1 },
-      ⟨by show pyBitLength c - 1 < pyBitLength c; omega,
-       by show (0 : ℤ) = Int.fdiv c (2 ^ (pyBitLength c - 1 + 1).toNat);
-          rw [show (pyBitLength c - 1 + 1 : ℤ) = pyBitLength c by ring]; exact (seed_d_eq hc).symm,
-       one_pos⟩⟩ : IterSigma c)
+      { hs_lb := by
+          have hbl := pyBitLength_nonneg c
+          show (-1 : ℤ) ≤ pyBitLength c - 1; omega
+        hs_lt := by show pyBitLength c - 1 < pyBitLength c; omega
+        hd_eq := by
+          have hbl := pyBitLength_nonneg c
+          show (0 : ℤ) = c py>> (pyBitLength c - 1 + 1)
+          simp only [pyRshift_def]
+          rw [show (pyBitLength c - 1 + 1 : ℤ) = pyBitLength c from by ring]
+          exact (pyRshift_pyBitLength_eq_zero hc).symm
+        ha_pos := one_pos }⟩ : IterSigma c)
     (fun st => 0 ≤ st.val.s)
     (iterBody c n hc hn)
     (fun st => (st.val.s + 1).toNat)

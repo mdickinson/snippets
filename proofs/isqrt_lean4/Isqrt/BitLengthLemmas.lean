@@ -105,3 +105,41 @@ theorem pyBitLength_of_nonneg {n : ℤ} (hn : 0 ≤ n) :
   congr 1
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le hn
   rfl
+
+/-! ## pyBitLength: interaction with right shift -/
+
+/-- For `0 ≤ s < c.bit_length()`, the right shift `c >> s` is at least `1`: it
+still retains the leading bit. (Used to show the body's left-shift amount is
+nonneg.) -/
+theorem one_le_pyRshift_of_lt_pyBitLength {c s : ℤ}
+    (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < pyBitLength c) :
+    1 ≤ c py>> s := by
+  simp only [pyRshift_def]
+  rw [Int.le_fdiv_iff_mul_le (by positivity), one_mul]
+  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
+  rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
+        simp [pyBitLength]] at hs_lt
+  have hbl_pos : 0 < natBitLength cn := by omega
+  have hcn_pos : 0 < cn := natBitLength_pos_iff.mp hbl_pos
+  have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
+  have hexp : s.toNat ≤ natBitLength cn - 1 := by omega
+  calc (2 : ℤ) ^ s.toNat
+      ≤ (2 : ℤ) ^ (natBitLength cn - 1) := by
+        apply pow_le_pow_right₀ (by norm_num) hexp
+    _ = ((2 ^ (natBitLength cn - 1) : ℕ) : ℤ) := by push_cast; rfl
+    _ ≤ (↑cn : ℤ) := by exact_mod_cast hbound
+
+/-- Right-shifting `c` by its own bit length yields `0` (since
+`c < 2 ^ c.bit_length()`). This is the loop's seed value of `d`. -/
+theorem pyRshift_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
+    pyRshift c (pyBitLength c) (pyBitLength_nonneg c) = 0 := by
+  simp only [pyRshift_def]
+  rw [Int.fdiv_eq_ediv_of_nonneg c (by positivity)]
+  apply Int.ediv_eq_zero_of_lt hc
+  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
+  have hbl : (pyBitLength (↑cn : ℤ)).toNat = natBitLength cn := by
+    rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
+          simp [pyBitLength]]
+    exact Int.toNat_natCast _
+  rw [hbl]
+  exact_mod_cast lt_two_pow_natBitLength cn

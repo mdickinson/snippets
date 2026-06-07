@@ -14,6 +14,8 @@ proof at the call site (e.g., nonzero divisor, nonneg shift amount).
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
+import Mathlib.Data.Int.DivMod
+import Isqrt.FDivLemmas
 
 /-! ## Definitions -/
 
@@ -97,3 +99,30 @@ theorem pyFloordiv_nonneg {a b : ℤ} {hb : b ≠ 0} (ha : 0 ≤ a) (hb_pos : 0 
 theorem pyRshift_nonneg {n k : ℤ} {hk : 0 ≤ k} (hn : 0 ≤ n) :
     0 ≤ pyRshift n k hk := by
   simp; exact Int.fdiv_nonneg hn (by positivity)
+
+/-! ## Ordering and arithmetic lemmas
+
+These bridge the Python operators to the `Int.fdiv` lemma library, so that
+downstream code (notably `Iterative.lean`) can reason about `py>>` and `py//`
+without ever mentioning `Int.fdiv` directly. -/
+
+/-- Right-shifting a nonneg integer cannot increase it. -/
+theorem pyRshift_le_self {n k : ℤ} (hn : 0 ≤ n) (hk : 0 ≤ k) :
+    n py>> k ≤ n := by
+  simp only [pyRshift_def]
+  exact Int.fdiv_le_self_of_nonneg hn (by positivity)
+
+/-- One more bit of right shift is a further floor-halving:
+`n >> (k + 1) = (n >> k) // 2`. (This is the body's `e = d // 2` link — the
+recursion's `c ↦ c // 2` step. No sign hypothesis on `n` is needed.) -/
+theorem pyRshift_succ (n k : ℤ) (hk : 0 ≤ k) :
+    n py>> (k + 1) = (n py>> k) py// 2 := by
+  simp only [pyRshift_def, pyFloordiv_def]
+  rw [show (k + 1).toNat = k.toNat + 1 from by omega, pow_succ,
+      ← Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by norm_num)]
+
+/-- `(a // b) * b ≤ a` for positive divisor `b`. -/
+theorem pyFloordiv_mul_le_self (a b : ℤ) (hb : 0 < b) :
+    (a py// b) * b ≤ a := by
+  simp only [pyFloordiv_def]
+  exact Int.fdiv_mul_le_self hb
