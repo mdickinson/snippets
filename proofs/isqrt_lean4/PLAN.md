@@ -87,7 +87,7 @@ proofs/isqrt_lean4/
 
 - Thin wrappers around `Int.ediv` lemmas via `Int.fdiv_eq_ediv_of_nonneg`:
   `Int.le_fdiv_iff_mul_le`, `Int.fdiv_lt_iff_lt_mul`,
-  `Int.lt_fdiv_add_one_mul`, `Int.fdiv_le_fdiv` (monotone in numerator),
+  `Int.lt_fdiv_add_one_mul`,
   `Int.fdiv_mul_le_self`, `Int.fdiv_le_self_of_nonneg` (a nonneg ÷ positive
   can't grow).
 - `Int.toNat_fdiv_of_nonneg` bridges to ℕ: for nonneg `x, y`,
@@ -95,7 +95,7 @@ proofs/isqrt_lean4/
 
 ### `BitLengthLemmas.lean` — Bit-length properties
 
-- `natBitLength_le_iff`, `lt_natBitLength_iff`, `natBitLength_div_two_pow`,
+- `natBitLength_le_iff`, `lt_natBitLength_iff`,
   `two_pow_pred_natBitLength_le`, `lt_two_pow_natBitLength`. Used by
   `SizeConditions.lean`.
 - Right-shift facts in py-op form for `Iterative.lean`:

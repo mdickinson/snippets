@@ -58,34 +58,6 @@ theorem lt_natBitLength_iff {n k : ℕ} : k < natBitLength n ↔ 2 ^ k ≤ n := 
   simp only [not_lt, not_le]
   exact natBitLength_le_iff
 
-/-! ## natBitLength: interaction with division -/
-
-/-- Right-shifting (dividing by `2^k`) reduces bit length by `k`. -/
-theorem natBitLength_div_two_pow (n k : ℕ) :
-    natBitLength (n / 2 ^ k) = natBitLength n - k := by
-  by_cases hk : k ≤ natBitLength n
-  · -- Case k ≤ natBitLength n
-    apply Nat.le_antisymm
-    · -- ≤: natBitLength (n / 2^k) ≤ natBitLength n - k
-      rw [natBitLength_le_iff, Nat.div_lt_iff_lt_mul (Nat.two_pow_pos k),
-          ← pow_add, Nat.sub_add_cancel hk]
-      exact lt_two_pow_natBitLength n
-    · -- ≥: natBitLength n - k ≤ natBitLength (n / 2^k)
-      rcases Nat.eq_or_lt_of_le hk with rfl | hk'
-      · simp
-      · -- k < natBitLength n, so natBitLength n - k ≥ 1
-        have hn : 0 < n := natBitLength_pos_iff.mp (by omega)
-        suffices natBitLength n - k - 1 < natBitLength (n / 2 ^ k) by omega
-        rw [lt_natBitLength_iff, Nat.le_div_iff_mul_le (Nat.two_pow_pos k),
-            ← pow_add]
-        have : natBitLength n - k - 1 + k = natBitLength n - 1 := by omega
-        rw [this]
-        exact two_pow_pred_natBitLength_le hn
-  · -- Case k > natBitLength n: both sides are 0
-    have hk' : natBitLength n ≤ k := by omega
-    rw [Nat.sub_eq_zero_of_le hk', natBitLength_eq_zero_iff]
-    exact Nat.div_eq_of_lt (natBitLength_le_iff.mp hk')
-
 /-! ## pyBitLength: ℤ-level properties -/
 
 theorem pyBitLength_nonneg (n : ℤ) : 0 ≤ pyBitLength n := by
@@ -98,13 +70,6 @@ theorem pyBitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < pyBitLength n := by
   rcases eq_or_lt_of_le (pyBitLength_nonneg n) with h | h
   · exact absurd (pyBitLength_eq_zero_iff.mp h.symm) hn
   · exact h
-
-theorem pyBitLength_of_nonneg {n : ℤ} (hn : 0 ≤ n) :
-    pyBitLength n = ↑(natBitLength n.toNat) := by
-  unfold pyBitLength
-  congr 1
-  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le hn
-  rfl
 
 /-! ## pyBitLength: interaction with right shift -/
 

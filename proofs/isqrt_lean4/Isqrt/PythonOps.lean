@@ -76,29 +76,17 @@ theorem pyLshift_def (n k : ℤ) (hk : 0 ≤ k) :
 theorem pyBitLength_def (n : ℤ) :
     pyBitLength n = ↑(natBitLength n.natAbs) := rfl
 
-theorem natBitLength_zero : natBitLength 0 = 0 := rfl
-
-theorem natBitLength_succ (n : ℕ) :
-    natBitLength (n + 1) = Nat.log2 (n + 1) + 1 := rfl
-
-/-! ## Connection between shifts and floor division -/
-
-/-- Right shift is a special case of floor division (by a power of 2). -/
-theorem pyRshift_eq_pyFloordiv (n k : ℤ) (hk : 0 ≤ k)
-    (h : (2 : ℤ) ^ k.toNat ≠ 0) :
-    pyRshift n k hk = pyFloordiv n (2 ^ k.toNat) h := rfl
-
 /-! ## Nonnegativity lemmas -/
 
 /-- Floor division of a nonneg numerator by a positive denominator is nonneg. -/
 theorem pyFloordiv_nonneg {a b : ℤ} {hb : b ≠ 0} (ha : 0 ≤ a) (hb_pos : 0 < b) :
     0 ≤ pyFloordiv a b hb := by
-  simp; exact Int.fdiv_nonneg ha (le_of_lt hb_pos)
+  simp only [pyFloordiv_def]; exact Int.fdiv_nonneg ha (le_of_lt hb_pos)
 
 /-- Right-shifting a nonneg integer gives a nonneg result. -/
 theorem pyRshift_nonneg {n k : ℤ} {hk : 0 ≤ k} (hn : 0 ≤ n) :
     0 ≤ pyRshift n k hk := by
-  simp; exact Int.fdiv_nonneg hn (by positivity)
+  simp only [pyRshift_def]; exact Int.fdiv_nonneg hn (by positivity)
 
 /-! ## Ordering and arithmetic lemmas
 
