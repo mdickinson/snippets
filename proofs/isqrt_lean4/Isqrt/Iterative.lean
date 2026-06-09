@@ -76,12 +76,11 @@ The `for s in reversed(range(c.bit_length()))` loop translates into Lean's own
 (and the carried `a > 0`) are in scope inside the loop body, so the py-ops' default
 `by omega` discharges their preconditions.
 
-Correctness for this form (left as `sorry` on this definitions-only branch) reduces
+Correctness for this form is proved in `Isqrt.IterativeCorrectness`: it reduces
 the `do`/`forIn'` loop to a `List.foldl` over the reversed range via the
-`Init.Data.List.Monadic` bridge lemmas (e.g. `idRun_forIn'_yield_eq_foldl`), then
+`Init.Data.List.Monadic` bridge lemma `List.forIn'_pure_yield_eq_foldl`, then
 runs a position-indexed fold invariant — the same `key_isqrt_lemma` step the
-recursive proof uses. (Compare the `Nat.foldRev` form, whose `Nat.foldRev_invariant`
-rule applies without the `forIn → foldl` reduction step.)
+recursive proof uses.
 -/
 
 import Isqrt.PythonOps

@@ -6,6 +6,5 @@ import Isqrt.SizeConditions
 import Isqrt.KeyLemma
 import Isqrt.Algorithm
 import Isqrt.Correctness
-import Isqrt.While
 import Isqrt.Iterative
 import Isqrt.IterativeCorrectness

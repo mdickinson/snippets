@@ -14,16 +14,16 @@ step differs. Here the loop is Lean's `for h : s in (List.range L).reverse do �
    total step, and `List.foldl_attach` discards the `.attach`. What remains is a plain
    `List.foldl` over `(List.range L).reverse`.
 
-2. **Run the position-indexed invariant.** `foldl_reverseRange_invariant` is the
-   reversed-range analogue of `pyWhile_invariant`: since `(List.range L).reverse` is
-   `[L-1, …, 1, 0]`, folding it left visits the loop indices in descending order, and the
-   loop property is *indexed by the position* `s` that the `while` form kept in its state:
+2. **Run the position-indexed invariant.** `foldl_reverseRange_invariant` is a
+   loop-invariant rule for a left fold over a reversed range: since `(List.range L).reverse`
+   is `[L-1, …, 1, 0]`, folding it left visits the loop indices in descending order, and the
+   loop property is *indexed by the position* `s` (the loop counter):
 
        motive s a := isNearSqrt a ⌊n / 4^(c - c>>s)⌋
 
    The seed lands at `s = L` (where `c >> L = 0`) and the result at `s = 0` (where
    `c >> 0 = c`, collapsing `4^(c-d)` to `4^0 = 1`). The per-iteration body is one
-   `key_isqrt_lemma` step, identical to the recursive and `while`/`foldRev` proofs.
+   `key_isqrt_lemma` step, identical to the one in the recursive proof.
 
 `iterStep` is the loop body as a standalone function (the `for`-loop's `a := …` line); the
 correctness file owns it because `Iterative.lean` inlines the body to read line-for-line
@@ -41,8 +41,8 @@ import Isqrt.SizeConditions
 
 /-! ## A reversed-range `foldl` invariant rule -/
 
-/-- Indexed invariant rule for a left fold over `(List.range L).reverse` — the
-reversed-range analogue of `pyWhile_invariant`. Since the list is `[L-1, …, 1, 0]`,
+/-- Indexed invariant rule for a left fold over `(List.range L).reverse` — the standard
+loop-invariant principle, specialised to a descending reversed range. Since the list is `[L-1, …, 1, 0]`,
 `foldl g init` applies `g · (L-1)`, …, `g · 0` in turn, so reading `motive i x` as "`x`
 is a valid state with `i` iterations still to run" gives `i = L` at the seed, `i = 0` at
 the result, and each step the index bound `s < L` for free. Proved by induction on `L`

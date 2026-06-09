@@ -45,13 +45,11 @@ Isqrt/
   SizeConditions.lean        -- size-condition invariants carried through the recursion
   Algorithm.lean             -- recursive isqrtAux and isqrt definitions
   Correctness.lean           -- recursive correctness proof (isqrt_is_sqrt)
-  While.lean                 -- generic pyWhile combinator + partial-correctness while rule
-  Iterative.lean             -- iterative isqrtIterative definition (pyWhile-based)
+  Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
   IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_is_sqrt)
   Tests/
     PythonOps.lean           -- #guard checks for the Python operations
     Isqrt.lean               -- #guard checks for isqrt on concrete values
-    While.lean               -- checks for the pyWhile combinator
     Iterative.lean           -- #guard checks for isqrtIterative
 ```
 
@@ -117,10 +115,12 @@ CPython itself ships an [iterative formulation][cpython-iterative] of
 the same algorithm, derived from the recursive one for efficiency. That
 formulation is verified here too: `isqrtIterative` (`Isqrt/Iterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
-comment, and `isqrtIterative_is_sqrt` (`Isqrt/IterativeCorrectness.lean`)
-proves it meets the same specification as the recursive `isqrt`, reusing
-the recursive proof's algebra through a generic `while`-loop combinator
-(`Isqrt/While.lean`).
+comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
+as Lean's own `for … in … do`. `isqrtIterative_is_sqrt`
+(`Isqrt/IterativeCorrectness.lean`) then proves it meets the same
+specification as the recursive `isqrt`: it reduces the `for … in` loop to a
+`List.foldl` over the reversed range and reuses the recursive proof's
+per-iteration algebra unchanged.
 
 [so-recursive]: https://stackoverflow.com/a/78076732
 [cpython-iterative]: https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211
