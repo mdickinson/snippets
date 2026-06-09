@@ -1,7 +1,7 @@
 /-
-Python's `math.integer` module defines an `isqrt` function that computes the integer
+Python's `math` module defines an `isqrt` function that computes the integer
 part of the square root of a nonnegative integer input. The implementation of
-`math.integer.isqrt` is in C, but the comments in the C source include equivalent
+`math.isqrt` is in C, but the comments in the C source include equivalent
 Python code, reproduced verbatim here for easy reference.
 
     def isqrt(n):
@@ -36,7 +36,10 @@ point of view). Key changes:
 - Drop the `index` translation and negative `n` guard; assume that the
   input is a nonnegative `int`. Behaviour for negative n is considered undefined.
 - Add type hints.
-- Replace the `for` loop with an equivalent `while` loop.
+- Recompute both shift amounts from the loop variable: `e = c >> (s + 1)` and
+  `d = c >> s`, rather than threading `e = d` from the previous iteration. The two
+  agree — the loop counts down, so the iteration before `s` processed `s + 1`, where
+  `d` was `c >> (s + 1)` — and this leaves the body self-contained (no carried `d`).
 - Remove the implicit bool-to-int conversion in the final return.
 - Place the main body in an else branch.
 
@@ -49,76 +52,41 @@ point of view). Key changes:
             c = (n.bit_length() - 1) // 2
 
             a = 1
-            d = 0
-            s = c.bit_length() - 1
-            while s >= 0:
-                e = d
+            for s in reversed(range(c.bit_length())):
+                e = c >> (s + 1)
                 d = c >> s
                 a = (a << d - e - 1) + (n >> (2 * c - d - e + 1)) // a
-                s = s - 1
 
             return a - 1 if a * a > n else a
 
 
 This rewritten version is our target for translation into Lean.
 
-This is `isqrtAux` unrolled bottom-up: the loop's `d` climbs the chain
-`c >> j` that the recursion descends, and each iteration is one recursive step.
-The translation uses the generic `pyWhile` combinator (`Isqrt.While`). The
-persistent loop state `(s, d, a)` lives in a subtype carrying the minimal
-well-definedness invariant `iterInv`; `e` is loop-local (the incoming `d`).
+The `for s in reversed(range(c.bit_length()))` loop translates into Lean's own
+`for … in … do` notation, in the identity monad (`Id.run do`):
 
-This module holds the definition `isqrtIterative` and the named lemmas its body
-needs to typecheck. The py-op precondition proofs are kept out of the `pyWhile`
-call as top-level lemmas: an inline `by` inside the `⟨val, proof⟩` constructor
-hits an elaboration-order bug where the proof metavariable entangles with the
-measure-decrease goal (surfacing as a spurious "no goals to be solved").
-Correctness lives in `Isqrt.IterativeCorrectness`.
+- the reversed range `reversed(range(L))` is the list `(List.range L).reverse`;
+- `for h : s in …` binds the membership proof `h : s ∈ …`, which yields the loop
+  variable's bound `s < L` (the `for`-with-proof form desugars to `forIn'`);
+- the rebindable Python local `a` is a `let mut`, typed as the subtype
+  `{a : ℤ // 0 < a}` so the running invariant (the `py// a` divisor is nonzero)
+  rides along with the value across iterations.
+
+`e` and `d` are loop-local, recomputed from `s`. The shift-nonneg facts `hK`, `hJ`
+(and the carried `a > 0`) are in scope inside the loop body, so the py-ops' default
+`by omega` discharges their preconditions.
+
+Correctness for this form (left as `sorry` on this definitions-only branch) reduces
+the `do`/`forIn'` loop to a `List.foldl` over the reversed range via the
+`Init.Data.List.Monadic` bridge lemmas (e.g. `idRun_forIn'_yield_eq_foldl`), then
+runs a position-indexed fold invariant — the same `key_isqrt_lemma` step the
+recursive proof uses. (Compare the `Nat.foldRev` form, whose `Nat.foldRev_invariant`
+rule applies without the `forIn → foldl` reduction step.)
 -/
 
 import Isqrt.PythonOps
 import Isqrt.BitLengthLemmas
 import Isqrt.RecursionDepth
-import Isqrt.While
-
-/-! ## Loop state and its well-definedness invariant -/
-
-/-- Persistent loop state of the iterative isqrt: the Python locals `s, d, a`
-that survive across iterations (`e` is loop-local). -/
-structure IterState where
-  /-- Python local `s`: the bit index of `c` being processed, counting down
-  from `c.bit_length() - 1` to `0`. -/
-  s : ℤ
-  /-- Python local `d`: equal to `c >> s` within the loop, climbing toward `c`
-  as `s` descends. -/
-  d : ℤ
-  /-- Python local `a`: the running integer-square-root approximation. -/
-  a : ℤ
-
-/-- The well-definedness invariant bundled into the loop-state subtype: the
-minimal facts the body needs to discharge its py-op preconditions. `c` is the
-fixed recursion bound (closure-captured). With the loop variable `s` running
-`c.bit_length() - 1` down to `-1`, the persistent `d` holds `c >> (s + 1)` — the
-shift from the *previous* iteration.
-
-This is a `structure` rather than a bare conjunction so that the `py>>` in
-`hd_eq` can discharge its `0 ≤ s + 1` precondition from the earlier `hs_lb`
-field (a plain `∧` cannot share a proof between conjuncts). `hs_lb` is the loop
-variable's lower bound, reached (`s = -1`) at loop exit; its full *nonnegativity*
-during the loop comes from the loop condition `0 ≤ s`, so that is not bundled
-here — nor are the near-√ property and the size condition. -/
-structure iterInv (c : ℤ) (st : IterState) : Prop where
-  /-- `s` never drops below `-1`, so the shift amount `s + 1` is nonneg. -/
-  hs_lb : -1 ≤ st.s
-  /-- `s` stays below `c.bit_length()`. -/
-  hs_lt : st.s < pyBitLength c
-  /-- `d` is `c` right-shifted by the previous iteration's amount. -/
-  hd_eq : st.d = c py>> (st.s + 1)
-  /-- `a` is positive (the `py// a` precondition). -/
-  ha_pos : 0 < st.a
-
-/-- The loop-state type handed to `pyWhile`: states carrying `iterInv c`. -/
-abbrev IterSigma (c : ℤ) := { st : IterState // iterInv c st }
 
 /-! ## Body precondition lemmas (top-level named lemmas, not inline `by`) -/
 
@@ -149,113 +117,45 @@ theorem iter_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
   have h2 : c py>> (s + 1) ≤ c := pyRshift_le_self hc (by omega)
   rw [hd]; omega
 
-/-! ## The loop body -/
-
-/-- One execution of the loop body. Reads line-for-line with the Python suite
-
-    e = d; d = c >> s; a = (a << d-e-1) + (n >> (2c-d-e+1)) // a; s = s - 1
-
-The persistent locals `s, d, a` are unpacked from the loop state up front, and
-the four assignments follow in order (`e` is the incoming `d`; Lean
-`let`-shadowing of `s` and `d` mirrors Python's rebinding). The shift-nonneg
-facts `hK`, `hJ` (and `ha_pos`) are in scope, so the py-ops' default `by omega`
-discharges their preconditions. `iterInv` is re-established for the new state.
-Defined as a standalone `def` (not inline in the `pyWhile` call) so the
-precondition proofs don't entangle with the measure-decrease goal. -/
-def iterBody (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n)
-    (st : IterSigma c) (h : 0 ≤ st.val.s) : IterSigma c :=
-  -- the persistent Python locals, unpacked from the loop state
-  let s := st.val.s
-  let d := st.val.d
-  let a := st.val.a
-  -- invariant facts the body's preconditions consume
-  have hs_nn  : 0 ≤ s              := h
-  have hd_eq  : d = c py>> (s + 1) := st.property.hd_eq
-  have hs_lt  : s < pyBitLength c  := st.property.hs_lt
-  have ha_pos : 0 < a              := st.property.ha_pos
-  -- one pass of the loop body, line for line with the Python:
-  --   e = d; d = c >> s; a = (a << d-e-1) + (n >> (2*c-d-e+1)) // a; s = s - 1
-  let e := d
-  let d := c py>> s
-  have hK : 0 ≤ d - e - 1         := iter_lshift_nonneg hc hs_nn hs_lt hd_eq
-  have hJ : 0 ≤ 2 * c - d - e + 1 := iter_rshift_nonneg hc hs_nn hd_eq
-  let a := (a py<< (d - e - 1)) + (n py>> (2 * c - d - e + 1)) py// a
-  let s := s - 1
-  ⟨{ s := s, d := d, a := a },
-   { hs_lb := by show (-1 : ℤ) ≤ st.val.s - 1; omega,
-     hs_lt := by show st.val.s - 1 < pyBitLength c; omega,
-     hd_eq := by
-       show c py>> st.val.s = c py>> (st.val.s - 1 + 1)
-       simp only [pyRshift_def]
-       rw [show (st.val.s - 1 + 1 : ℤ) = st.val.s from by ring]
-     ha_pos := pyLshift_add_pyFloordiv_pos ha_pos hn hK hJ }⟩
-
-/-- The body decrements `s`. (Drives the measure-decrease proof.) -/
-@[simp] theorem iterBody_s {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
-    {st : IterSigma c} {h : 0 ≤ st.val.s} :
-    (iterBody c n hc hn st h).val.s = st.val.s - 1 := rfl
-
-/-- The body sets `d` to `c >> s`. -/
-@[simp] theorem iterBody_d {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
-    {st : IterSigma c} {h : 0 ≤ st.val.s} :
-    (iterBody c n hc hn st h).val.d = c py>> st.val.s := rfl
-
-/-- The body's new `a`, mirroring the Python `(a << d-e-1) + (n >> 2c-d-e+1) // a`
-with `d = c >> s` and `e` the old `d`. The shift/divisor preconditions are passed
-explicitly via the named lemmas (the infix operators' `by omega` default can't
-discharge them); the correctness proof unfolds the py-ops with `*_def` and
-rewrites the result into one `key_isqrt_lemma` step. -/
-@[simp] theorem iterBody_a {c n : ℤ} {hc : 0 ≤ c} {hn : 0 ≤ n}
-    {st : IterSigma c} {h : 0 ≤ st.val.s} :
-    (iterBody c n hc hn st h).val.a =
-      pyLshift st.val.a ((c py>> st.val.s) - st.val.d - 1)
-          (iter_lshift_nonneg hc h st.property.hs_lt st.property.hd_eq)
-        + pyFloordiv
-            (pyRshift n (2 * c - (c py>> st.val.s) - st.val.d + 1)
-              (iter_rshift_nonneg hc h st.property.hd_eq))
-            st.val.a st.property.ha_pos.ne' := rfl
-
 /-! ## The iterative isqrt -/
-
-/-- The `while s >= 0` loop of `isqrtIterative`, factored out as a standalone def
-returning the final loop state (bundled with `¬ 0 ≤ s`, i.e. the loop has
-stopped). Extracting it lets the correctness proof `unfold` this name and hand
-the bare `pyWhile` application to `pyWhile_invariant` — exactly the
-`countDownPos` pattern in `Tests/While.lean` — without having to reproduce the
-opaque measure-decrease proof term. The measure is `(s + 1).toNat` rather than
-`s.toNat`: the loop runs down to `s = -1`, where `s.toNat` would stall at the
-final `0 → -1` step. -/
-def isqrtIterativeLoop (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n) :
-    { st : IterSigma c // ¬ (0 ≤ st.val.s) } :=
-  pyWhile
-    (⟨{ s := pyBitLength c - 1, d := 0, a := 1 },
-      { hs_lb := by
-          have hbl := pyBitLength_nonneg c
-          show (-1 : ℤ) ≤ pyBitLength c - 1; omega
-        hs_lt := by show pyBitLength c - 1 < pyBitLength c; omega
-        hd_eq := by
-          have hbl := pyBitLength_nonneg c
-          show (0 : ℤ) = c py>> (pyBitLength c - 1 + 1)
-          simp only [pyRshift_def]
-          rw [show (pyBitLength c - 1 + 1 : ℤ) = pyBitLength c from by ring]
-          exact (pyRshift_pyBitLength_eq_zero hc).symm
-        ha_pos := one_pos }⟩ : IterSigma c)
-    (fun st => 0 ≤ st.val.s)
-    (iterBody c n hc hn)
-    (fun st => (st.val.s + 1).toNat)
-    (fun st h => by simp_wf; omega)
 
 /-- Integer square root, iterative form (the rewritten Python target above).
 
 Precondition `0 ≤ n`. `n = 0` is special-cased to `0` (the loop would otherwise
 shift by a negative amount), mirroring the recursive `isqrt`. For `n ≥ 1` the
-`while s >= 0` loop (`isqrtIterativeLoop`) is the faithful `pyWhile` translation;
-the final line returns `a - 1` or `a` exactly as the Python
+`for s in reversed(range(c.bit_length()))` loop is Lean's `for … in … do` over
+`(List.range L).reverse` in the `Id` monad, with the running `a` a `let mut`; the
+loop body reads line-for-line with the Python suite
+
+    e = c >> (s + 1); d = c >> s; a = (a << d-e-1) + (n >> (2c-d-e+1)) // a
+
+and the final line returns `a - 1` or `a` exactly as the Python
 `return a - 1 if a * a > n else a`. -/
-def isqrtIterative (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ :=
-  if _ : n = 0 then 0
+def isqrtIterative (n : ℤ) (n_nonneg : 0 ≤ n := by omega) : ℤ := Id.run do
+  if _ : n = 0 then
+    return 0
   else
     let c := (pyBitLength n - 1) py// 2
     have hc : 0 ≤ c := isqrt_c_nonneg (by omega)
-    let a := (isqrtIterativeLoop c n hc n_nonneg).val.val.a
-    if a * a > n then a - 1 else a
+    -- the running approximation `a`, carrying its positivity invariant
+    let mut a : {a : ℤ // 0 < a} := ⟨1, one_pos⟩
+    for h : s in (List.range (pyBitLength c).toNat).reverse do
+      -- the loop variable's bound, read off the membership proof `h`
+      have hsL : s < (pyBitLength c).toNat := List.mem_range.mp (List.mem_reverse.mp h)
+      let av := a.val
+      have ha_pos : 0 < av := a.property
+      let sZ : ℤ := s
+      have hs_nn : 0 ≤ sZ := by positivity
+      have hs_lt : sZ < pyBitLength c := by
+        have hbl := pyBitLength_nonneg c; omega
+      -- one pass of the loop body, line for line with the Python:
+      --   e = c >> (s + 1); d = c >> s; a = (a << d-e-1) + (n >> (2*c-d-e+1)) // a
+      let e := c py>> (sZ + 1)
+      let d := c py>> sZ
+      have hd_eq : e = c py>> (sZ + 1)  := rfl
+      have hK : 0 ≤ d - e - 1         := iter_lshift_nonneg hc hs_nn hs_lt hd_eq
+      have hJ : 0 ≤ 2 * c - d - e + 1 := iter_rshift_nonneg hc hs_nn hd_eq
+      a := ⟨(av py<< (d - e - 1)) + (n py>> (2 * c - d - e + 1)) py// av,
+            pyLshift_add_pyFloordiv_pos ha_pos n_nonneg hK hJ⟩
+    let aFinal := a.val
+    return (if aFinal * aFinal > n then aFinal - 1 else aFinal)
