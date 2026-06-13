@@ -1,155 +1,171 @@
 /-
-Correctness of `isqrt n`: it returns the floor of `√n`.
+Correctness of the recursive monadic integer square root `isqrt`.
 
-Strategy: strong induction on `c.toNat` for `isqrtAux`, where the
-size-condition invariant `4^c ≤ n < 4^(c+1)` (from `Isqrt.SizeConditions`)
-is preserved by each recursive step. The inductive step combines
-`isqrtAux_step_val` (unfolds the recursion) with `key_isqrt_lemma`
-(the algebraic correctness statement from `Isqrt.KeyLemma`). The main
-result is `isIntegerSquareRoot_isqrt`.
+Strategy: structural induction on the counter `s` for `isqrtAux`, carrying
+the **tight** invariant `(pyBitLength c).toNat = s` alongside the size condition
+`4^c ≤ n < 4^(c+1)` (from `Isqrt.SizeConditions`). The invariant must be tight,
+not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
+`k = (c-1) // 2 = -1` and the body's `a << k` would raise `ValueError`.
+
+Each inductive step discharges the `.ok`-ness of every monadic operation — proving
+no `//`, `>>`, or `<<` ever raises when `s = c.bit_length()` and `c ≥ 0` — and then
+applies the core algebraic step `key_isqrt_lemma` (`Isqrt.KeyLemma`) to the
+recursive subproblem's value. The top-level result `isqrt_eq_ok_iff` is a faithful
+total spec, mirroring the iterative `isqrtIterative_eq_ok_iff`.
 -/
 
 import Isqrt.Algorithm
-import Isqrt.FDivLemmas
-import Isqrt.KeyLemma
 import Isqrt.SizeConditions
+import Isqrt.KeyLemma
+import Isqrt.RecursionDepth
 
-/-! ## Correctness of `isqrtAux` -/
+set_option maxHeartbeats 1000000
 
-/-- Helper: `(j + 2).toNat = j.toNat + 2` for `0 ≤ j`. -/
+/-- `Except.ok a >>= f = f a` (definitional; lets `simp` step through a successful
+bind in the `do`-block reduction). -/
+private theorem Except.ok_bind' {ε α β : Type _} (a : α) (f : α → Except ε β) :
+    (Except.ok a >>= f) = f a := rfl
+
+/-- `(j + 2).toNat = j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_add_two {j : ℤ} (hj : 0 ≤ j) :
     (j + 2).toNat = j.toNat + 2 := by
   obtain ⟨j0, rfl⟩ := Int.eq_ofNat_of_zero_le hj
   rw [Int.toNat_natCast]; omega
 
-/-- Helper: `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
+/-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
     (2 * j + 2).toNat = 2 * j.toNat + 2 := by
   obtain ⟨j0, rfl⟩ := Int.eq_ofNat_of_zero_le hj
   rw [Int.toNat_natCast]; omega
 
-/-- Unfolding lemma for the recursive case of `isqrtAux`. Exposes the
-algorithm's return value in terms of the recursive subproblem's value `a`. -/
-private theorem isqrtAux_step_val {c n : ℤ} (hc : 0 ≤ c) (hn : 0 ≤ n)
-    (hc_pos : 0 < c) :
-    let k := (c - 1) py// 2
-    let kn : 0 ≤ k := pyFloordiv_nonneg (by linarith) (by norm_num)
-    let d := c py// 2
-    let dn : 0 ≤ d := pyFloordiv_nonneg hc (by norm_num)
-    let m := pyRshift n (2 * k + 2) (by linarith)
-    let mn : 0 ≤ m := pyRshift_nonneg hn
-    let a := (isqrtAux d m dn mn).val
-    (isqrtAux c n hc hn).val =
-      a * 2 ^ k.toNat + (Int.fdiv n (2 ^ (k + 2).toNat)).fdiv a := by
-  intro k kn d dn m mn a
-  unfold isqrtAux
-  simp [hc_pos.ne']
-  rfl
+/-- The recursive auxiliary is a positive near square root for any size-conformant
+`(c, n)`, **and never raises**, provided the counter is seeded tightly at
+`s = c.bit_length()`.
 
-/-- The aux function is a near square root for any size-conformant `(c, n)`.
-
-For `0 < n` satisfying the size condition `4^c ≤ n < 4^(c+1)`, the value
-returned by `isqrtAux c n` is a near square root of `n`:
-`(a - 1)² < n ∧ n < (a + 1)²`. -/
+Structural induction on `s`: the base `s = 0` forces `c = 0` (so the function
+returns `1`, a near-√ of the `1 ≤ n < 4` that the size condition pins down), and
+the step `s + 1` discharges every monadic operation to `.ok` — the recursive call
+via the induction hypothesis (whose bit-length premise is `toNat_pyBitLength_fdiv_two`),
+the shifts/divisions via their nonneg side conditions — then closes with the core
+`key_isqrt_lemma` algebra of `Isqrt.KeyLemma` (the same per-step lemma the iterative
+proof `Isqrt.IterativeCorrectness` applies). -/
 private theorem isqrtAux_correctness :
-    ∀ (cn : ℕ) {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n),
-      c.toNat = cn → hasSizeCondition c n →
-      isNearSquareRoot (isqrtAux c n hc hn.le).val n := by
-  intro cn
-  induction cn using Nat.strong_induction_on with
-  | _ cn ih =>
-    intro c n hc hn hcn ⟨h_lo, h_hi⟩
-    by_cases hc0 : c = 0
-    · -- Base case: c = 0, size condition gives 1 ≤ n < 4
-      subst hc0
-      have h_val : (isqrtAux 0 n hc hn.le).val = 1 := by
-        unfold isqrtAux; rfl
-      simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
-      refine ⟨?_, ?_⟩
-      · show ((isqrtAux 0 n hc hn.le).val - 1) * ((isqrtAux 0 n hc hn.le).val - 1) < n
-        rw [h_val]; ring_nf; linarith
-      · show n < ((isqrtAux 0 n hc hn.le).val + 1) * ((isqrtAux 0 n hc hn.le).val + 1)
-        rw [h_val]; ring_nf; linarith
-    · -- Inductive case: c > 0
-      have hc_pos : 0 < c := lt_of_le_of_ne hc (Ne.symm hc0)
-      set k := (c - 1) py// 2 with hk_def
-      have k_nn : 0 ≤ k := pyFloordiv_nonneg (by linarith) (by norm_num)
-      set d := c py// 2 with hd_def
-      have d_nn : 0 ≤ d := pyFloordiv_nonneg hc (by norm_num)
-      have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
-      set m := pyRshift n (2 * k + 2) h2k2_nn with hm_def
-      have m_nn : 0 ≤ m := pyRshift_nonneg hn.le
-      -- Size condition is preserved by the recursive step.
-      have hsc_step : hasSizeCondition d m :=
-        size_condition_step hc_pos ⟨h_lo, h_hi⟩
-      have m_pos : 0 < m := by
-        have h4d_nn : (0 : ℤ) < (4 : ℤ) ^ d.toNat := by positivity
-        linarith [hsc_step.1]
-      -- The recursion decreases on `c.toNat`.
-      have hd_toNat_lt : d.toNat < cn := by
-        rw [← hcn, hd_def]
-        show (Int.fdiv c 2).toNat < c.toNat
-        obtain ⟨c0, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-        rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
-            Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-        simp [Int.toNat_natCast]
-        have : 0 < c0 := by exact_mod_cast hc_pos
-        omega
-      -- Apply induction hypothesis to the recursive call.
-      have ih_result := ih d.toNat hd_toNat_lt d_nn m_pos rfl hsc_step
-      set a := (isqrtAux d m d_nn m_pos.le).val with ha_def
-      have a_pos : 0 < a := (isqrtAux d m d_nn m_pos.le).property
-      set M := (2 : ℤ) ^ k.toNat with hM_def
-      have M_pos : 0 < M := by positivity
-      -- Bridge: `m = n.fdiv (4 * M²)`.
-      have hm_eq : m = n.fdiv (4 * M ^ 2) := by
-        show Int.fdiv n (2 ^ (2 * k + 2).toNat) = _
-        rw [toNat_two_mul_add_two k_nn, hM_def]
-        congr 1; ring
-      -- M_bound: `4 * M⁴ ≤ n`.
-      have hM4 : 4 * M ^ 4 ≤ n := by
-        have := M_bound_from_size hc_pos ⟨h_lo, h_hi⟩
-        -- `M_bound_from_size` is now stated with `Int.fdiv`; fold it back to the
-        -- proof-carrying `py//` so `hk_def`/`hM_def` apply.
-        rw [show Int.fdiv (c - 1) 2 = (c - 1) py// 2 from rfl] at this
-        rwa [← hk_def, ← hM_def] at this
-      -- Apply the key algebraic lemma.
-      have a_near' : isNearSquareRoot a (n.fdiv (4 * M ^ 2)) := hm_eq ▸ ih_result
-      have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
-      -- Unfold the algorithm to expose its return value, then rewrite to
-      -- the form expected by `h_key`.
-      have val_eq : (isqrtAux c n hc hn.le).val = M * a + n.fdiv (4 * M * a) := by
-        have step1 := isqrtAux_step_val hc hn.le hc_pos
-        -- `step1` has the form  isqrtAux c n = a * 2^k.toNat + ...
-        simp only at step1
-        rw [step1, toNat_add_two k_nn]
-        have h_pow : (2 : ℤ) ^ (k.toNat + 2) = 4 * M := by
-          rw [hM_def, pow_add]; ring
-        rw [h_pow]
-        rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity : (0 : ℤ) ≤ 4 * M) a_pos.le]
-        ring
-      show isNearSquareRoot (isqrtAux c n hc hn.le).val n
-      rw [val_eq]
-      exact h_key
+    ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
+      (pyBitLength c).toNat = s → hasSizeCondition c n →
+      ∃ a, isqrtAux s c n = .ok a ∧ 0 < a ∧ isNearSquareRoot a n := by
+  intro s
+  induction s with
+  | zero =>
+    intro c n hc hn hbl hsc
+    -- `(pyBitLength c).toNat = 0` with `0 ≤ c` forces `c = 0`.
+    have hbl_nn := pyBitLength_nonneg c
+    have hc0 : c = 0 := pyBitLength_eq_zero_iff.mp (by omega)
+    subst hc0
+    obtain ⟨h_lo, h_hi⟩ := hsc
+    simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
+    -- `isqrtAux 0 0 n = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
+    exact ⟨1, rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
+                            by show n < (1 + 1) * (1 + 1); omega⟩
+  | succ s ih =>
+    intro c n hc hn hbl hsc
+    -- `(pyBitLength c).toNat = s + 1 > 0` forces `0 < c`.
+    have hc_pos : 0 < c := by
+      rcases eq_or_lt_of_le hc with h | h
+      · rw [← h, show pyBitLength (0 : ℤ) = 0 from pyBitLength_eq_zero_iff.mpr rfl] at hbl
+        simp at hbl
+      · exact h
+    -- The recursive arguments, in `Int.fdiv` form (matching the `Except` ops).
+    set k : ℤ := Int.fdiv (c - 1) 2 with hk_def
+    set d : ℤ := Int.fdiv c 2 with hd_def
+    set m : ℤ := Int.fdiv n (2 ^ (2 * k + 2).toNat) with hm_def
+    have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
+    have d_nn : 0 ≤ d := Int.fdiv_nonneg hc (by norm_num)
+    have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
+    have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
+    have m_nn : 0 ≤ m := Int.fdiv_nonneg hn.le (by positivity)
+    -- Size condition is preserved by the step.
+    have hsc_step : hasSizeCondition d m := size_condition_step hc_pos hsc
+    have m_pos : 0 < m := by
+      obtain ⟨hlo, _⟩ := hsc_step
+      have : (0 : ℤ) < 4 ^ d.toNat := by positivity
+      linarith
+    -- The tight bit-length invariant descends: `(c // 2).bit_length() = c.bit_length() - 1`.
+    have hbl_step : (pyBitLength d).toNat = s := by
+      have h := toNat_pyBitLength_fdiv_two hc_pos
+      rw [← hd_def] at h
+      omega
+    -- Induction hypothesis on the recursive subproblem.
+    obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih d_nn m_pos hbl_step hsc_step
+    -- Reduce the `do`-block: every operation takes its `.ok` branch.
+    have hred : isqrtAux (s + 1) c n
+        = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
+      unfold isqrtAux
+      simp only [pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
+        ← hk_def, ← hd_def, Except.ok_bind',
+        pyRshift_eq_ok h2k2_nn, ← hm_def, ha_eq,
+        pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn,
+        pyFloordiv_eq_ok (ne_of_gt a_pos)]
+      rfl
+    -- Algebra: the returned value is the `key_isqrt_lemma` output for `M = 2^k.toNat`.
+    set M := (2 : ℤ) ^ k.toNat with hM_def
+    have M_pos : 0 < M := by positivity
+    have hm_eq : m = Int.fdiv n (4 * M ^ 2) := by
+      rw [hm_def, toNat_two_mul_add_two k_nn, hM_def]
+      congr 1; ring
+    have hM4 : 4 * M ^ 4 ≤ n := by
+      have h := M_bound_from_size hc_pos hsc
+      rwa [← hk_def, ← hM_def] at h
+    have a_near' : isNearSquareRoot a (Int.fdiv n (4 * M ^ 2)) := hm_eq ▸ a_near
+    have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
+    have val_eq :
+        a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
+          = M * a + Int.fdiv n (4 * M * a) := by
+      rw [toNat_add_two k_nn]
+      have h_pow : (2 : ℤ) ^ (k.toNat + 2) = 4 * M := by rw [hM_def, pow_add]; ring
+      rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity : (0 : ℤ) ≤ 4 * M) a_pos.le, hM_def]
+      ring
+    refine ⟨_, hred, ?_, ?_⟩
+    · -- positivity of the returned value
+      exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))
+        (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) a_pos.le)
+    · -- near-√ via the key lemma
+      rw [val_eq]; exact h_key
 
-/-! ## Correctness of `isqrt` -/
+/-- Correctness of the recursive monadic integer square root `isqrt`.
 
-/-- Main correctness theorem: `isqrt n` is the floor of `√n`. -/
-theorem isIntegerSquareRoot_isqrt (n : ℤ) (hn : 0 ≤ n) :
-    isIntegerSquareRoot (isqrt n hn) n := by
-  show isqrt n hn * isqrt n hn ≤ n ∧ n < (isqrt n hn + 1) * (isqrt n hn + 1)
-  unfold isqrt
-  by_cases hn0 : n = 0
-  · subst hn0
-    simp
-  · simp only [hn0, ↓reduceDIte]
-    have hn_pos : 0 < n := lt_of_le_of_ne hn (Ne.symm hn0)
-    set c := (pyBitLength n - 1) py// 2 with hc_def
-    have hc_nn : 0 ≤ c := isqrt_c_nonneg hn0
-    set a := (isqrtAux c n hc_nn hn_pos.le).val with ha_def
-    -- Apply isqrtAux_correctness with the initial size condition.
-    have hsc := size_condition_initial hn_pos
-    have h_near : isNearSquareRoot a n :=
-      isqrtAux_correctness c.toNat hc_nn hn_pos rfl hsc
-    -- Final return adjustment: `a - 1 if n < a*a else a` is the integer sqrt.
-    exact h_near.toIntegerSquareRoot
+For `n < 0` it raises exactly the `ValueError` CPython does; otherwise it returns
+`.ok v` with `v = ⌊√n⌋` (`isIntegerSquareRoot v n`). The proof reduces the
+`do`-block to the `isqrtAux` call characterised by `isqrtAux_correctness`
+— establishing en route that none of the `Except` operations ever takes its error
+branch for `n ≥ 0` — and closes the `n ≥ 1` case with the final `a-1`/`a`
+adjustment (`isNearSquareRoot.toIntegerSquareRoot`), which the recursive source's
+`a - 1 if n < a * a else a` already matches verbatim. The total spec is identical
+to the iterative `isqrtIterative_eq_ok_iff`. -/
+theorem isqrt_eq_ok_iff (n : ℤ) :
+    (match isqrt n with
+     | .ok v => 0 ≤ n ∧ isIntegerSquareRoot v n
+     | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative") := by
+  rcases lt_trichotomy n 0 with hneg | hzero | hpos
+  · -- n < 0: the first guard raises, short-circuiting the `do` block.
+    have herr : isqrt n
+        = .error (.valueError "isqrt() argument must be nonnegative") := by
+      unfold isqrt; rw [if_pos hneg]; rfl
+    rw [herr]; exact ⟨hneg, rfl⟩
+  · -- n = 0: special-cased to 0.
+    subst hzero
+    have hok : isqrt 0 = .ok 0 := by unfold isqrt; norm_num; rfl
+    rw [hok]; exact ⟨le_refl 0, by unfold isIntegerSquareRoot; norm_num⟩
+  · -- 0 < n: the recursion runs and never raises.
+    have hn0 : n ≠ 0 := ne_of_gt hpos
+    set c : ℤ := Int.fdiv (pyBitLength n - 1) 2 with hc_def
+    obtain ⟨a, ha_eq, _a_pos, a_near⟩ :=
+      isqrtAux_correctness (pyBitLength c).toNat
+        (c := c) (n := n) (isqrt_c_nonneg hn0) hpos rfl (size_condition_initial hpos)
+    have hred : isqrt n = .ok (if n < a * a then a - 1 else a) := by
+      conv_lhs => unfold isqrt
+      simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
+        pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hc_def]
+      rw [show (Except.ok c : Except PyException ℤ) = pure c from rfl, pure_bind, ha_eq]
+      rfl
+    rw [hred]
+    exact ⟨hpos.le, a_near.toIntegerSquareRoot⟩

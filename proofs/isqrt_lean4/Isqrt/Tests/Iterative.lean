@@ -1,42 +1,91 @@
 /-
-Sanity checks for the iterative isqrt.
-
-These #guard statements verify that `isqrtIterative` produces the correct
-integer square root for a selection of concrete values, matching `isqrt`
-(see `Tests/Isqrt.lean`). A failing #guard causes a build error.
+Sanity checks for the iterative integer square root `isqrtIterative` and the
+Python operations it uses: the `Except`-returning `pyFloordiv` / `pyLshift` /
+`pyRshift` / `pyRange`, plus the plain `pyBitLength`. The `Except` results run
+through the `assert*` helpers below, which unwrap an `Except PyException Int` — a
+bare `#guard` cannot, since `PyException` has no `DecidableEq`; `pyBitLength`
+returns a plain `Int`, so it is checked with `#guard` directly. `Isqrt.Tests.Isqrt`
+reuses these helpers for the recursive `isqrt`. A failing `#guard` causes a build
+error.
 -/
 
 import Isqrt.Iterative
 
+/-! ## Assertion helpers for `Except PyException Int` results -/
+
+/-- True when the computation returned `.ok expected`. -/
+def assertReturns (actual : Except PyException Int) (expected : Int) : Bool :=
+  match actual with
+  | .ok v => v == expected
+  | .error _ => false
+
+/-- True when the computation raised `ZeroDivisionError`. -/
+def assertRaisesZeroDivisionError (actual : Except PyException Int) : Bool :=
+  match actual with
+  | .error .zeroDivisionError => true
+  | _ => false
+
+/-- True when the computation raised `ValueError msg`. -/
+def assertRaisesValueError (msg : String) (actual : Except PyException Int) : Bool :=
+  match actual with
+  | .error (.valueError m) => m == msg
+  | _ => false
+
+/-! ## pyFloordiv -/
+
+#guard assertReturns (pyFloordiv 10 3) 3
+#guard assertReturns (pyFloordiv 10 (-3)) (-4)
+#guard assertReturns (pyFloordiv (-10) (-3)) 3
+#guard assertReturns (pyFloordiv (-10) 3) (-4)
+#guard assertRaisesZeroDivisionError (pyFloordiv 10 0)
+#guard assertRaisesZeroDivisionError (pyFloordiv (-10) 0)
+#guard assertRaisesZeroDivisionError (pyFloordiv 0 0)
+
+/-! ## pyLshift / pyRshift -/
+
+#guard assertReturns (pyLshift 3 2) 12
+#guard assertReturns (pyLshift 3 0) 3
+#guard assertReturns (pyLshift (-3) 2) (-12)
+#guard assertReturns (pyLshift (-3) 0) (-3)
+#guard assertRaisesValueError "negative shift count" (pyLshift 3 (-1))
+
+#guard assertReturns (pyRshift 12 3) 1
+#guard assertReturns (pyRshift 12 2) 3
+#guard assertReturns (pyRshift 12 0) 12
+#guard assertReturns (pyRshift (-12) 3) (-2)
+#guard assertReturns (pyRshift (-12) 2) (-3)
+#guard assertReturns (pyRshift (-12) 0) (-12)
+#guard assertRaisesValueError "negative shift count" (pyRshift 12 (-1))
+#guard assertRaisesValueError "negative shift count" (pyRshift (-12) (-1))
+
+/-! ## pyRange -/
+
+#guard pyRange 0 == []
+#guard pyRange 1 == [0]
+#guard pyRange 5 == [0, 1, 2, 3, 4]
+#guard pyRange (-5) == []
+
+/-! ## pyBitLength -/
+
+#guard pyBitLength 0 == 0
+#guard pyBitLength 1 == 1
+#guard pyBitLength 255 == 8
+#guard pyBitLength 256 == 9
+#guard pyBitLength (-256) == 9               -- bit_length of abs
+
 /-! ## isqrtIterative -/
 
--- zero (special-cased before the loop)
-#guard isqrtIterative 0 == 0
-
--- perfect squares
-#guard isqrtIterative 1 == 1
-#guard isqrtIterative 4 == 2
-#guard isqrtIterative 9 == 3
-#guard isqrtIterative 16 == 4
-#guard isqrtIterative 100 == 10
-#guard isqrtIterative 10000 == 100
-
--- non-perfect squares (returns floor of sqrt)
-#guard isqrtIterative 2 == 1
-#guard isqrtIterative 3 == 1
-#guard isqrtIterative 5 == 2
-#guard isqrtIterative 8 == 2
-#guard isqrtIterative 15 == 3
-#guard isqrtIterative 17 == 4
-#guard isqrtIterative 99 == 9
-#guard isqrtIterative 101 == 10
-
--- just below and just above a perfect square
-#guard isqrtIterative 24 == 4
-#guard isqrtIterative 25 == 5
-#guard isqrtIterative 26 == 5
-
--- larger value
-#guard isqrtIterative 999999 == 999
-#guard isqrtIterative 1000000 == 1000
-#guard isqrtIterative 1000001 == 1000
+#guard assertReturns (isqrtIterative 0) 0
+#guard assertReturns (isqrtIterative 1) 1
+#guard assertReturns (isqrtIterative 2) 1
+#guard assertReturns (isqrtIterative 3) 1
+#guard assertReturns (isqrtIterative 4) 2
+#guard assertReturns (isqrtIterative 5) 2
+#guard assertReturns (isqrtIterative 8) 2
+#guard assertReturns (isqrtIterative 9) 3
+#guard assertReturns (isqrtIterative 15) 3
+#guard assertReturns (isqrtIterative 16) 4
+#guard assertReturns (isqrtIterative 999999) 999
+#guard assertReturns (isqrtIterative 1000000) 1000
+#guard assertReturns (isqrtIterative (10 ^ 1000)) (10 ^ 500)
+#guard assertRaisesValueError "isqrt() argument must be nonnegative" (isqrtIterative (-1))

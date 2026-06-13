@@ -5,10 +5,9 @@ needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
 This file owns the bit-length *definitions* (`natBitLength`, `pyBitLength`) and
 connects them — via `Nat.log2` — to power-of-two bounds, the per-step halving of
 a right shift, and the two loop-body shift-amount nonnegativity facts. Everything
-here is style-agnostic: it mentions neither the proof-carrying `py>>` / `py//`
-operators (`Isqrt.PythonOps`) nor their `Except` counterparts (`Isqrt.PythonOpsExcept`),
-so both formulations build on it. The proof-carrying operators are layered on top
-in `Isqrt.PythonOps`, which restates the relevant lemmas in `py>>` / `py//` form.
+here is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python operators,
+so the `Except`-returning operators (`Isqrt.PythonOps`) and both the iterative and
+recursive isqrt translations build on it directly.
 -/
 
 import Mathlib.Tactic.Ring
@@ -27,8 +26,9 @@ def natBitLength : ℕ → ℕ
   | n + 1 => Nat.log2 (n + 1) + 1
 
 /-- Python's `n.bit_length()`. Returns the number of bits needed to represent
-`abs(n)`, with `(0).bit_length() == 0`. Never raises, so — unlike `//`/`>>`/`<<`
-— it has a single form shared by both the proof-carrying and `Except` translations. -/
+`abs(n)`, with `(0).bit_length() == 0`. Never raises, so — unlike `//`/`>>`/`<<` —
+it needs no `Except` form: a single plain `Int`-valued function the iterative and
+recursive isqrt translations share. -/
 def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
 
 @[simp]
@@ -128,9 +128,8 @@ theorem pyBitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < pyBitLength n := by
 /-! ## pyBitLength: interaction with floor-halving
 
 The right shift `c >> s` is the floor division `⌊c / 2^s⌋`; these lemmas are
-stated directly on `Int.fdiv c (2 ^ s.toNat)` so they serve both translations.
-`Isqrt.PythonOps` re-exports the first two in `py>>` form for the proof-carrying
-isqrt. -/
+stated directly on `Int.fdiv c (2 ^ s.toNat)` so they serve both the iterative and
+recursive isqrt translations. -/
 
 /-- One more step of floor-halving by a power of two:
 `⌊c / 2^(s+1)⌋ = ⌊⌊c / 2^s⌋ / 2⌋`. The `Int.fdiv` twin of `pyRshift_succ` — the
@@ -195,11 +194,10 @@ theorem toNat_pyBitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
 
 /-! ## Loop-body shift-amount nonnegativity
 
-Both isqrt formulations recompute, at loop position `s`, the shifts `d' = ⌊c/2^s⌋`
-(new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then form the
-left-shift amount `d' - d - 1` and the right-shift amount `2c - d' - d + 1`. These
-two lemmas show both are nonneg, in pure `Int.fdiv` form (the `py>>` versions in
-`Isqrt.Iterative` are thin wrappers over these). -/
+Both the iterative and recursive isqrt recompute, at loop position `s`, the shifts
+`d' = ⌊c/2^s⌋` (new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then form
+the left-shift amount `d' - d - 1` and the right-shift amount `2c - d' - d + 1`.
+These two lemmas show both are nonneg, in pure `Int.fdiv` form. -/
 
 /-- The left-shift amount `⌊c/2^s⌋ - d - 1` is nonneg, where `d = ⌊c/2^(s+1)⌋`,
 for `0 ≤ s < c.bit_length()`. The body's hardest precondition: it needs
