@@ -6,7 +6,7 @@ size-condition invariant `4^c ≤ n < 4^(c+1)` (from `Isqrt.SizeConditions`)
 is preserved by each recursive step. The inductive step combines
 `isqrtAux_step_val` (unfolds the recursion) with `key_isqrt_lemma`
 (the algebraic correctness statement from `Isqrt.KeyLemma`). The main
-result is `isqrt_is_sqrt`.
+result is `isIntegerSquareRoot_isqrt`.
 -/
 
 import Isqrt.Algorithm
@@ -54,7 +54,7 @@ returned by `isqrtAux c n` is a near square root of `n`:
 private theorem isqrtAux_correctness :
     ∀ (cn : ℕ) {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n),
       c.toNat = cn → hasSizeCondition c n →
-      isNearSqrt (isqrtAux c n hc hn.le).val n := by
+      isNearSquareRoot (isqrtAux c n hc hn.le).val n := by
   intro cn
   induction cn using Nat.strong_induction_on with
   | _ cn ih =>
@@ -111,7 +111,7 @@ private theorem isqrtAux_correctness :
         have := M_bound_from_size hc_pos ⟨h_lo, h_hi⟩
         rwa [← hk_def, ← hM_def] at this
       -- Apply the key algebraic lemma.
-      have a_near' : isNearSqrt a (n.fdiv (4 * M ^ 2)) := hm_eq ▸ ih_result
+      have a_near' : isNearSquareRoot a (n.fdiv (4 * M ^ 2)) := hm_eq ▸ ih_result
       have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
       -- Unfold the algorithm to expose its return value, then rewrite to
       -- the form expected by `h_key`.
@@ -125,15 +125,15 @@ private theorem isqrtAux_correctness :
         rw [h_pow]
         rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity : (0 : ℤ) ≤ 4 * M) a_pos.le]
         ring
-      show isNearSqrt (isqrtAux c n hc hn.le).val n
+      show isNearSquareRoot (isqrtAux c n hc hn.le).val n
       rw [val_eq]
       exact h_key
 
 /-! ## Correctness of `isqrt` -/
 
 /-- Main correctness theorem: `isqrt n` is the floor of `√n`. -/
-theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
-    isIntegerSqrt (isqrt n hn) n := by
+theorem isIntegerSquareRoot_isqrt (n : ℤ) (hn : 0 ≤ n) :
+    isIntegerSquareRoot (isqrt n hn) n := by
   show isqrt n hn * isqrt n hn ≤ n ∧ n < (isqrt n hn + 1) * (isqrt n hn + 1)
   unfold isqrt
   by_cases hn0 : n = 0
@@ -146,7 +146,7 @@ theorem isqrt_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
     set a := (isqrtAux c n hc_nn hn_pos.le).val with ha_def
     -- Apply isqrtAux_correctness with the initial size condition.
     have hsc := size_condition_initial hn_pos
-    have h_near : isNearSqrt a n :=
+    have h_near : isNearSquareRoot a n :=
       isqrtAux_correctness c.toNat hc_nn hn_pos rfl hsc
     -- Final return adjustment: `a - 1 if n < a*a else a` is the integer sqrt.
-    exact h_near.toIntegerSqrt
+    exact h_near.toIntegerSquareRoot

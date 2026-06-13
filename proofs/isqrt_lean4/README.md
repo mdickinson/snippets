@@ -41,12 +41,12 @@ Isqrt/
   FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
   BitLengthLemmas.lean       -- natBitLength / pyBitLength properties
   RecursionDepth.lean        -- isqrt_c_nonneg, shared by both algorithm variants
-  KeyLemma.lean              -- key algebraic lemma; isNearSqrt / isIntegerSqrt predicates
+  KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot / isIntegerSquareRoot predicates
   SizeConditions.lean        -- size-condition invariants carried through the recursion
   Algorithm.lean             -- recursive isqrtAux and isqrt definitions
-  Correctness.lean           -- recursive correctness proof (isqrt_is_sqrt)
+  Correctness.lean           -- recursive correctness proof (isIntegerSquareRoot_isqrt)
   Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
-  IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_is_sqrt)
+  IterativeCorrectness.lean  -- iterative correctness proof (isIntegerSquareRoot_isqrtIterative)
   Tests/
     PythonOps.lean           -- #guard checks for the Python operations
     Isqrt.lean               -- #guard checks for isqrt on concrete values
@@ -116,7 +116,7 @@ the same algorithm, derived from the recursive one for efficiency. That
 formulation is verified here too: `isqrtIterative` (`Isqrt/Iterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
-as Lean's own `for … in … do`. `isqrtIterative_is_sqrt`
+as Lean's own `for … in … do`. `isIntegerSquareRoot_isqrtIterative`
 (`Isqrt/IterativeCorrectness.lean`) then proves it meets the same
 specification as the recursive `isqrt`: it reduces the `for … in` loop to a
 `List.foldl` over the reversed range and reuses the recursive proof's
@@ -380,10 +380,10 @@ that Python's `math.isqrt` is correct, here's where to put your attention
   Lean function isn't actually computing the same thing as the Python
   function it claims to mirror, the proof is proving something about a
   different algorithm.
-- The *statement* of the correctness theorem `isqrt_is_sqrt` (in
+- The *statement* of the correctness theorem `isIntegerSquareRoot_isqrt` (in
   `Isqrt/Correctness.lean`). This is where we say what "correct" means.
-  Concretely, the theorem asserts `isIntegerSqrt (isqrt n hn) n`, where the
-  predicate `isIntegerSqrt a n` (in `Isqrt/KeyLemma.lean`) unfolds to
+  Concretely, the theorem asserts `isIntegerSquareRoot (isqrt n hn) n`, where the
+  predicate `isIntegerSquareRoot a n` (in `Isqrt/KeyLemma.lean`) unfolds to
   `a * a ≤ n ∧ n < (a + 1) * (a + 1)` — i.e., `a` is the floor of √n. If the
   statement (or the predicate) is too weak, the proof being valid doesn't buy
   us what we wanted.

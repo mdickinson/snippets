@@ -19,7 +19,7 @@ step differs. Here the loop is Lean's `for h : s in (List.range L).reverse do �
    is `[L-1, …, 1, 0]`, folding it left visits the loop indices in descending order, and the
    loop property is *indexed by the position* `s` (the loop counter):
 
-       motive s a := isNearSqrt a ⌊n / 4^(c - c>>s)⌋
+       motive s a := isNearSquareRoot a ⌊n / 4^(c - c>>s)⌋
 
    The seed lands at `s = L` (where `c >> L = 0`) and the result at `s = 0` (where
    `c >> 0 = c`, collapsing `4^(c-d)` to `4^0 = 1`). The per-iteration body is one
@@ -32,7 +32,7 @@ with the Python.
 Gotcha when writing the motive: `py>>` is `infixl:60` and `-` is `infixl:65`, so
 `c - c py>> s` parses as `(c - c) py>> s`. Parenthesize: `4^(c - (c py>> s))`.
 
-The main result is `isqrtIterative_is_sqrt`, the same statement as `isqrt_is_sqrt`.
+The main result is `isIntegerSquareRoot_isqrtIterative`, the same statement as `isIntegerSquareRoot_isqrt`.
 -/
 
 import Isqrt.Iterative
@@ -112,15 +112,15 @@ theorem iterStep_val (c n : ℤ) (hc : 0 ≤ c) (hn : 0 ≤ n) (s : ℕ)
 /-- The `for`-loop result is a near square root of `n`. The loop reduces to a
 `List.foldl` over `(List.range L).reverse` (see the module note), and
 `foldl_reverseRange_invariant` runs the position-indexed loop property
-`motive s a := isNearSqrt a ⌊n/4^(c - c>>s)⌋`: the seed (`s = L`, `c>>L = 0`) is
-`isNearSqrt 1 ⌊n/4^c⌋` (base case), each step is one `key_isqrt_lemma`, and at the result
+`motive s a := isNearSquareRoot a ⌊n/4^(c - c>>s)⌋`: the seed (`s = L`, `c>>L = 0`) is
+`isNearSquareRoot 1 ⌊n/4^c⌋` (base case), each step is one `key_isqrt_lemma`, and at the result
 (`s = 0`) `c>>0 = c` collapses the divisor to `4^0 = 1`.
 
 The fold body is stated via `iterStep` applied at each element's index (with the bound
 read off the `.attach` membership proof), matching the loop `Iterative.lean` produces. -/
 theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition c n) :
-    isNearSqrt ((List.range (pyBitLength c).toNat).reverse.attach.foldl
+    isNearSquareRoot ((List.range (pyBitLength c).toNat).reverse.attach.foldl
       (fun (b : {a : ℤ // 0 < a})
           (x : {s // s ∈ (List.range (pyBitLength c).toNat).reverse}) =>
         iterStep c n hc hn.le x.1 (List.mem_range.mp (List.mem_reverse.mp x.2)) b)
@@ -140,8 +140,8 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
         congr 1
         funext b x
         rw [dif_pos (List.mem_range.mp (List.mem_reverse.mp x.2))]]
-  -- The indexed loop property at the result (`s = 0`) collapses to `isNearSqrt _ n`.
-  suffices h : isNearSqrt
+  -- The indexed loop property at the result (`s = 0`) collapses to `isNearSquareRoot _ n`.
+  suffices h : isNearSquareRoot
       ((List.range (pyBitLength c).toNat).reverse.foldl
         (fun (b : {a : ℤ // 0 < a}) s =>
           if h : s < (pyBitLength c).toNat then iterStep c n hc hn.le s h b else b)
@@ -150,13 +150,13 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     simpa [pyRshift_def, Int.fdiv_one] using h
   refine foldl_reverseRange_invariant
     (motive := fun (s : ℕ) (a : {a : ℤ // 0 < a}) =>
-      isNearSqrt a.val (Int.fdiv n (4 ^ (c - (c py>> (↑s : ℤ))).toNat)))
+      isNearSquareRoot a.val (Int.fdiv n (4 ^ (c - (c py>> (↑s : ℤ))).toNat)))
     (fun (b : {a : ℤ // 0 < a}) s =>
       if h : s < (pyBitLength c).toNat then iterStep c n hc hn.le s h b else b)
     (pyBitLength c).toNat ⟨1, one_pos⟩ ?hinit ?hstep
   case hinit =>
-    -- Seed: at `s = L`, `c >> L = 0`, so `isNearSqrt 1 ⌊n/4^(c-0)⌋` (base case).
-    show isNearSqrt (1 : ℤ) (Int.fdiv n (4 ^ (c - (c py>> (↑(pyBitLength c).toNat : ℤ))).toNat))
+    -- Seed: at `s = L`, `c >> L = 0`, so `isNearSquareRoot 1 ⌊n/4^(c-0)⌋` (base case).
+    show isNearSquareRoot (1 : ℤ) (Int.fdiv n (4 ^ (c - (c py>> (↑(pyBitLength c).toNat : ℤ))).toNat))
     have hz : c py>> (↑(pyBitLength c).toNat : ℤ) = 0 := by
       rw [pyRshift_def]
       have h := pyRshift_pyBitLength_eq_zero hc
@@ -218,7 +218,7 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     have hM4 : 4 * M ^ 4 ≤ N_new := by
       have := M_bound_from_size hd_new_pos hsc_new
       rwa [← hk_def, ← hM_def] at this
-    -- near-√ at the child: isNearSqrt a_old ⌊N_new/4M²⌋ = the incoming property `hx`
+    -- near-√ at the child: isNearSquareRoot a_old ⌊N_new/4M²⌋ = the incoming property `hx`
     have h_div_bridge :
         Int.fdiv N_new (4 * M ^ 2) = Int.fdiv n (4 ^ (c - d_old).toNat) := by
       rw [hN_new_def, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
@@ -227,7 +227,7 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       simp only [← pow_mul, ← pow_add]
       congr 1
       omega
-    have h_near : isNearSqrt a_old (Int.fdiv N_new (4 * M ^ 2)) := by
+    have h_near : isNearSquareRoot a_old (Int.fdiv N_new (4 * M ^ 2)) := by
       rw [h_div_bridge]; exact hx
     -- the body's new `a` is exactly the `key_isqrt_lemma` output
     have hMa_nn : (0 : ℤ) ≤ 4 * M * a_old :=
@@ -256,20 +256,20 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
 /-! ## Correctness of `isqrtIterative` -/
 
 /-- Main correctness theorem for the iterative form: `isqrtIterative n` is the floor of
-`√n`. Same statement as `isqrt_is_sqrt`.
+`√n`. Same statement as `isIntegerSquareRoot_isqrt`.
 
 For `n ≠ 0`, unfolding the `do` block and applying `List.forIn'_pure_yield_eq_foldl`
 turns the `for`-loop into the `List.foldl` that `loopFold_near` characterises; the result
-is a near square root, and the final `a - 1`/`a` adjustment (`isNearSqrt.toIntegerSqrt`)
+is a near square root, and the final `a - 1`/`a` adjustment (`isNearSquareRoot.toIntegerSquareRoot`)
 pins it to `⌊√n⌋`. -/
-theorem isqrtIterative_is_sqrt (n : ℤ) (hn : 0 ≤ n) :
-    isIntegerSqrt (isqrtIterative n hn) n := by
+theorem isIntegerSquareRoot_isqrtIterative (n : ℤ) (hn : 0 ≤ n) :
+    isIntegerSquareRoot (isqrtIterative n hn) n := by
   by_cases hn0 : n = 0
-  · subst hn0; simp [isqrtIterative, isIntegerSqrt]
+  · subst hn0; simp [isqrtIterative, isIntegerSquareRoot]
   · have hn_pos : 0 < n := lt_of_le_of_ne hn (Ne.symm hn0)
     have hc : 0 ≤ (pyBitLength n - 1) py// 2 := isqrt_c_nonneg hn0
     have h_near := loopFold_near (c := (pyBitLength n - 1) py// 2) hc hn_pos
       (size_condition_initial hn_pos)
     unfold isqrtIterative
     simp only [hn0, ↓reduceDIte, pure_bind, List.forIn'_pure_yield_eq_foldl, Id.run_pure]
-    exact h_near.toIntegerSqrt
+    exact h_near.toIntegerSquareRoot

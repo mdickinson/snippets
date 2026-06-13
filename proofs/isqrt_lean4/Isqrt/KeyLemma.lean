@@ -4,7 +4,7 @@ Key algebraic lemma for the isqrt correctness proof.
 We say that a positive integer `a` is a **near square root** of a positive
 integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
 `⌊√n⌋` or `⌈√n⌉`. The file also defines the companion predicate
-`isIntegerSqrt a n` (`a² ≤ n < (a + 1)²`), the exact `a = ⌊√n⌋` postcondition
+`isIntegerSquareRoot a n` (`a² ≤ n < (a + 1)²`), the exact `a = ⌊√n⌋` postcondition
 asserted by the top-level correctness theorems; the algorithm's final
 `a-1`/`a` choice is what turns a near square root into the integer square root.
 
@@ -20,28 +20,28 @@ import Mathlib.Tactic.Positivity
 /-! ## Square-root predicates
 
 Both predicates are stated multiplicatively — `x * x`, never `x ^ 2`:
-`isIntegerSqrt` mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)`
-that the top-level theorems assert, and `isNearSqrt` follows suit for symmetry.
+`isIntegerSquareRoot` mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)`
+that the top-level theorems assert, and `isNearSquareRoot` follows suit for symmetry.
 The doc-comment prose, by contrast, writes squares as `x²`: the `*` rule governs
 compiled statements that mirror Python source, while informal math in comments
 follows ordinary mathematical notation. -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
-def isNearSqrt (a n : ℤ) : Prop :=
+def isNearSquareRoot (a n : ℤ) : Prop :=
   (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
 
 /-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
-`a = ⌊√n⌋` exactly — unlike `isNearSqrt`, which only pins `a` down to `⌊√n⌋`
+`a = ⌊√n⌋` exactly — unlike `isNearSquareRoot`, which only pins `a` down to `⌊√n⌋`
 or `⌈√n⌉`. This is the postcondition the top-level correctness theorems
 assert. -/
-def isIntegerSqrt (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
+def isIntegerSquareRoot (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
 /-- The algorithm's final return adjustment: a near square root `a` is either
 `⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
 yields the integer square root. Both correctness proofs close with this step. -/
-theorem isNearSqrt.toIntegerSqrt {a n : ℤ} (h : isNearSqrt a n) :
-    isIntegerSqrt (if n < a * a then a - 1 else a) n := by
+theorem isNearSquareRoot.toIntegerSquareRoot {a n : ℤ} (h : isNearSquareRoot a n) :
+    isIntegerSquareRoot (if n < a * a then a - 1 else a) n := by
   obtain ⟨h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a
   · simp only [h_lt, ↓reduceIte]
@@ -109,10 +109,10 @@ private theorem n_lower {n M a : ℤ} (hM : 0 < M)
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 theorem key_isqrt_lemma {n M a : ℤ}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
-    (h_near : isNearSqrt a (n.fdiv (4 * M^2))) :
-    isNearSqrt (M * a + n.fdiv (4 * M * a)) n := by
+    (h_near : isNearSquareRoot a (n.fdiv (4 * M^2))) :
+    isNearSquareRoot (M * a + n.fdiv (4 * M * a)) n := by
   obtain ⟨ha_lo, ha_hi⟩ := h_near
-  -- `isNearSqrt` is multiplicative; recover the `^2` shape the algebra uses.
+  -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [← pow_two] at ha_lo ha_hi
   set q := n.fdiv (4 * M * a)
   have hMa_pos : 0 < 4 * M * a := by positivity
@@ -169,5 +169,5 @@ theorem key_isqrt_lemma {n M a : ℤ}
     -- Cancel (4*M*a)²
     have h4Ma_sq_nonneg : (0 : ℤ) ≤ (4 * M * a)^2 := sq_nonneg _
     exact lt_of_mul_lt_mul_right h_squared h4Ma_sq_nonneg
-  -- Convert the `^2`-form bounds back to the multiplicative `isNearSqrt`.
+  -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
