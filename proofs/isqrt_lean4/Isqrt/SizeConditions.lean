@@ -112,16 +112,15 @@ exponent is a natural number). Intended for `0 ≤ c`. -/
 def hasSizeCondition (c n : ℤ) : Prop :=
   (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c.toNat + 1)
 
-/-- Initial size condition holds for `c = (pyBitLength n - 1) py// 2`. -/
+/-- Initial size condition holds for `c = ⌊(pyBitLength n - 1) / 2⌋`. -/
 theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
-    hasSizeCondition ((pyBitLength n - 1) py// 2) n := by
+    hasSizeCondition (Int.fdiv (pyBitLength n - 1) 2) n := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le hn.le
   have hm_pos : 0 < m := by exact_mod_cast hn
   have h_bl_pos : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
   -- Convert recursion-depth expression to ℕ.
-  have h_toNat : ((pyBitLength (↑m : ℤ) - 1) py// 2).toNat
+  have h_toNat : (Int.fdiv (pyBitLength (↑m : ℤ) - 1) 2).toNat
                   = (natBitLength m - 1) / 2 := by
-    show (Int.fdiv (pyBitLength (↑m : ℤ) - 1) 2).toNat = _
     rw [show pyBitLength (↑m : ℤ) = ((natBitLength m : ℕ) : ℤ) from rfl,
         show ((natBitLength m : ℕ) : ℤ) - 1 = ((natBitLength m - 1 : ℕ) : ℤ) from by
           omega,
@@ -135,15 +134,12 @@ theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
   · exact_mod_cast h_lo
   · exact_mod_cast h_hi
 
-/-- Size condition preserved by the recursive step: `c ↦ c py// 2`,
-`n ↦ n py>> (2k+2)` where `k = (c - 1) py// 2`. -/
+/-- Size condition preserved by the recursive step: `c ↦ ⌊c/2⌋`,
+`n ↦ ⌊n / 2^(2k+2)⌋` where `k = ⌊(c - 1)/2⌋`. -/
 theorem size_condition_step {c n : ℤ} (hc : 0 < c)
     (h : hasSizeCondition c n) :
-    hasSizeCondition (c py// 2)
-      (pyRshift n (2 * ((c - 1) py// 2) + 2)
-        (by have : 0 ≤ ((c - 1) py// 2) :=
-              pyFloordiv_nonneg (by linarith) (by norm_num)
-            linarith)) := by
+    hasSizeCondition (Int.fdiv c 2)
+      (Int.fdiv n (2 ^ (2 * Int.fdiv (c - 1) 2 + 2).toNat)) := by
   obtain ⟨h_lo, h_hi⟩ := h
   have hn_nonneg : 0 ≤ n := by
     have h4c_nn : (0 : ℤ) ≤ (4 : ℤ) ^ c.toNat := by positivity
@@ -154,34 +150,26 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
   have hcn_pos : 0 < cn := by exact_mod_cast hc
   -- `c.toNat = cn` etc.
   have hcN : (↑cn : ℤ).toNat = cn := Int.toNat_natCast cn
-  -- ((cn : ℤ) py// 2).toNat = cn / 2
-  have h_c2 : ((↑cn : ℤ) py// 2).toNat = cn / 2 := by
-    show (Int.fdiv (↑cn : ℤ) 2).toNat = _
+  -- ⌊cn / 2⌋.toNat = cn / 2
+  have h_c2 : (Int.fdiv (↑cn : ℤ) 2).toNat = cn / 2 := by
     rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
     simp
-  -- ((cn - 1 : ℤ) py// 2).toNat = (cn - 1) / 2
-  have h_c12 : ((↑cn - 1 : ℤ) py// 2).toNat = (cn - 1) / 2 := by
-    show (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = _
+  -- ⌊(cn - 1) / 2⌋.toNat = (cn - 1) / 2
+  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 := by
     rw [show ((↑cn : ℤ) - 1) = ((cn - 1 : ℕ) : ℤ) from by omega,
         show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
     simp
   -- The shifted value equals the ℤ-cast of the ℕ-level shifted value.
   have h_shift :
-      pyRshift (↑nn : ℤ) (2 * ((↑cn - 1 : ℤ) py// 2) + 2) (by
-        have : 0 ≤ ((↑cn - 1 : ℤ) py// 2) :=
-          pyFloordiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
-                                linarith) (by norm_num)
-        linarith)
+      Int.fdiv (↑nn : ℤ) (2 ^ (2 * Int.fdiv (↑cn - 1 : ℤ) 2 + 2).toNat)
         = ((nn / 2 ^ (2 * ((cn - 1) / 2) + 2) : ℕ) : ℤ) := by
-    show Int.fdiv (↑nn : ℤ) (2 ^ (2 * ((↑cn - 1 : ℤ) py// 2) + 2).toNat) = _
-    have h_shamt : (2 * ((↑cn - 1 : ℤ) py// 2) + 2).toNat
+    have h_shamt : (2 * Int.fdiv (↑cn - 1 : ℤ) 2 + 2).toNat
                   = 2 * ((cn - 1) / 2) + 2 := by
-      have h_k_nn : 0 ≤ ((↑cn - 1 : ℤ) py// 2) :=
-        pyFloordiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
-                              linarith)
-                          (by norm_num)
+      have h_k_nn : 0 ≤ Int.fdiv (↑cn - 1 : ℤ) 2 :=
+        Int.fdiv_nonneg (by have : (1:ℤ) ≤ cn := by exact_mod_cast hcn_pos
+                            linarith) (by norm_num)
       rw [← h_c12]; omega
     rw [h_shamt,
         show ((2 : ℤ) ^ (2 * ((cn - 1) / 2) + 2))
@@ -201,9 +189,9 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
   · exact_mod_cast step_lo
   · exact_mod_cast step_hi
 
-/-- `4 * M^4 ≤ n` from the size condition, where `M = 2^((c-1) py// 2).toNat`. -/
+/-- `4 * M^4 ≤ n` from the size condition, where `M = 2^⌊(c-1)/2⌋.toNat`. -/
 theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
-    4 * ((2 : ℤ) ^ (((c - 1) py// 2).toNat)) ^ 4 ≤ n := by
+    4 * ((2 : ℤ) ^ ((Int.fdiv (c - 1) 2).toNat)) ^ 4 ≤ n := by
   obtain ⟨h_lo, _⟩ := h
   have hn_nonneg : 0 ≤ n := by
     have : (0 : ℤ) ≤ (4 : ℤ) ^ c.toNat := by positivity
@@ -212,8 +200,7 @@ theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn_pos : 0 < cn := by exact_mod_cast hc
   have hcN : (↑cn : ℤ).toNat = cn := Int.toNat_natCast cn
-  have h_c12 : ((↑cn - 1 : ℤ) py// 2).toNat = (cn - 1) / 2 := by
-    show (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = _
+  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 := by
     rw [show ((↑cn : ℤ) - 1) = ((cn - 1 : ℕ) : ℤ) from by omega,
         show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]

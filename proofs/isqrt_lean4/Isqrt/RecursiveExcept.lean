@@ -28,7 +28,7 @@ base case, but a *monadic* `c // 2` is bind-opaque to Lean's termination checker
 (and `(-1) // 2 = -1` in Python, so a verbatim translation would even self-loop on
 `c < 0`). We sidestep both by recursing **structurally on an explicit counter**
 `s : ℕ`, seeded at `c.bit_length()`. Since `(c // 2).bit_length() = c.bit_length() - 1`
-for `c > 0` (`Isqrt.BitLengthLemmas.toNat_pyBitLength_pyFloordiv_two`), the counter
+for `c > 0` (`Isqrt.BitLengthLemmas.toNat_pyBitLength_fdiv_two`), the counter
 decreases by exactly one per recursive step and hits `0` precisely when `c` does —
 so `match s` faithfully reproduces the `if c == 0` base case with no `termination_by`,
 no precondition, and `c // 2` left as a genuine `Except` operation. The same counter

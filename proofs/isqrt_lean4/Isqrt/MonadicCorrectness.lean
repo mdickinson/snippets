@@ -1,5 +1,7 @@
 import Isqrt.MonadicIsqrt
-import Isqrt.IterativeCorrectness
+import Isqrt.KeyLemma
+import Isqrt.SizeConditions
+import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 
@@ -78,8 +80,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `c >> L = 0`, where `L = c.bit_length()`.
-  have hz : Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := by
-    have h := pyRshift_pyBitLength_eq_zero hc; rwa [pyRshift_def] at h
+  have hz : Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := fdiv_two_pow_pyBitLength_eq_zero hc
   set motive : ℕ → MProd ℤ ℤ → Prop := fun (s : ℕ) (r : MProd ℤ ℤ) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
       ∧ isNearSquareRoot r.fst (Int.fdiv n (4 ^ (c - Int.fdiv c (2 ^ s)).toNat)) with hmotive
@@ -106,21 +107,21 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     set a_old := x.fst with ha_old_def
     obtain ⟨ha_old_pos, hx_snd, hx_near⟩ := hx
     set N_new := Int.fdiv n (4 ^ (c - d_new).toNat) with hN_new_def
-    -- bridge depths to `py>>` form for the shift lemmas
-    have hd_new_py : d_new = c py>> sZ := by rw [pyRshift_def, hsi]
-    have hd_old_eq : d_old = c py>> (sZ + 1) := by rw [pyRshift_def, hsi1]
-    have hd_old_nonneg : 0 ≤ d_old := by rw [hd_old_eq]; exact pyRshift_nonneg hc
+    -- align depths with the `Int.fdiv c (2^·)` shape the shift lemmas use
+    have hd_new_fdiv : d_new = Int.fdiv c (2 ^ sZ.toNat) := by rw [hsi]
+    have hd_old_fdiv : d_old = Int.fdiv c (2 ^ (sZ + 1).toNat) := by rw [hsi1]
+    have hd_old_nonneg : 0 ≤ d_old := by rw [hd_old_def]; exact Int.fdiv_nonneg hc (by positivity)
     have hd_new_nonneg : 0 ≤ d_new := by rw [hd_new_def]; exact Int.fdiv_nonneg hc (by positivity)
     have hd_new_le : d_new ≤ c := by
       rw [hd_new_def]; exact Int.fdiv_le_self_of_nonneg hc (by positivity)
     have hK : 0 ≤ d_new - d_old - 1 := by
-      rw [hd_new_py]; exact iter_lshift_nonneg hc hs_nn hs_lt hd_old_eq
+      rw [hd_new_fdiv]; exact fdiv_two_pow_lshift_nonneg hc hs_nn hs_lt hd_old_fdiv
     have hd_new_pos : 0 < d_new := by omega
     have h_halve : d_old = Int.fdiv d_new 2 := by
-      rw [hd_old_eq, hd_new_py]; exact pyRshift_succ c sZ hs_nn
-    set k := (d_new - 1) py// 2 with hk_def
+      rw [hd_old_fdiv, hd_new_fdiv]; exact fdiv_two_pow_succ c sZ hs_nn
+    set k := Int.fdiv (d_new - 1) 2 with hk_def
     have hk_eq : k = d_new - d_old - 1 := by
-      rw [hk_def]; simp only [pyFloordiv_def]; rw [h_halve,
+      rw [hk_def, h_halve,
           Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : ℤ) ≤ 2),
           Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : ℤ) ≤ 2)]
       omega
@@ -133,7 +134,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       rwa [← hk_def, ← hM_def] at this
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
       have h1 : d_new ≤ c := hd_new_le
-      have h2 : d_old ≤ c := by rw [hd_old_eq]; exact pyRshift_le_self hc (by omega)
+      have h2 : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self_of_nonneg hc (by positivity)
       omega
     -- the incoming near-√ property at the child depth
     have h_div_bridge :

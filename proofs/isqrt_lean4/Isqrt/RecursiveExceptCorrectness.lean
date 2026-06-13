@@ -45,7 +45,7 @@ private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
 Structural induction on `s`: the base `s = 0` forces `c = 0` (so the function
 returns `1`, a near-√ of the `1 ≤ n < 4` that the size condition pins down), and
 the step `s + 1` discharges every monadic operation to `.ok` — the recursive call
-via the induction hypothesis (whose bit-length premise is `toNat_pyBitLength_pyFloordiv_two`),
+via the induction hypothesis (whose bit-length premise is `toNat_pyBitLength_fdiv_two`),
 the shifts/divisions via their nonneg side conditions — then closes with the same
 `key_isqrt_lemma` algebra as `Isqrt.Correctness`. -/
 private theorem isqrtAuxExcept_correctness :
@@ -82,19 +82,15 @@ private theorem isqrtAuxExcept_correctness :
     have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
     have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
     have m_nn : 0 ≤ m := Int.fdiv_nonneg hn.le (by positivity)
-    -- Size condition is preserved by the step (bridge `py`-form to `Int.fdiv`).
-    have hsc_step : hasSizeCondition d m := by
-      have h := size_condition_step hc_pos hsc
-      simp only [pyFloordiv_def, pyRshift_def] at h
-      exact h
+    -- Size condition is preserved by the step.
+    have hsc_step : hasSizeCondition d m := size_condition_step hc_pos hsc
     have m_pos : 0 < m := by
       obtain ⟨hlo, _⟩ := hsc_step
       have : (0 : ℤ) < 4 ^ d.toNat := by positivity
       linarith
     -- The tight bit-length invariant descends: `(c // 2).bit_length() = c.bit_length() - 1`.
     have hbl_step : (pyBitLength d).toNat = s := by
-      have h := toNat_pyBitLength_pyFloordiv_two hc_pos
-      rw [pyFloordiv_def] at h
+      have h := toNat_pyBitLength_fdiv_two hc_pos
       rw [← hd_def] at h
       omega
     -- Induction hypothesis on the recursive subproblem.
@@ -117,7 +113,6 @@ private theorem isqrtAuxExcept_correctness :
       congr 1; ring
     have hM4 : 4 * M ^ 4 ≤ n := by
       have h := M_bound_from_size hc_pos hsc
-      simp only [pyFloordiv_def] at h
       rwa [← hk_def, ← hM_def] at h
     have a_near' : isNearSquareRoot a (Int.fdiv n (4 * M ^ 2)) := hm_eq ▸ a_near
     have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'

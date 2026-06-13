@@ -217,6 +217,9 @@ theorem loopFold_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       rw [hN_new_def]; exact size_condition_at_depth hd_new_nonneg hd_new_le hsc
     have hM4 : 4 * M ^ 4 ≤ N_new := by
       have := M_bound_from_size hd_new_pos hsc_new
+      -- `M_bound_from_size` is now stated with `Int.fdiv`; fold it back to the
+      -- proof-carrying `py//` so `hk_def`/`hM_def` apply.
+      rw [show Int.fdiv (d_new - 1) 2 = (d_new - 1) py// 2 from rfl] at this
       rwa [← hk_def, ← hM_def] at this
     -- near-√ at the child: isNearSquareRoot a_old ⌊N_new/4M²⌋ = the incoming property `hx`
     have h_div_bridge :

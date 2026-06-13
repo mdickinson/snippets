@@ -1,12 +1,39 @@
 /-
-Lemmas about `natBitLength` and `pyBitLength` needed for the isqrt proof.
+`int.bit_length()` and the power-of-two / floor-division lemmas the isqrt proof
+needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
 
-These connect our `natBitLength` definition (via `Nat.log2`) to
-power-of-two bounds, providing the ℕ and ℤ infrastructure for
-reasoning about Python's `int.bit_length()`.
+This file owns the bit-length *definitions* (`natBitLength`, `pyBitLength`) and
+connects them — via `Nat.log2` — to power-of-two bounds, the per-step halving of
+a right shift, and the two loop-body shift-amount nonnegativity facts. Everything
+here is style-agnostic: it mentions neither the proof-carrying `py>>` / `py//`
+operators (`Isqrt.PythonOps`) nor their `Except` counterparts (`Isqrt.PythonOpsExcept`),
+so both formulations build on it. The proof-carrying operators are layered on top
+in `Isqrt.PythonOps`, which restates the relevant lemmas in `py>>` / `py//` form.
 -/
 
-import Isqrt.PythonOps
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Positivity
+import Mathlib.Data.Int.DivMod
+import Isqrt.FDivLemmas
+
+/-! ## Definitions -/
+
+/-- Bit length of a natural number: the number of bits needed to represent `n`,
+with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2`
+for access to core Lean 4's `log2` lemma library. -/
+def natBitLength : ℕ → ℕ
+  | 0 => 0
+  | n + 1 => Nat.log2 (n + 1) + 1
+
+/-- Python's `n.bit_length()`. Returns the number of bits needed to represent
+`abs(n)`, with `(0).bit_length() == 0`. Never raises, so — unlike `//`/`>>`/`<<`
+— it has a single form shared by both the proof-carrying and `Except` translations. -/
+def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
+
+@[simp]
+theorem pyBitLength_def (n : ℤ) :
+    pyBitLength n = ↑(natBitLength n.natAbs) := rfl
 
 /-! ## natBitLength: basic properties -/
 
@@ -98,15 +125,27 @@ theorem pyBitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < pyBitLength n := by
   · exact absurd (pyBitLength_eq_zero_iff.mp h.symm) hn
   · exact h
 
-/-! ## pyBitLength: interaction with right shift -/
+/-! ## pyBitLength: interaction with floor-halving
 
-/-- For `0 ≤ s < c.bit_length()`, the right shift `c >> s` is at least `1`: it
-still retains the leading bit. (Used to show the body's left-shift amount is
+The right shift `c >> s` is the floor division `⌊c / 2^s⌋`; these lemmas are
+stated directly on `Int.fdiv c (2 ^ s.toNat)` so they serve both translations.
+`Isqrt.PythonOps` re-exports the first two in `py>>` form for the proof-carrying
+isqrt. -/
+
+/-- One more step of floor-halving by a power of two:
+`⌊c / 2^(s+1)⌋ = ⌊⌊c / 2^s⌋ / 2⌋`. The `Int.fdiv` twin of `pyRshift_succ` — the
+recursion's `c ↦ c // 2` step. No sign hypothesis on `c` is needed. -/
+theorem fdiv_two_pow_succ (c s : ℤ) (hs : 0 ≤ s) :
+    Int.fdiv c (2 ^ (s + 1).toNat) = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
+  rw [show (s + 1).toNat = s.toNat + 1 from by omega, pow_succ,
+      ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num)]
+
+/-- For `0 ≤ s < c.bit_length()`, the floor-halving `⌊c / 2^s⌋` is at least `1`:
+it still retains the leading bit. (Used to show the body's left-shift amount is
 nonneg.) -/
-theorem one_le_pyRshift_of_lt_pyBitLength {c s : ℤ}
+theorem one_le_fdiv_two_pow_of_lt_pyBitLength {c s : ℤ}
     (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < pyBitLength c) :
-    1 ≤ c py>> s := by
-  simp only [pyRshift_def]
+    1 ≤ Int.fdiv c (2 ^ s.toNat) := by
   rw [Int.le_fdiv_iff_mul_le (by positivity), one_mul]
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
   rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
@@ -121,11 +160,10 @@ theorem one_le_pyRshift_of_lt_pyBitLength {c s : ℤ}
     _ = ((2 ^ (natBitLength cn - 1) : ℕ) : ℤ) := by push_cast; rfl
     _ ≤ (↑cn : ℤ) := by exact_mod_cast hbound
 
-/-- Right-shifting `c` by its own bit length yields `0` (since
+/-- Floor-halving `c` by `2 ^ c.bit_length()` yields `0` (since
 `c < 2 ^ c.bit_length()`). This is the loop's seed value of `d`. -/
-theorem pyRshift_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
-    pyRshift c (pyBitLength c) (pyBitLength_nonneg c) = 0 := by
-  simp only [pyRshift_def]
+theorem fdiv_two_pow_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
+    Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := by
   rw [Int.fdiv_eq_ediv_of_nonneg c (by positivity)]
   apply Int.ediv_eq_zero_of_lt hc
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
@@ -139,12 +177,11 @@ theorem pyRshift_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
 /-- Each recursive `c ↦ c // 2` step drops exactly one from `c.bit_length()`
 (for `0 < c`). The ℤ counterpart of `natBitLength_div_two`, in the `.toNat`
 form the structural-counter induction consumes. -/
-theorem toNat_pyBitLength_pyFloordiv_two {c : ℤ} (hc : 0 < c) :
-    (pyBitLength (c py// 2)).toNat = (pyBitLength c).toNat - 1 := by
+theorem toNat_pyBitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
+    (pyBitLength (Int.fdiv c 2)).toNat = (pyBitLength c).toNat - 1 := by
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn : 0 < cn := by exact_mod_cast hc
-  have h_half : (↑cn : ℤ) py// 2 = ((cn / 2 : ℕ) : ℤ) := by
-    show Int.fdiv (↑cn : ℤ) 2 = _
+  have h_half : Int.fdiv (↑cn : ℤ) 2 = ((cn / 2 : ℕ) : ℤ) := by
     rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
     rfl
@@ -155,3 +192,38 @@ theorem toNat_pyBitLength_pyFloordiv_two {c : ℤ} (hc : 0 < c) :
     rw [show pyBitLength (↑m : ℤ) = ↑(natBitLength m) from by simp [pyBitLength]]
     exact Int.toNat_natCast _
   rw [key (cn / 2), key cn, natBitLength_div_two hcn]
+
+/-! ## Loop-body shift-amount nonnegativity
+
+Both isqrt formulations recompute, at loop position `s`, the shifts `d' = ⌊c/2^s⌋`
+(new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then form the
+left-shift amount `d' - d - 1` and the right-shift amount `2c - d' - d + 1`. These
+two lemmas show both are nonneg, in pure `Int.fdiv` form (the `py>>` versions in
+`Isqrt.Iterative` are thin wrappers over these). -/
+
+/-- The left-shift amount `⌊c/2^s⌋ - d - 1` is nonneg, where `d = ⌊c/2^(s+1)⌋`,
+for `0 ≤ s < c.bit_length()`. The body's hardest precondition: it needs
+`⌊c/2^s⌋ ≥ 1` (from `s < c.bit_length()`, `one_le_fdiv_two_pow_of_lt_pyBitLength`)
+and the halving link `d = ⌊⌊c/2^s⌋/2⌋` (`fdiv_two_pow_succ`). -/
+theorem fdiv_two_pow_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
+    (hs_lt : s < pyBitLength c) (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
+    0 ≤ Int.fdiv c (2 ^ s.toNat) - d - 1 := by
+  have hhalve : d = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
+    rw [hd]; exact fdiv_two_pow_succ c s hs_nn
+  have hge1 : 1 ≤ Int.fdiv c (2 ^ s.toNat) :=
+    one_le_fdiv_two_pow_of_lt_pyBitLength hc hs_nn hs_lt
+  have hmul : Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 * 2 ≤ Int.fdiv c (2 ^ s.toNat) :=
+    Int.fdiv_mul_le_self (by norm_num)
+  have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
+    Int.fdiv_nonneg (by omega) (by norm_num)
+  rw [hhalve]; omega
+
+/-- The right-shift amount `2c - ⌊c/2^s⌋ - d + 1` is nonneg, where
+`d = ⌊c/2^(s+1)⌋`. Both floor-halvings are `≤ c` (for `0 ≤ c`), so the amount is
+`≥ 1`. -/
+theorem fdiv_two_pow_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c)
+    (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
+    0 ≤ 2 * c - Int.fdiv c (2 ^ s.toNat) - d + 1 := by
+  have h1 : Int.fdiv c (2 ^ s.toNat) ≤ c := Int.fdiv_le_self_of_nonneg hc (by positivity)
+  have h2 : Int.fdiv c (2 ^ (s + 1).toNat) ≤ c := Int.fdiv_le_self_of_nonneg hc (by positivity)
+  rw [hd]; omega

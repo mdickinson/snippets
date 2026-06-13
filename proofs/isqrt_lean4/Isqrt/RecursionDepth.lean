@@ -7,10 +7,11 @@ it being nonnegative. Factoring that single fact out here lets each algorithm
 module import it without depending on the other.
 -/
 
-import Isqrt.PythonOps
 import Isqrt.BitLengthLemmas
 
-/-- The recursion depth `(n.bit_length() - 1) py// 2` is nonneg for nonzero `n`. -/
+/-- The recursion depth `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n`.
+Stated in pure `Int.fdiv` form (the proof-carrying `py//` and the `Except` `//`
+both reduce to it definitionally), so both isqrt formulations share it. -/
 theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
-    0 ≤ (pyBitLength n - 1) py// 2 :=
-  pyFloordiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
+    0 ≤ Int.fdiv (pyBitLength n - 1) 2 :=
+  Int.fdiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)

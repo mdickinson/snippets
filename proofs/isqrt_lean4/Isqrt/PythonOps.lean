@@ -11,16 +11,17 @@ Each operation that can raise an exception in Python requires a validity
 proof at the call site (e.g., nonzero divisor, nonneg shift amount).
 -/
 
--- `Ring` and `Linarith` are not used directly in this file; downstream modules
--- (`Iterative`, `SizeConditions`) call `ring`/`linarith`/`nlinarith` without
--- importing those tactics and rely on this transitive re-export. Dropping them
--- as "unused" breaks the downstream build under `--wfail`. (The cleaner fix is
--- to import the tactics in the files that use them.)
+-- `Ring` and `Linarith` are not used directly in this file; `Isqrt.Iterative`
+-- calls `ring`/`linarith`/`nlinarith` without importing those tactics and relies
+-- on this transitive re-export. Dropping them as "unused" breaks the downstream
+-- build under `--wfail`. (The cleaner fix is to import the tactics in the files
+-- that use them.)
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import Mathlib.Data.Int.DivMod
 import Isqrt.FDivLemmas
+import Isqrt.BitLengthLemmas
 
 /-! ## Definitions -/
 
@@ -39,17 +40,6 @@ def pyRshift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := Int.fdiv n (2 ^ k.
 by `2^k`. Requires a proof that the shift amount is nonneg. -/
 @[nolint unusedArguments]
 def pyLshift (n k : ℤ) (_hk : 0 ≤ k := by omega) : ℤ := n * (2 ^ k.toNat)
-
-/-- Bit length of a natural number: the number of bits needed to represent `n`,
-with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2`
-for access to core Lean 4's `log2` lemma library. -/
-def natBitLength : ℕ → ℕ
-  | 0 => 0
-  | n + 1 => Nat.log2 (n + 1) + 1
-
-/-- Python's `n.bit_length()`. Returns the number of bits needed to represent
-`abs(n)`, with `(0).bit_length() == 0`. -/
-def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
 
 /-! ## Python-style operators
 
@@ -79,10 +69,6 @@ theorem pyRshift_def (n k : ℤ) (hk : 0 ≤ k) :
 @[simp]
 theorem pyLshift_def (n k : ℤ) (hk : 0 ≤ k) :
     pyLshift n k hk = n * 2 ^ k.toNat := rfl
-
-@[simp]
-theorem pyBitLength_def (n : ℤ) :
-    pyBitLength n = ↑(natBitLength n.natAbs) := rfl
 
 /-! ## Nonnegativity lemmas -/
 
@@ -134,3 +120,22 @@ theorem pyLshift_add_pyFloordiv_pos {a n K J : ℤ}
     simp only [pyLshift_def]; exact mul_pos ha (by positivity)
   have h_div_nonneg : 0 ≤ (n py>> J) py// a := pyFloordiv_nonneg (pyRshift_nonneg hn) ha
   omega
+
+/-! ## Bit-length interaction with right shift
+
+`py>>`-form restatements of `Isqrt.BitLengthLemmas`'
+`one_le_fdiv_two_pow_of_lt_pyBitLength` / `fdiv_two_pow_pyBitLength_eq_zero`, for the
+proof-carrying isqrt. (The `Except` translation uses the `Int.fdiv` originals directly.) -/
+
+/-- For `0 ≤ s < c.bit_length()`, the right shift `c >> s` is at least `1`: it still
+retains the leading bit. (Used to show the body's left-shift amount is nonneg.) -/
+theorem one_le_pyRshift_of_lt_pyBitLength {c s : ℤ}
+    (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < pyBitLength c) :
+    1 ≤ c py>> s := by
+  rw [pyRshift_def]; exact one_le_fdiv_two_pow_of_lt_pyBitLength hc hs_nn hs_lt
+
+/-- Right-shifting `c` by its own bit length yields `0` (since `c < 2 ^ c.bit_length()`).
+This is the loop's seed value of `d`. -/
+theorem pyRshift_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
+    pyRshift c (pyBitLength c) (pyBitLength_nonneg c) = 0 := by
+  rw [pyRshift_def]; exact fdiv_two_pow_pyBitLength_eq_zero hc
