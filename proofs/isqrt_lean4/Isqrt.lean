@@ -11,3 +11,5 @@ import Isqrt.IterativeCorrectness
 import Isqrt.PythonOpsExcept
 import Isqrt.MonadicIsqrt
 import Isqrt.MonadicCorrectness
+import Isqrt.RecursiveExcept
+import Isqrt.RecursiveExceptCorrectness

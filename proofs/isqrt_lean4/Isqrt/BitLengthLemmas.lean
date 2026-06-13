@@ -58,6 +58,33 @@ theorem lt_natBitLength_iff {n k : ℕ} : k < natBitLength n ↔ 2 ^ k ≤ n := 
   simp only [not_lt, not_le]
   exact natBitLength_le_iff
 
+/-- Halving drops exactly one bit: `natBitLength (n / 2) = natBitLength n - 1`
+for `0 < n`. This is the structural-counter linchpin — each recursive `c ↦ c // 2`
+step decreases `c.bit_length()` by one, so a counter seeded at `c.bit_length()`
+reaches `0` exactly when `c` does. -/
+theorem natBitLength_div_two {n : ℕ} (hn : 0 < n) :
+    natBitLength (n / 2) = natBitLength n - 1 := by
+  have hb : 0 < natBitLength n := natBitLength_pos_iff.mpr hn
+  apply le_antisymm
+  · -- `natBitLength (n/2) ≤ natBitLength n - 1`  ⟺  `n/2 < 2^(natBitLength n - 1)`
+    rw [natBitLength_le_iff]
+    have hub := lt_two_pow_natBitLength n
+    have hsplit : 2 ^ natBitLength n = 2 * 2 ^ (natBitLength n - 1) := by
+      rw [← pow_succ']; congr 1; omega
+    omega
+  · -- `natBitLength n - 1 ≤ natBitLength (n/2)`
+    by_cases h1 : 2 ≤ natBitLength n
+    · -- `natBitLength n ≥ 2`: from `2^(natBitLength n - 1) ≤ n` deduce `2^(b-2) ≤ n/2`.
+      have hlow := two_pow_pred_natBitLength_le hn
+      have hsplit : 2 ^ (natBitLength n - 1) = 2 * 2 ^ (natBitLength n - 2) := by
+        rw [← pow_succ']; congr 1; omega
+      rw [hsplit] at hlow
+      have hhalf : 2 ^ (natBitLength n - 2) ≤ n / 2 := by omega
+      have := (lt_natBitLength_iff (n := n / 2) (k := natBitLength n - 2)).mpr hhalf
+      omega
+    · -- `natBitLength n = 1`: the bound is `0 ≤ _`.
+      omega
+
 /-! ## pyBitLength: ℤ-level properties -/
 
 theorem pyBitLength_nonneg (n : ℤ) : 0 ≤ pyBitLength n := by
@@ -108,3 +135,23 @@ theorem pyRshift_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
     exact Int.toNat_natCast _
   rw [hbl]
   exact_mod_cast lt_two_pow_natBitLength cn
+
+/-- Each recursive `c ↦ c // 2` step drops exactly one from `c.bit_length()`
+(for `0 < c`). The ℤ counterpart of `natBitLength_div_two`, in the `.toNat`
+form the structural-counter induction consumes. -/
+theorem toNat_pyBitLength_pyFloordiv_two {c : ℤ} (hc : 0 < c) :
+    (pyBitLength (c py// 2)).toNat = (pyBitLength c).toNat - 1 := by
+  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
+  have hcn : 0 < cn := by exact_mod_cast hc
+  have h_half : (↑cn : ℤ) py// 2 = ((cn / 2 : ℕ) : ℤ) := by
+    show Int.fdiv (↑cn : ℤ) 2 = _
+    rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
+        Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
+    rfl
+  rw [h_half]
+  -- Both bit-lengths reduce to `natBitLength` on the underlying ℕ (introduce a
+  -- fresh `↑m` so `simp` can't rewrite a cast-of-division).
+  have key : ∀ m : ℕ, (pyBitLength (↑m : ℤ)).toNat = natBitLength m := fun m => by
+    rw [show pyBitLength (↑m : ℤ) = ↑(natBitLength m) from by simp [pyBitLength]]
+    exact Int.toNat_natCast _
+  rw [key (cn / 2), key cn, natBitLength_div_two hcn]
