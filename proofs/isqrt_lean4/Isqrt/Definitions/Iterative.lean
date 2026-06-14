@@ -34,8 +34,7 @@ and the function itself is a `do` block — `let mut a/d`, a `for … in`, and m
 binds (`←`) for each operation that could raise. It's named `isqrtIterative` to set
 it apart from the recursive translation `isqrtRecursive` (`Isqrt.Definitions.Recursive`):
 the two are the iterative and recursive translations of the same CPython algorithm, sharing
-the operators of `Isqrt.Definitions.PythonOps` and `pyBitLength` of
-`Isqrt.Definitions.BitLength`.
+the operators and `pyBitLength` of `Isqrt.Definitions.PythonOps`.
 
 Correctness is proved in `Isqrt.Proofs.IterativeCorrectness`.
 
@@ -43,7 +42,6 @@ Key reference: https://lean-lang.org/papers/do.pdf
 -/
 
 import Isqrt.Definitions.PythonOps
-import Isqrt.Definitions.BitLength
 
 /-- Integer square root of `n`, monadic (`Except`) form — the direct `do`-block
 translation of the CPython source above.

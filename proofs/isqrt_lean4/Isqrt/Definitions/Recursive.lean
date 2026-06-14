@@ -40,7 +40,6 @@ Correctness is proved in `Isqrt.Proofs.RecursiveCorrectness`.
 -/
 
 import Isqrt.Definitions.PythonOps
-import Isqrt.Definitions.BitLength
 
 /-- Recursive auxiliary for the monadic integer square root, structurally
 recursive on the counter `s`. Intended to be called with `s = c.bit_length()`;

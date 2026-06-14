@@ -2,36 +2,59 @@
 Lemmas about `int.bit_length()` — the power-of-two and floor-division facts the
 isqrt proof needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
 
-Part of the **proofs** layer. The bit-length *definitions* `natBitLength` and
-`pyBitLength` themselves live in `Isqrt.Definitions.BitLength` (trust surface);
-this file connects them — via `Nat.log2` — to power-of-two bounds, the per-step
-halving of a right shift, and the two loop-body shift-amount nonnegativity facts.
-Everything here is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python
-operators, so both the iterative and recursive correctness proofs build on it
-directly.
+Part of the **proofs** layer. The public `pyBitLength` lives in
+`Isqrt.Definitions.PythonOps` (trust surface), where it inlines its bit-length
+computation directly. This file re-declares that computation as the named ℕ-level
+`natBitLength` — the workhorse the lemmas below run on — and keeps it honest against
+`pyBitLength` by the bridge lemma `pyBitLength_natCast` (a one-line `cases`). It then connects
+`natBitLength`, via `Nat.log2`, to power-of-two bounds, the per-step halving of a
+right shift, and the two loop-body shift-amount nonnegativity facts. Everything here
+is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python operators, so
+both the iterative and recursive correctness proofs build on it directly.
 -/
 
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import Mathlib.Data.Int.DivMod
-import Isqrt.Definitions.BitLength
+import Isqrt.Definitions.PythonOps
 import Isqrt.Proofs.FDivLemmas
+
+/-! ## natBitLength: the ℕ-level bit length -/
+
+/-- Bit length of a natural number: the number of bits needed to represent `n`,
+with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2` for
+access to core Lean 4's `log2` lemma library.
+
+This is the ℕ-level workhorse the bit-length proofs run on. It is *not* trust
+surface: the public `pyBitLength` (`Isqrt.Definitions.PythonOps`) inlines this same
+computation, and `pyBitLength_natCast` below verifies — by a one-line `cases` — that
+the two agree, so this re-declaration cannot silently drift from it. -/
+def natBitLength : Nat → Nat
+  | 0 => 0
+  | n + 1 => Nat.log2 (n + 1) + 1
 
 /-! ## pyBitLength: defining-equation lemmas -/
 
-@[simp]
-theorem pyBitLength_def (n : ℤ) :
-    pyBitLength n = ↑(natBitLength n.natAbs) := rfl
+/-- `pyBitLength` of a `ℕ`-cast drops the `natAbs`: `pyBitLength ↑m = ↑(natBitLength m)`.
+This is the bridge tying the trust-surface `pyBitLength` (whose inlined bit-length match
+is a distinct match-auxiliary) to the named `natBitLength` above: `cases m <;> rfl` checks
+they agree on each constructor, so the re-declaration cannot silently drift. It's also the
+form the ℤ↔ℕ bridges below (and in `Isqrt.Proofs.SizeConditions`) `rw` with directly;
+the general `pyBitLength_def` is the `@[simp]` normal form, so this one isn't `@[simp]`. -/
+theorem pyBitLength_natCast (m : ℕ) : pyBitLength (↑m : ℤ) = ↑(natBitLength m) := by
+  cases m <;> rfl
 
-/-- `pyBitLength` of a `ℕ`-cast drops the `natAbs`: `pyBitLength ↑m = natBitLength m`.
-The nat-cast specialisation of `pyBitLength_def` — the form the ℤ↔ℕ bridges below
-(and in `Isqrt.Proofs.SizeConditions`) repeatedly need, since `(↑m).natAbs` reduces to `m`. -/
+/-- `pyBitLength` unfolds to `natBitLength` on the underlying `natAbs`. The general form
+of `pyBitLength_natCast`, applied at `n.natAbs` — `pyBitLength` depends on `n` only through
+`n.natAbs`, so the two are definitionally interchangeable. -/
 @[simp]
-theorem pyBitLength_natCast (m : ℕ) : pyBitLength (↑m : ℤ) = ↑(natBitLength m) := rfl
+theorem pyBitLength_def (n : ℤ) : pyBitLength n = ↑(natBitLength n.natAbs) :=
+  pyBitLength_natCast n.natAbs
 
-/-- `.toNat` of `pyBitLength_natCast`: `(pyBitLength ↑m).toNat = natBitLength m`. -/
-@[simp]
+/-- `.toNat` of `pyBitLength_natCast`: `(pyBitLength ↑m).toNat = natBitLength m`. Not
+`@[simp]` (simp derives it from `pyBitLength_def` + casts); kept as a named target for
+the *targeted* `rw`s below that must not disturb neighbouring casts. -/
 theorem toNat_pyBitLength_natCast (m : ℕ) :
     (pyBitLength (↑m : ℤ)).toNat = natBitLength m := by
   rw [pyBitLength_natCast, Int.toNat_natCast]
@@ -116,10 +139,10 @@ theorem natBitLength_div_two {n : ℕ} (hn : 0 < n) :
 /-! ## pyBitLength: ℤ-level properties -/
 
 theorem pyBitLength_nonneg (n : ℤ) : 0 ≤ pyBitLength n := by
-  simp [pyBitLength]
+  rw [pyBitLength_def]; positivity
 
 theorem pyBitLength_eq_zero_iff {n : ℤ} : pyBitLength n = 0 ↔ n = 0 := by
-  simp [pyBitLength, natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
+  simp [natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
 
 theorem pyBitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < pyBitLength n := by
   rcases eq_or_lt_of_le (pyBitLength_nonneg n) with h | h

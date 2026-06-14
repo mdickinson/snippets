@@ -110,8 +110,7 @@ IsqrtTests.lean                -- tests root (imports the #guard files)
 Isqrt/
   Definitions.lean             -- component root: the trust surface
   Definitions/
-    PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
-    BitLength.lean             -- natBitLength / pyBitLength definitions
+    PythonOps.lean             -- PyException; //, >>, <<, range, bit_length mirrors
     IntegerSquareRoot.lean     -- isIntegerSquareRoot specification predicate
     Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
@@ -358,11 +357,9 @@ by zero — with `Except`:
 Python's `int.bit_length()` returns the number of bits needed to
 represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 `>>`, this method can't raise on any integer input, so it needs no
-`Except` wrapper — it's just a function. Its definition lives in
-`Isqrt/Definitions/BitLength.lean` (with the operator definitions in
-`Isqrt/Definitions/PythonOps.lean`, but in its own module, since it's a
-separate concept); the lemmas about it live in
-`Isqrt/Proofs/BitLengthLemmas.lean`.
+`Except` wrapper — it's just a function. It's defined as `pyBitLength` in
+`Isqrt/Definitions/PythonOps.lean`, alongside the operator mirrors it joins;
+the lemmas about it live in `Isqrt/Proofs/BitLengthLemmas.lean`.
 
 On the Lean side it's named `pyBitLength : Int → Int`, defined as
 `natBitLength n.natAbs` (where `natBitLength : Nat → Nat` is built on top of
@@ -497,9 +494,9 @@ that Python's `math.integer.isqrt` is correct, here's where to put your attentio
 
 - The Lean *definitions* of `isqrtRecursive` and `nsqrt` (in
   `Isqrt/Definitions/Recursive.lean`), of `isqrtIterative` (in
-  `Isqrt/Definitions/Iterative.lean`), of the `pyFloordiv` / `pyRshift` /
-  `pyLshift` operations (in `Isqrt/Definitions/PythonOps.lean`), and of
-  `pyBitLength` (in `Isqrt/Definitions/BitLength.lean`) — that is, everything
+  `Isqrt/Definitions/Iterative.lean`), and of the `pyFloordiv` / `pyRshift` /
+  `pyLshift` operations together with `pyBitLength` (all in
+  `Isqrt/Definitions/PythonOps.lean`) — that is, everything
   under `Isqrt/Definitions/`, which imports nothing but Lean's own core (not
   even Mathlib), so scrutinising it means trusting only Lean itself. These are
   the only places where a
