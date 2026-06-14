@@ -110,7 +110,8 @@ IsqrtTests.lean                -- tests root (imports the #guard files)
 Isqrt/
   Definitions.lean             -- component root: the trust surface
   Definitions/
-    PythonOps.lean             -- PyException; //, >>, <<, range, bit_length mirrors
+    Exceptions.lean            -- PyException + the succeeds/fails return-or-raise helpers
+    PythonOps.lean             -- //, >>, <<, range, bit_length mirrors
     Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
     Specification.lean         -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
@@ -478,8 +479,9 @@ proof `h` that the computation took that branch. So the first clause reads "for
 nonnegative `n`, `f n` succeeds, and the value it returns is `⌊√n⌋`"; the second,
 "for negative `n`, `f n` fails, and the exception it raises is exactly the
 `ValueError` Python raises for negative input, message and all." (These four
-helpers live in the project's own `Isqrt` namespace, defined alongside the
-contract rather than grafted onto `Except`.)
+helpers live in the project's own `Isqrt` namespace, in
+`Isqrt/Definitions/Exceptions.lean` alongside `PyException`, rather than grafted
+onto `Except`.)
 
 That is the certificate. A `do` block short-circuits to `.error` the
 moment any operation raises, so the only way `isqrtRecursive n` can return (be

@@ -4,53 +4,28 @@ the **definitions** layer, the trust surface: a reader must read and trust this
 module to know the correctness proofs (`Isqrt.Proofs.RecursiveCorrectness`,
 `Isqrt.Proofs.IterativeCorrectness`) prove the right thing.
 
-The contract `isCorrectIsqrt` is stated with four small helpers on an `Except`
-result, in the project's own `Isqrt` namespace — `succeeds`/`fails` (it returned /
-it raised) and the proof-carrying extractors `returnValue`/`exceptionRaised` (the
-returned value / the raised exception,
-total only given a proof that the computation took that branch). Each clause then
-reads as the property we actually want, applied to the real returned value or
-raised exception, with the sign of the argument as a hypothesis: for nonnegative
-`n` the function returns the integer square root; for negative `n` it raises
-CPython's `ValueError`.
+The contract `isCorrectIsqrt` is stated with the four small `Except` helpers from
+`Isqrt.Definitions.Exceptions` — `succeeds`/`fails` (it returned / it raised) and
+the proof-carrying extractors `returnValue`/`exceptionRaised` (the returned value /
+the raised exception, total only given a proof that the computation took that
+branch). Each clause then reads as the property we actually want, applied to the
+real returned value or raised exception, with the sign of the argument as a
+hypothesis: for nonnegative `n` the function returns the integer square root; for
+negative `n` it raises CPython's `ValueError`.
 
 `isCorrectIsqrt` is parameterised by the implementation `f`, so this module
-depends only on the `Except`/`PyException` vocabulary (`Isqrt.Definitions.PythonOps`),
+depends only on the `Except`/`PyException` vocabulary (`Isqrt.Definitions.Exceptions`),
 never on the `isqrt` definitions themselves. (The proof-only companion predicate
 `isNearSquareRoot` lives with the key algebraic lemma in `Isqrt.Proofs.KeyLemma`.)
 -/
 
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.Exceptions
 
 /-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
 `a = ⌊√n⌋` exactly. This is the postcondition asserted of a returned value.
 Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the Python postcondition
 `a * a <= n < (a + 1) * (a + 1)`. -/
 def isIntegerSquareRoot (a n : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
-
-namespace Isqrt
-
-/-- Assertion that a computation didn't raise. -/
-def succeeds {ε α : Type _} (x : Except ε α) : Prop := match x with
-  | .ok _ => True
-  | .error _ => False
-
-/-- The return value from a computation that didn't raise. -/
-def returnValue {ε α : Type _} (x : Except ε α) (p : succeeds x) : α :=
-  match x with
-  | .ok a => a
-
-/-- Assertion that a computation failed. -/
-def fails {ε α : Type _} (x : Except ε α) : Prop := match x with
-  | .ok _ => False
-  | .error _ => True
-
-/-- The exception raised by a failed computation. -/
-def exceptionRaised {ε α : Type _} (x : Except ε α) (p : fails x) : ε :=
-  match x with
-  | .error e => e
-
-end Isqrt
 
 /-- `f` is a correct integer square root:
 * for every nonnegative `n`, `f n` succeeds (does not raise) and the value it

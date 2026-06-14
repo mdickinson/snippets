@@ -21,13 +21,7 @@ a plain `Int`-valued function. Its supporting lemmas live in
 `Isqrt.Proofs.BitLengthLemmas`.
 -/
 
-/-- The Python exceptions that `math.isqrt` and the operations it uses can raise.
-`deriving Repr` lets `#eval` print the exception's contents in tests (the analogue
-of a Python `__repr__`). -/
-inductive PyException where
-  | zeroDivisionError
-  | valueError (msg : String)
-  deriving Repr
+import Isqrt.Definitions.Exceptions
 
 /-- Python's `a // b` (floor division) as an `Except`: raises `ZeroDivisionError`
 when `b = 0`, otherwise returns `Int.fdiv a b` — which rounds toward `-∞`, matching
