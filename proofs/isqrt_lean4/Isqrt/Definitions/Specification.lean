@@ -27,10 +27,10 @@ Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the Python postconditio
 `a * a <= n < (a + 1) * (a + 1)`. -/
 def isIntegerSquareRoot (a n : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
-/-- `f` is a correct integer square root:
-* for every nonnegative `n`, `f n` succeeds (does not raise) and the value it
+/-- `isqrt` is a correct integer square root:
+* for every nonnegative `n`, `isqrt n` succeeds (does not raise) and the value it
   returns is the integer square root of `n` (`isIntegerSquareRoot`);
-* for every negative `n`, `f n` raises exactly the `ValueError` CPython's
+* for every negative `n`, `isqrt n` raises exactly the `ValueError` CPython's
   `math.isqrt` raises, message and all.
 
 Stated with the proof-carrying `succeeds`/`returnValue` and `fails`/`exceptionRaised`
