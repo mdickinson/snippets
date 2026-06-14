@@ -1,18 +1,71 @@
-# Correctness proof for CPython's `math.isqrt`
+# Correctness proof for CPython's `math.integer.isqrt`
 
-A formal proof in Lean 4 of correctness for the integer square root
-algorithm behind CPython's `math.isqrt` — both the original recursive
-formulation and the iterative formulation that CPython ships.
+This repository provides a formal proof of correctness, in Lean, of the algorithm
+underlying the CPython implementation of Python's `math.integer.isqrt` function.
 
-## Prerequisites
+## Overview
 
-Install [elan](https://github.com/leanprover/elan) (the Lean version manager):
+Python's `math.integer.isqrt` standard library function (`math.isqrt` prior to Python
+3.15) computes the integer square root of a nonnegative integer `n`: the unique
+integer `a` satisfying `a * a <= n < (a + 1) * (a + 1)`.
+
+The function is implemented in C, but the source code describes an equivalent Python
+implementation. Here's that implementation. (Sources: [original
+commit](https://github.com/python/cpython/blob/73934b9da07daefb203e7d26089e7486a1ce4fdf/Modules/mathmodule.c#L1515-L1535)
+for Python 3.8; [current home in
+math.integer](https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211).)
+
+```python
+def isqrt(n):
+    """
+    Return the integer part of the square root of the input.
+    """
+    n = operator.index(n)
+
+    if n < 0:
+        raise ValueError("isqrt() argument must be nonnegative")
+    if n == 0:
+        return 0
+
+    c = (n.bit_length() - 1) // 2
+    a = 1
+    d = 0
+    for s in reversed(range(c.bit_length())):
+        # Loop invariant: (a-1)**2 < (n >> 2*(c - d)) < (a+1)**2
+        e = d
+        d = c >> s
+        a = (a << d - e - 1) + (n >> 2*c - e - d + 1) // a
+
+    return a - (a*a > n)
+```
+
+Despite its simplicity, the algorithm is unpublished and novel, and in places quite
+delicate, so skepticism about its correctness is warranted. This repository provides a
+direct, faithful translation of the above algorithm into the Lean programming language,
+along with a formal machine-checkable proof of correctness of that translation.
+
+While the iterative version above is what's implemented in CPython, the algorithm as
+originally derived was recursive, and is clearer when expressed that way. This
+repository therefore also contains a definition and proof of correctness for the
+recursive variant of the algorithm.
+
+## Validating the proof
+
+This section describes how you can use Lean to validate the proof.
+
+### Prerequisites
+
+Install [elan](https://github.com/leanprover/elan) (the Lean version manager), following
+the [instructions](https://github.com/leanprover/elan#installation) in the README for
+that project. For example, on macOS or Linux you can use:
 
 ```
 curl https://elan.dev/install.sh -sSf | sh
 ```
 
-## Building
+This should make `elan` and `lake` available on your `PATH`.
+
+### Building the project
 
 From this directory:
 
@@ -20,6 +73,7 @@ From this directory:
 lake exe cache get   # download prebuilt Mathlib (avoids compiling from source)
 lake build           # build the project
 lake build --wfail   # build, failing on warnings too (matches CI)
+lake lint            # check for style issues
 ```
 
 The first `lake` command you run will automatically download the correct
@@ -28,6 +82,7 @@ Lean toolchain version (specified in `lean-toolchain`).
 Downloading the Mathlib cache (`lake exe cache get`) fetches ~1-2 GB of
 prebuilt `.olean` files. Without this step, `lake build` would compile
 all of Mathlib from source, which takes several hours.
+
 
 ## Project structure
 
@@ -63,7 +118,7 @@ the `#guard` checks. The implementation library does not import the tests.
 ## Python-to-Lean translation
 
 The goal of this proof is to give us confidence in the recursive
-integer square root algorithm behind CPython's `math.isqrt`. We don't
+integer square root algorithm behind CPython's `math.integer.isqrt`. We don't
 prove anything about the Python code directly; instead, we translate
 the relevant Python code into Lean and prove that the *Lean* code is
 correct.
@@ -108,7 +163,7 @@ def isqrt(n: int) -> int:
 
 It's closely adapted from [a Stack Overflow answer][so-recursive] by
 the same author who designed the algorithm and wrote CPython's
-`math.isqrt`. The code is also reproduced as a docstring at the top of
+`math.integer.isqrt`. The code is also reproduced as a docstring at the top of
 `Isqrt/Algorithm.lean`.
 
 CPython itself ships an [iterative formulation][cpython-iterative] of
@@ -415,7 +470,7 @@ corollaries of one theorem about one return value.
 ### What do I need to trust?
 
 If you're reading this repository hoping to come away with confidence
-that Python's `math.isqrt` is correct, here's where to put your attention
+that Python's `math.integer.isqrt` is correct, here's where to put your attention
 — and where you can let your guard down.
 
 **Read carefully.** The fidelity of the translation lives in two places:
