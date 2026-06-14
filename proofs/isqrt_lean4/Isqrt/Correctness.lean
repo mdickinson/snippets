@@ -21,11 +21,6 @@ import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 
-/-- `Except.ok a >>= f = f a` (definitional; lets `simp` step through a successful
-bind in the `do`-block reduction). -/
-private theorem Except.ok_bind' {ε α β : Type _} (a : α) (f : α → Except ε β) :
-    (Except.ok a >>= f) = f a := rfl
-
 /-- `(j + 2).toNat = j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_add_two {j : ℤ} (hj : 0 ≤ j) :
     (j + 2).toNat = j.toNat + 2 := by
@@ -101,7 +96,7 @@ private theorem isqrtAux_correctness :
         = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
       unfold isqrtAux
       simp only [pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
-        ← hk_def, ← hd_def, Except.ok_bind',
+        ← hk_def, ← hd_def, Except.ok_bind,
         pyRshift_eq_ok h2k2_nn, ← hm_def, ha_eq,
         pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn,
         pyFloordiv_eq_ok (ne_of_gt a_pos)]

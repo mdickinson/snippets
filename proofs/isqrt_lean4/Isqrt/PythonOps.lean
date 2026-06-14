@@ -85,3 +85,11 @@ theorem pyRshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
   unfold pyRshift; split
   · omega
   · rfl
+
+/-- `Except.ok a >>= f = f a` (definitional). The companion to the `_eq_ok`
+lemmas above: once one of them rewrites an operation to `.ok v`, this steps the
+`do`-block past the resulting bind. It's the `.ok`-form analogue of `pure_bind`,
+which `simp` won't fire on a literal `Except.ok` (the head it sees is `Except.ok`,
+not `pure`). Both correctness proofs use it. -/
+theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
+    (Except.ok a >>= f) = f a := rfl

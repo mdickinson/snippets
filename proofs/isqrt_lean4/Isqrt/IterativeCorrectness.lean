@@ -5,10 +5,6 @@ import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 
-/-- `Except.ok a >>= f = f a` (definitional; lets `simp` step through a successful bind). -/
-theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
-    (Except.ok a >>= f) = f a := rfl
-
 /-- One iteration of the monadic loop, as a standalone `Except`-returning step on the
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
 body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes
