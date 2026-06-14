@@ -121,6 +121,7 @@ Isqrt/
     PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
     SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
+    SpecificationLemmas.lean   -- bridges plain .ok/.error equalities to the proof-carrying spec
     RecursiveCorrectness.lean  -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
     IterativeCorrectness.lean  -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
   Tests/
@@ -463,18 +464,20 @@ we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
 def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
-  (∀ n, 0 ≤ n → Isqrt.returns (f n) (fun a => isIntegerSquareRoot a n)) ∧
-  (∀ n, n < 0 → Isqrt.raises (f n) (.valueError "isqrt() argument must be nonnegative"))
+  (∀ n, 0 ≤ n → let v := f n; ∃ h : succeeded v, isIntegerSquareRoot (returnValue v h) n)
+  ∧
+  (∀ n, n < 0 → let v := f n; ∃ h : failed v, exception v h = .valueError "isqrt() argument must be nonnegative")
 ```
 
-Here `Isqrt.returns (f n) p` means `f n` evaluated to `.ok a` for some `a` with
-`p a` — it returned a value, rather than raising — and `Isqrt.raises (f n) e`
-means it evaluated to `.error e`. (`returns`/`raises` are our own `Prop`-level
-predicates, kept in the project's namespace rather than grafted onto `Except`.)
-So: for every nonnegative input, `f` *returns* (never raises) a
-value that is `⌊√n⌋`; for every negative input, `f` *raises*, and the error is
-pinned to a single possibility — exactly the `ValueError` Python raises for
-negative input, message and all.
+Here `succeeded v` and `failed v` assert that `v` returned (took the `.ok` branch)
+or raised (took the `.error` branch); `returnValue v h` and `exception v h` then
+extract the returned value or the raised exception, each total only given the
+proof `h` that the computation took that branch. So the first clause reads "for
+nonnegative `n`, `f n` succeeds, and the value it returns is `⌊√n⌋`"; the second,
+"for negative `n`, `f n` fails, and the exception it raises is exactly the
+`ValueError` Python raises for negative input, message and all." (These four
+helpers are our own, defined alongside the contract rather than grafted onto
+`Except`.)
 
 That is the certificate. A `do` block short-circuits to `.error` the
 moment any operation raises, so the only way `isqrtRecursive n` can return (be

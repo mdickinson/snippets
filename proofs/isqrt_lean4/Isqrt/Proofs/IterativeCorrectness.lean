@@ -1,5 +1,6 @@
 import Isqrt.Definitions.Iterative
 import Isqrt.Definitions.Specification
+import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonOpsLemmas
@@ -196,11 +197,13 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ a, isqrtIterative n = .ok a ∧ isIntegerSquareRoot a n
+    show ∃ h : succeeded (isqrtIterative n),
+      isIntegerSquareRoot (returnValue (isqrtIterative n) h) n
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
-      exact ⟨0, by unfold isqrtIterative; norm_num; rfl,
-             by unfold isIntegerSquareRoot; norm_num⟩
+      refine returnValue_satisfies (by unfold isqrtIterative; norm_num; rfl)
+        (fun a => isIntegerSquareRoot a 0) ?_
+      show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
@@ -216,12 +219,18 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
           (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
-      refine ⟨_, hred, ?_⟩
-      have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
-          = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
-      rw [hadj]
-      exact hy_near.toIntegerSquareRoot
+      have hp : isIntegerSquareRoot (y.fst - if y.fst * y.fst > n then 1 else 0) n := by
+        have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
+            = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
+        rw [hadj]
+        exact hy_near.toIntegerSquareRoot
+      exact returnValue_satisfies hred (fun a => isIntegerSquareRoot a n) hp
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
-    show isqrtIterative n = .error (.valueError "isqrt() argument must be nonnegative")
-    unfold isqrtIterative; rw [if_pos hn]; rfl
+    show ∃ h : failed (isqrtIterative n),
+      exception (isqrtIterative n) h = .valueError "isqrt() argument must be nonnegative"
+    have herr : isqrtIterative n
+        = .error (.valueError "isqrt() argument must be nonnegative") := by
+      unfold isqrtIterative; rw [if_pos hn]; rfl
+    exact exception_satisfies herr
+      (fun e => e = .valueError "isqrt() argument must be nonnegative") rfl
