@@ -9,8 +9,9 @@ establish:
 - `4·M⁴ ≤ n` follows from `4^c ≤ n` for `M = 2^((c-1)/2)`.
 
 The core lemmas are proved at ℕ level using the `natBitLength`
-infrastructure. ℤ-level corollaries are provided at the end, packaged as
-`hasSizeCondition`, for direct use in Phase 6.
+infrastructure; the ℤ-level corollaries at the end, stated in terms of
+`hasSizeCondition`, are what the two correctness proofs consume. This file also
+owns `isqrt_c_nonneg`, the nonnegativity of the initial recursion depth.
 -/
 
 import Isqrt.BitLengthLemmas
