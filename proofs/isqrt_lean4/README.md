@@ -463,13 +463,15 @@ we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
 def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
-  (∀ n, 0 ≤ n → (f n).returns (fun a => isIntegerSquareRoot a n)) ∧
-  (∀ n, n < 0 → (f n).raises (.valueError "isqrt() argument must be nonnegative"))
+  (∀ n, 0 ≤ n → Isqrt.returns (f n) (fun a => isIntegerSquareRoot a n)) ∧
+  (∀ n, n < 0 → Isqrt.raises (f n) (.valueError "isqrt() argument must be nonnegative"))
 ```
 
-Here `(f n).returns p` means `f n` evaluated to `.ok a` for some `a` with `p a` —
-it returned a value, rather than raising — and `(f n).raises e` means it evaluated
-to `.error e`. So: for every nonnegative input, `f` *returns* (never raises) a
+Here `Isqrt.returns (f n) p` means `f n` evaluated to `.ok a` for some `a` with
+`p a` — it returned a value, rather than raising — and `Isqrt.raises (f n) e`
+means it evaluated to `.error e`. (`returns`/`raises` are our own `Prop`-level
+predicates, kept in the project's namespace rather than grafted onto `Except`.)
+So: for every nonnegative input, `f` *returns* (never raises) a
 value that is `⌊√n⌋`; for every negative input, `f` *raises*, and the error is
 pinned to a single possibility — exactly the `ValueError` Python raises for
 negative input, message and all.
