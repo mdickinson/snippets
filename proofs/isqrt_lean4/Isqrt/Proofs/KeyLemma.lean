@@ -3,39 +3,36 @@ Key algebraic lemma for the isqrt correctness proof.
 
 We say that a positive integer `a` is a **near square root** of a positive
 integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
-`⌊√n⌋` or `⌈√n⌉`. The file also defines the companion predicate
-`isIntegerSquareRoot a n` (`a² ≤ n < (a + 1)²`), the exact `a = ⌊√n⌋` postcondition
-asserted by the top-level correctness theorems; the algorithm's final
-`a-1`/`a` choice is what turns a near square root into the integer square root.
+`⌊√n⌋` or `⌈√n⌉`. This is a proof-only notion: `isNearSquareRoot` is defined here,
+alongside the key lemma that uses it. Its companion `isIntegerSquareRoot` — the
+exact `a = ⌊√n⌋` postcondition the top-level theorems assert — is trust surface, so
+it lives in `Isqrt.Definitions.IntegerSquareRoot`; the algorithm's final `a-1`/`a`
+choice (`isNearSquareRoot.toIntegerSquareRoot` below) is what turns a near square
+root into the integer square root.
 
 This file proves: given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`,
 if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
 near square root of `n`.
 -/
 
-import Isqrt.FDivLemmas
+import Isqrt.Definitions.IntegerSquareRoot
+import Isqrt.Proofs.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-/-! ## Square-root predicates
+/-! ## The near-square-root predicate
 
-Both predicates are stated multiplicatively — `x * x`, never `x ^ 2`:
-`isIntegerSquareRoot` mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)`
-that the top-level theorems assert, and `isNearSquareRoot` follows suit for symmetry.
-The doc-comment prose, by contrast, writes squares as `x²`: the `*` rule governs
-compiled statements that mirror Python source, while informal math in comments
-follows ordinary mathematical notation. -/
+`isNearSquareRoot` is stated multiplicatively — `x * x`, never `x ^ 2` — for
+symmetry with `isIntegerSquareRoot` (in `Isqrt.Definitions.IntegerSquareRoot`),
+which mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)` that the
+top-level theorems assert. The doc-comment prose, by contrast, writes squares as
+`x²`: the `*` rule governs compiled statements that mirror Python source, while
+informal math in comments follows ordinary mathematical notation. -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
 def isNearSquareRoot (a n : ℤ) : Prop :=
   (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
-
-/-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
-`a = ⌊√n⌋` exactly — unlike `isNearSquareRoot`, which only pins `a` down to `⌊√n⌋`
-or `⌈√n⌉`. This is the postcondition the top-level correctness theorems
-assert. -/
-def isIntegerSquareRoot (a n : ℤ) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
 /-- The algorithm's final return adjustment: a near square root `a` is either
 `⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
@@ -177,8 +174,8 @@ For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+
 — a left shift of `a` by `k`, plus the divided-down remainder — equals
 `Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
 correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
-recursive proof (`Isqrt.Correctness`) with `ν = n`, the iterative proof
-(`Isqrt.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
+recursive proof (`Isqrt.Proofs.Correctness`) with `ν = n`, the iterative proof
+(`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
 move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
 theorem key_isqrt_body_eq {ν a M : ℤ} {k : ℤ} (hk : 0 ≤ k) (ha : 0 < a)
     (hM : M = 2 ^ k.toNat) :

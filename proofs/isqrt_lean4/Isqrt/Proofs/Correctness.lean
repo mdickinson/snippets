@@ -3,20 +3,22 @@ Correctness of the recursive monadic integer square root `isqrt`.
 
 Strategy: structural induction on the counter `s` for `isqrtAux`, carrying
 the **tight** invariant `(pyBitLength c).toNat = s` alongside the size condition
-`4^c ≤ n < 4^(c+1)` (from `Isqrt.SizeConditions`). The invariant must be tight,
+`4^c ≤ n < 4^(c+1)` (from `Isqrt.Proofs.SizeConditions`). The invariant must be tight,
 not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
 `k = (c-1) // 2 = -1` and the body's `a << k` would raise `ValueError`.
 
 Each inductive step discharges the `.ok`-ness of every monadic operation — proving
 no `//`, `>>`, or `<<` ever raises when `s = c.bit_length()` and `c ≥ 0` — and then
-applies the core algebraic step `key_isqrt_lemma` (`Isqrt.KeyLemma`) to the
+applies the core algebraic step `key_isqrt_lemma` (`Isqrt.Proofs.KeyLemma`) to the
 recursive subproblem's value. The top-level result `isqrt_eq_ok_iff` is a faithful
 total spec, mirroring the iterative `isqrtIterative_eq_ok_iff`.
 -/
 
-import Isqrt.Algorithm
-import Isqrt.SizeConditions
-import Isqrt.KeyLemma
+import Isqrt.Definitions.Algorithm
+import Isqrt.Proofs.SizeConditions
+import Isqrt.Proofs.KeyLemma
+import Isqrt.Proofs.PythonOpsLemmas
+import Isqrt.Proofs.BitLengthLemmas
 
 /-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
@@ -33,8 +35,8 @@ returns `1`, a near-√ of the `1 ≤ n < 4` that the size condition pins down),
 the step `s + 1` discharges every monadic operation to `.ok` — the recursive call
 via the induction hypothesis (whose bit-length premise is `toNat_pyBitLength_fdiv_two`),
 the shifts/divisions via their nonneg side conditions — then closes with the core
-`key_isqrt_lemma` algebra of `Isqrt.KeyLemma` (the same per-step lemma the iterative
-proof `Isqrt.IterativeCorrectness` applies). -/
+`key_isqrt_lemma` algebra of `Isqrt.Proofs.KeyLemma` (the same per-step lemma the iterative
+proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem isqrtAux_correctness :
     ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
       (pyBitLength c).toNat = s → hasSizeCondition c n →

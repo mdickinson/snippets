@@ -1,7 +1,7 @@
 /-
 The *recursive* integer square root, in monadic (`Except`) form — the companion
-to the iterative `isqrtIterative` of `Isqrt.Iterative`. The recursive algorithm,
-again taken verbatim from the comments in CPython's `math.isqrt` C source:
+to the iterative `isqrtIterative` of `Isqrt.Definitions.Iterative`. The recursive
+algorithm, again taken verbatim from the comments in CPython's `math.isqrt` C source:
 
     def isqrt_aux(c, n):
         if c == 0:
@@ -27,26 +27,26 @@ The one structural wrinkle: `isqrt_aux` recurses on `c // 2` with `c == 0` as it
 base case, but a *monadic* `c // 2` is bind-opaque to Lean's termination checker
 (and `(-1) // 2 = -1` in Python, so a verbatim translation would even self-loop on
 `c < 0`). We sidestep both by recursing **structurally on an explicit counter**
-`s : ℕ`, seeded at `c.bit_length()`. Since `(c // 2).bit_length() = c.bit_length() - 1`
-for `c > 0` (`Isqrt.BitLengthLemmas.toNat_pyBitLength_fdiv_two`), the counter
+`s : Nat`, seeded at `c.bit_length()`. Since `(c // 2).bit_length() = c.bit_length() - 1`
+for `c > 0` (`Isqrt.Proofs.BitLengthLemmas.toNat_pyBitLength_fdiv_two`), the counter
 decreases by exactly one per recursive step and hits `0` precisely when `c` does —
 so `match s` faithfully reproduces the `if c == 0` base case with no `termination_by`,
 no precondition, and `c // 2` left as a genuine `Except` operation. The same counter
 is CPython's *iterative* loop bound `reversed(range(c.bit_length()))`, so the two
 formulations share a skeleton.
 
-Correctness is proved in `Isqrt.Correctness`.
+Correctness is proved in `Isqrt.Proofs.Correctness`.
 -/
 
-import Isqrt.PythonOps
-import Isqrt.BitLengthLemmas
+import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.BitLength
 
 /-- Recursive auxiliary for the monadic integer square root, structurally
 recursive on the counter `s`. Intended to be called with `s = c.bit_length()`;
 under that invariant the `match s` reproduces `isqrt_aux`'s `if c == 0` base case.
 Each `←` binds an operation that could raise; the correctness proof shows none of
 them ever does when `s = c.bit_length()` and `c ≥ 0`. -/
-def isqrtAux (s : ℕ) (c n : Int) : Except PyException Int :=
+def isqrtAux (s : Nat) (c n : Int) : Except PyException Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
@@ -65,7 +65,7 @@ translation of the recursive CPython source above.
 For `n < 0` it raises `ValueError`; for `n = 0` it returns `0`; otherwise it
 computes `c = (n.bit_length() - 1) // 2`, calls `isqrtAux` with the
 structural counter seeded at `c.bit_length()`, and applies the final `a-1`/`a`
-adjustment. Correctness is `Isqrt.Correctness`. -/
+adjustment. Correctness is `Isqrt.Proofs.Correctness`. -/
 def isqrt (n : Int) : Except PyException Int := do
   if n < 0 then
     throw (.valueError "isqrt() argument must be nonnegative")

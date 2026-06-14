@@ -60,7 +60,7 @@ the [instructions](https://github.com/leanprover/elan#installation) in the READM
 that project. For example, on macOS or Linux you can use:
 
 ```
-curl https://elan.dev/install.sh -sSf | sh
+curl https://elan.lean-lang.org/elan-init.sh -sSf | sh
 ```
 
 This should make `elan` and `lake` available on your `PATH`.
@@ -86,34 +86,52 @@ all of Mathlib from source, which takes several hours.
 
 ## Project structure
 
+The library is organised into three components, each a subdirectory of `Isqrt/`:
+
+- **`Definitions/`** — the trust surface: Lean mirrors of the Python operations,
+  the two `isqrt` translations, and the integer-square-root specification
+  predicate. This is the part a reader must check against Python (see "What do I
+  need to trust?" below).
+- **`Proofs/`** — the correctness theorems and every supporting lemma. A reader
+  who trusts Lean's checker can skip all of it beyond the *statements* of the two
+  top-level theorems.
+- **`Tests/`** — the `#guard` sanity checks.
+
+The dependency direction is one-way: `Proofs/` and `Tests/` both build on
+`Definitions/`, neither depends on the other, and `Definitions/` depends on
+nothing else in the project. (Lean doesn't enforce this across a single package;
+it's a convention the directory split keeps visible in review.)
+
 ```
-lakefile.lean              -- project configuration and dependencies
-lean-toolchain             -- Lean version pin
-Isqrt.lean                 -- library root (implementation modules)
-IsqrtTests.lean            -- tests root (imports the #guard files)
+lakefile.lean                  -- project configuration and dependencies
+lean-toolchain                 -- Lean version pin
+Isqrt.lean                     -- library root (imports Definitions + Proofs)
+IsqrtTests.lean                -- tests root (imports the #guard files)
 Isqrt/
-  FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
-  BitLengthLemmas.lean       -- natBitLength / pyBitLength definitions and properties
-  PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
-  SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
-  KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot / isIntegerSquareRoot predicates
-  Algorithm.lean             -- recursive isqrtAux and isqrt definitions
-  Correctness.lean           -- recursive correctness proof (isqrt_eq_ok_iff)
-  Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
-  IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
+  Definitions.lean             -- component root: the trust surface
+  Definitions/
+    PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
+    BitLength.lean             -- natBitLength / pyBitLength definitions
+    IntegerSquareRoot.lean     -- isIntegerSquareRoot specification predicate
+    Algorithm.lean             -- recursive isqrtAux and isqrt definitions
+    Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
+  Proofs.lean                  -- component root: theorems and supporting lemmas
+  Proofs/
+    FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
+    BitLengthLemmas.lean       -- power-of-two / floor-division facts about pyBitLength
+    PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
+    SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
+    KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
+    Correctness.lean           -- recursive correctness proof (isqrt_eq_ok_iff)
+    IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
   Tests/
-    Assertions.lean          -- assert* helpers shared by both test files
-    Iterative.lean           -- #guard checks for the Python ops and isqrtIterative
-    Isqrt.lean               -- #guard checks for the recursive isqrt
+    Assertions.lean            -- assert* helpers shared by both test files
+    Iterative.lean             -- #guard checks for the Python ops and isqrtIterative
+    Isqrt.lean                 -- #guard checks for the recursive isqrt
 ```
 
 Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
 the `#guard` checks. The implementation library does not import the tests.
-
-## Related files
-
-- `../isqrt/` — the original Lean 3 proof (kept for reference)
-- `../../snippets/isqrt.py` — Python implementations of the algorithm
 
 ## Python-to-Lean translation
 
@@ -164,15 +182,15 @@ def isqrt(n: int) -> int:
 It's closely adapted from [a Stack Overflow answer][so-recursive] by
 the same author who designed the algorithm and wrote CPython's
 `math.integer.isqrt`. The code is also reproduced as a docstring at the top of
-`Isqrt/Algorithm.lean`.
+`Isqrt/Definitions/Algorithm.lean`.
 
 CPython itself ships an [iterative formulation][cpython-iterative] of
 the same algorithm, derived from the recursive one for efficiency. That
-formulation is verified here too: `isqrtIterative` (`Isqrt/Iterative.lean`)
+formulation is verified here too: `isqrtIterative` (`Isqrt/Definitions/Iterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
 as Lean's own `for … in … do`. `isqrtIterative_eq_ok_iff`
-(`Isqrt/IterativeCorrectness.lean`) then proves it meets the same
+(`Isqrt/Proofs/IterativeCorrectness.lean`) then proves it meets the same
 specification as the recursive `isqrt`: it reduces the monadic `for … in`
 loop to a `List.foldlM` over the reversed range and reuses the recursive
 proof's per-iteration algebra unchanged.
@@ -340,9 +358,11 @@ by zero — with `Except`:
 Python's `int.bit_length()` returns the number of bits needed to
 represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 `>>`, this method can't raise on any integer input, so it needs no
-`Except` wrapper — it's just a function. It lives in
-`Isqrt/BitLengthLemmas.lean`, alongside the lemmas about it, rather than
-with the raising operations in `Isqrt/PythonOps.lean`.
+`Except` wrapper — it's just a function. Its definition lives in
+`Isqrt/Definitions/BitLength.lean` (with the operator definitions in
+`Isqrt/Definitions/PythonOps.lean`, but in its own module, since it's a
+separate concept); the lemmas about it live in
+`Isqrt/Proofs/BitLengthLemmas.lean`.
 
 On the Lean side it's named `pyBitLength : ℤ → ℤ`, defined as
 `natBitLength n.natAbs` (where `natBitLength : ℕ → ℕ` is built on top of
@@ -430,7 +450,7 @@ counts the steps still to come, while the loop's `s` is the shift amount
 at each step — but both walk `c.bit_length()` rungs from the top down to
 zero.) The recursive and iterative translations therefore share a
 skeleton, which is why their correctness proofs can share the same
-per-iteration algebra (`key_isqrt_lemma` in `Isqrt/KeyLemma.lean`).
+per-iteration algebra (`key_isqrt_lemma` in `Isqrt/Proofs/KeyLemma.lean`).
 
 ### The `.ok` result is a certificate
 
@@ -476,20 +496,21 @@ that Python's `math.integer.isqrt` is correct, here's where to put your attentio
 **Read carefully.** The fidelity of the translation lives in two places:
 
 - The Lean *definitions* of `isqrt` and `isqrtAux` (in
-  `Isqrt/Algorithm.lean`), of `isqrtIterative` (in `Isqrt/Iterative.lean`),
-  of the `pyFloordiv` / `pyRshift` / `pyLshift` operations (in
-  `Isqrt/PythonOps.lean`), and of `pyBitLength` (in
-  `Isqrt/BitLengthLemmas.lean`). These are the only places where a
+  `Isqrt/Definitions/Algorithm.lean`), of `isqrtIterative` (in
+  `Isqrt/Definitions/Iterative.lean`), of the `pyFloordiv` / `pyRshift` /
+  `pyLshift` operations (in `Isqrt/Definitions/PythonOps.lean`), and of
+  `pyBitLength` (in `Isqrt/Definitions/BitLength.lean`) — that is, everything
+  under `Isqrt/Definitions/`. These are the only places where a
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.
 - The *statements* of the correctness theorems `isqrt_eq_ok_iff` (in
-  `Isqrt/Correctness.lean`) and `isqrtIterative_eq_ok_iff` (in
-  `Isqrt/IterativeCorrectness.lean`). This is where we say what "correct"
+  `Isqrt/Proofs/Correctness.lean`) and `isqrtIterative_eq_ok_iff` (in
+  `Isqrt/Proofs/IterativeCorrectness.lean`). This is where we say what "correct"
   means. Each is a total specification by cases on the result, spelled out
   in "The `.ok` result is a certificate" above: on `.ok v` it asserts
   `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
-  `isIntegerSquareRoot a n` (in `Isqrt/KeyLemma.lean`) unfolds to
+  `isIntegerSquareRoot a n` (in `Isqrt/Definitions/IntegerSquareRoot.lean`) unfolds to
   `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor of √n — and
   on `.error e` it pins `e` to exactly Python's `ValueError`. If a
   statement (or the predicate) is too weak, the proof being valid doesn't

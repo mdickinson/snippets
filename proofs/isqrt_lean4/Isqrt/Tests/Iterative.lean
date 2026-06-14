@@ -8,7 +8,7 @@ through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap an
 directly. A failing `#guard` causes a build error.
 -/
 
-import Isqrt.Iterative
+import Isqrt.Definitions.Iterative
 import Isqrt.Tests.Assertions
 
 /-! ## pyFloordiv -/

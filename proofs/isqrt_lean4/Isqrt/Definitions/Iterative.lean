@@ -29,20 +29,21 @@ Python code, reproduced verbatim here for easy reference.
 
 This module gives a direct translation of the above Python into *monadic* Lean:
 the operations that can raise (`//`, `>>`, `<<`) become the `Except`-returning
-`pyFloordiv` / `pyRshift` / `pyLshift` of `Isqrt.PythonOps`,
+`pyFloordiv` / `pyRshift` / `pyLshift` of `Isqrt.Definitions.PythonOps`,
 and `isqrt` itself is a `do` block — `let mut a/d`, a `for … in`, and monadic binds
 (`←`) for each operation that could raise. The function is named `isqrtIterative`
-to set it apart from the recursive `isqrt` of `Isqrt.Algorithm`: the two are the
-iterative and recursive translations of the same CPython algorithm, sharing the
-operators of `Isqrt.PythonOps` and the bit-length facts of `Isqrt.BitLengthLemmas`.
+to set it apart from the recursive `isqrt` of `Isqrt.Definitions.Algorithm`: the two
+are the iterative and recursive translations of the same CPython algorithm, sharing
+the operators of `Isqrt.Definitions.PythonOps` and `pyBitLength` of
+`Isqrt.Definitions.BitLength`.
 
-Correctness is proved in `Isqrt.IterativeCorrectness`.
+Correctness is proved in `Isqrt.Proofs.IterativeCorrectness`.
 
 Key reference: https://lean-lang.org/papers/do.pdf
 -/
 
-import Isqrt.PythonOps
-import Isqrt.BitLengthLemmas
+import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.BitLength
 
 /-- Integer square root of `n`, monadic (`Except`) form — the direct `do`-block
 translation of the CPython source above.

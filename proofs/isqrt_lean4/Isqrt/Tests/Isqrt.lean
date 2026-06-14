@@ -5,7 +5,7 @@ using the shared `assert*` helpers of `Isqrt.Tests.Assertions`. A failing
 `#guard` causes a build error.
 -/
 
-import Isqrt.Algorithm
+import Isqrt.Definitions.Algorithm
 import Isqrt.Tests.Assertions
 
 /-! ## isqrt -/

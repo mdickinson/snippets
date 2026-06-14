@@ -1,35 +1,24 @@
 /-
-`int.bit_length()` and the power-of-two / floor-division lemmas the isqrt proof
-needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
+Lemmas about `int.bit_length()` — the power-of-two and floor-division facts the
+isqrt proof needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
 
-This file owns the bit-length *definitions* (`natBitLength`, `pyBitLength`) and
-connects them — via `Nat.log2` — to power-of-two bounds, the per-step halving of
-a right shift, and the two loop-body shift-amount nonnegativity facts. Everything
-here is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python operators,
-so the `Except`-returning operators (`Isqrt.PythonOps`) and both the iterative and
-recursive isqrt translations build on it directly.
+Part of the **proofs** layer. The bit-length *definitions* `natBitLength` and
+`pyBitLength` themselves live in `Isqrt.Definitions.BitLength` (trust surface);
+this file connects them — via `Nat.log2` — to power-of-two bounds, the per-step
+halving of a right shift, and the two loop-body shift-amount nonnegativity facts.
+Everything here is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python
+operators, so both the iterative and recursive correctness proofs build on it
+directly.
 -/
 
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import Mathlib.Data.Int.DivMod
-import Isqrt.FDivLemmas
+import Isqrt.Definitions.BitLength
+import Isqrt.Proofs.FDivLemmas
 
-/-! ## Definitions -/
-
-/-- Bit length of a natural number: the number of bits needed to represent `n`,
-with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2`
-for access to core Lean 4's `log2` lemma library. -/
-def natBitLength : ℕ → ℕ
-  | 0 => 0
-  | n + 1 => Nat.log2 (n + 1) + 1
-
-/-- Python's `n.bit_length()`. Returns the number of bits needed to represent
-`abs(n)`, with `(0).bit_length() == 0`. Never raises, so — unlike `//`/`>>`/`<<` —
-it needs no `Except` form: a single plain `Int`-valued function the iterative and
-recursive isqrt translations share. -/
-def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
+/-! ## pyBitLength: defining-equation lemmas -/
 
 @[simp]
 theorem pyBitLength_def (n : ℤ) :
@@ -37,7 +26,7 @@ theorem pyBitLength_def (n : ℤ) :
 
 /-- `pyBitLength` of a `ℕ`-cast drops the `natAbs`: `pyBitLength ↑m = natBitLength m`.
 The nat-cast specialisation of `pyBitLength_def` — the form the ℤ↔ℕ bridges below
-(and in `Isqrt.SizeConditions`) repeatedly need, since `(↑m).natAbs` reduces to `m`. -/
+(and in `Isqrt.Proofs.SizeConditions`) repeatedly need, since `(↑m).natAbs` reduces to `m`. -/
 @[simp]
 theorem pyBitLength_natCast (m : ℕ) : pyBitLength (↑m : ℤ) = ↑(natBitLength m) := rfl
 
