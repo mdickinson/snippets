@@ -117,7 +117,7 @@ Isqrt/
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
-    FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
+    FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔Nat bridge
     BitLengthLemmas.lean       -- power-of-two / floor-division facts about pyBitLength
     PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
     SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
@@ -364,12 +364,12 @@ represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 separate concept); the lemmas about it live in
 `Isqrt/Proofs/BitLengthLemmas.lean`.
 
-On the Lean side it's named `pyBitLength : ℤ → ℤ`, defined as
-`natBitLength n.natAbs` (where `natBitLength : ℕ → ℕ` is built on top of
-core Lean's `Nat.log2`). The intermediate trip through `ℕ` is one of the
+On the Lean side it's named `pyBitLength : Int → Int`, defined as
+`natBitLength n.natAbs` (where `natBitLength : Nat → Nat` is built on top of
+core Lean's `Nat.log2`). The intermediate trip through `Nat` is one of the
 bridging costs anticipated in "Why `Int` and not `Nat`" above: the
-natural home for a bit-count is `ℕ`, but the top-level signature
-returns `ℤ` to keep the public interface uniformly integer-valued and
+natural home for a bit-count is `Nat`, but the top-level signature
+returns `Int` to keep the public interface uniformly integer-valued and
 to match Python's signature (Python's `int.bit_length()` returns `int`,
 not some separate "nonneg int" type).
 
@@ -397,11 +397,11 @@ conditions rule `c < 0` out; the termination checker's blindness is the
 real obstacle.)
 
 The fix is to recurse on something the checker *can* see, without giving
-up the monadic division. We add an explicit counter `s : ℕ`, seed it at
+up the monadic division. We add an explicit counter `s : Nat`, seed it at
 `c.bit_length()`, and recurse **structurally** on `s`:
 
 ```
-def isqrtAux (s : ℕ) (c n : Int) : Except PyException Int :=
+def isqrtAux (s : Nat) (c n : Int) : Except PyException Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
@@ -500,7 +500,9 @@ that Python's `math.integer.isqrt` is correct, here's where to put your attentio
   `Isqrt/Definitions/Iterative.lean`), of the `pyFloordiv` / `pyRshift` /
   `pyLshift` operations (in `Isqrt/Definitions/PythonOps.lean`), and of
   `pyBitLength` (in `Isqrt/Definitions/BitLength.lean`) — that is, everything
-  under `Isqrt/Definitions/`. These are the only places where a
+  under `Isqrt/Definitions/`, which imports nothing but Lean's own core (not
+  even Mathlib), so scrutinising it means trusting only Lean itself. These are
+  the only places where a
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.
