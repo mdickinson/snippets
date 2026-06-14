@@ -37,20 +37,19 @@ lean-toolchain             -- Lean version pin
 Isqrt.lean                 -- library root (implementation modules)
 IsqrtTests.lean            -- tests root (imports the #guard files)
 Isqrt/
-  PythonOps.lean             -- Lean definitions matching Python's //, >>, <<, bit_length
   FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
-  BitLengthLemmas.lean       -- natBitLength / pyBitLength properties
+  BitLengthLemmas.lean       -- natBitLength / pyBitLength definitions and properties
+  PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
   RecursionDepth.lean        -- isqrt_c_nonneg, shared by both algorithm variants
-  KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot / isIntegerSquareRoot predicates
   SizeConditions.lean        -- size-condition invariants carried through the recursion
+  KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot / isIntegerSquareRoot predicates
   Algorithm.lean             -- recursive isqrtAux and isqrt definitions
-  Correctness.lean           -- recursive correctness proof (isIntegerSquareRoot_isqrt)
+  Correctness.lean           -- recursive correctness proof (isqrt_eq_ok_iff)
   Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
-  IterativeCorrectness.lean  -- iterative correctness proof (isIntegerSquareRoot_isqrtIterative)
+  IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
   Tests/
-    PythonOps.lean           -- #guard checks for the Python operations
-    Isqrt.lean               -- #guard checks for isqrt on concrete values
-    Iterative.lean           -- #guard checks for isqrtIterative
+    Iterative.lean           -- assert* helpers; #guard checks for the Python ops and isqrtIterative
+    Isqrt.lean               -- #guard checks for the recursive isqrt
 ```
 
 Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
@@ -77,11 +76,12 @@ different languages, so this isn't automatic.
 Several of the translation choices in this project were made specifically to
 support that high-fidelity claim. The subsections below walk through them.
 
-As a bonus, several of those choices also yield certificates about the
-Python algorithm itself — for example, that particular failure modes
-(like dividing by zero, or recursing forever) can never be triggered by
-any input. We flag these as **By-product:** notes in the subsections
-where they arise.
+Better still, the same choices turn the finished proof into a
+*certificate* about the Python algorithm itself: because every operation
+that can raise is modelled honestly, a successful run proves that no such
+failure — division by zero, a negative shift, runaway recursion — can be
+triggered by any valid input. The section "The `.ok` result is a
+certificate" below makes that precise.
 
 ### The Python reference
 
@@ -116,11 +116,11 @@ the same algorithm, derived from the recursive one for efficiency. That
 formulation is verified here too: `isqrtIterative` (`Isqrt/Iterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
-as Lean's own `for … in … do`. `isIntegerSquareRoot_isqrtIterative`
+as Lean's own `for … in … do`. `isqrtIterative_eq_ok_iff`
 (`Isqrt/IterativeCorrectness.lean`) then proves it meets the same
-specification as the recursive `isqrt`: it reduces the `for … in` loop to a
-`List.foldl` over the reversed range and reuses the recursive proof's
-per-iteration algebra unchanged.
+specification as the recursive `isqrt`: it reduces the monadic `for … in`
+loop to a `List.foldlM` over the reversed range and reuses the recursive
+proof's per-iteration algebra unchanged.
 
 [so-recursive]: https://stackoverflow.com/a/78076732
 [cpython-iterative]: https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211
@@ -143,15 +143,10 @@ on the meaning (and often the syntax) of the operation:
   same as on the Python side.
 - **Ring operations.** Addition, negation, multiplication, and subtraction
   use the same symbols (`+`, `-`, `*`) in both languages and have identical
-  semantics on integers.
+  semantics on integers. These never raise, so they translate directly —
+  only `//`, `>>`, and `<<` need the `Except` treatment described below.
 - **Order comparisons.** `<`, `<=`, `>`, `>=` likewise agree on both symbols
   and meanings.
-- **Operator precedences (engineered).** The custom `py//`, `py>>`,
-  `py<<` operators defined in `Isqrt/PythonOps.lean` are given
-  precedences chosen to match Python's: `py//` binds like `*`, `py>>`
-  and `py<<` bind looser than `+`, and all of them bind tighter than
-  the comparison operators. So expressions parse the same way in both
-  languages.
 
 ### Why `Int` and not `Nat`
 
@@ -175,16 +170,16 @@ done the same here, but chose `Int` for two reasons:
 
 `Int` isn't free either: in places where the underlying mathematical
 object is genuinely a natural number (the bit length of `n`, and the
-recursion-depth measure used to prove termination), we have to bridge
-between `Int` and `Nat` via `.toNat`. We pay some awkwardness either
-way — the question is *where*, and we chose `Int`.
+structural counter used for the recursion), we have to bridge between
+`Int` and `Nat` via `.toNat`. We pay some awkwardness either way — the
+question is *where*, and we chose `Int`.
 
 ### Equality: `=` vs `==`
 
 > **Lean details ahead.** A reader interested purely in the
 > Python-fidelity story can skip this subsection — the short version is
-> that the Lean test `if _ : c = 0 then ...` has runtime behaviour
-> identical to Python's `if c == 0:`. The rest of this subsection
+> that the Lean test `if n = 0 then ...` has runtime behaviour
+> identical to Python's `if n == 0:`. The rest of this subsection
 > explains why, for readers who'd otherwise be suspicious of the `=`
 > versus `==` mismatch.
 
@@ -192,7 +187,7 @@ Python's `==` takes two integers, compares them, and returns a Python
 `bool`; that `bool` is then used by `if` to pick a branch. Lean has a
 `==` operator that works similarly (returning something of type `Bool`),
 but the Lean definitions in this project use `=` rather than `==` — for
-example `if _ : c = 0 then ...` in `isqrtAux`. The `c = 0` here has
+example `if n = 0 then return 0` in `isqrt`. The `n = 0` here has
 type `Prop`, which lives in proof-world rather than in the
 concrete-computational-object world. At first glance that looks like the
 wrong tool for a runtime conditional.
@@ -206,14 +201,6 @@ proof — much like a `Bool` plus the matching proof.) Equality between integers
 so Lean supplies the procedure that constructs the instance
 automatically, and the runtime semantics of the Lean function —
 ignoring the proof layer — exactly match those of Python.
-
-Moreover, the *dependent* form of `if-then-else` — which is what's used
-here — routes the proof into each branch: a proof of `c = 0` in the
-`then` branch, a proof of `c ≠ 0` in the `else` branch. These
-hypotheses are exactly the form Lean's arithmetic tactics (like `omega`)
-consume directly, so downstream proofs are slightly more streamlined
-than they'd be if we'd compared via `==` and had to bridge from
-`(c == 0) = false` back to `c ≠ 0` by hand.
 
 ### Floor division
 
@@ -244,126 +231,186 @@ at least three reasonable ways to close that gap:
 - **Option 1.** Translate Python `//` directly to `Int.fdiv` and live
   with the mismatch.
 - **Option 2.** Translate Python `//` to a Lean function returning an
-  `Except`-style result, carrying either the result or an error.
+  `Except`-style result, carrying either the computed value or the
+  exception Python would have raised.
 - **Option 3.** Translate Python `//` to a 3-argument Lean function
   whose third argument is a *proof* that the denominator is nonzero.
 
-We use Option 3. Option 1 is too weak — it would let us silently build
-an algorithm that relied on dividing by zero. Option 2 gives us the
-rigor we want, but threading `Except` values through every intermediate
-expression is much more painful than discharging a proof obligation at
-the call site.
+We use **Option 2**. Option 1 is too weak — it would let us silently
+build an algorithm that relied on dividing by zero. Option 3 also closes
+the gap, but it makes the error case *unrepresentable*: you can't even
+write a division down until you've proved it won't raise, so the "never
+divides by zero" facts end up scattered across proof obligations at every
+call site, and the function has to carry proof baggage in its signature
+that Python's has no trace of. Option 2 keeps the function's shape honest
+— its result is a value that is *either* the answer or the very exception
+Python would raise — which lets us state a single *total* specification
+covering both the success and the failure case (see "The `.ok` result is
+a certificate" below).
 
 Concretely, the Lean side defines a function `pyFloordiv` taking two
-integers `a` and `b` and a proof that `b` is nonzero. Each call site has
-to supply that proof before the division is allowed to happen.
+integers `a` and `b` and returning `Except PyException Int`: when `b = 0`
+it returns `.error .zeroDivisionError`, mirroring Python's
+`ZeroDivisionError`; otherwise it returns `.ok (Int.fdiv a b)`.
 
-To keep this ergonomically tolerable, we add two conveniences:
-
-- The proof argument has a *default value* of `by omega`. In practice,
-  whenever the surrounding context already knows the divisor is nonzero
-  (which it usually does), the proof is discharged automatically and the
-  caller writes the division as if it took only two arguments.
-- We define an infix operator `py//` that calls `pyFloordiv`. It would
-  have been nicer to reuse `//` itself, but that symbol is already spoken
-  for in Lean's parser. So `(c - 1) py// 2` reads as closely to Python's
-  `(c - 1) // 2` as Lean's syntax allows.
-
-**By-product:** every `//` in the Python algorithm corresponds to a
-Lean call site that has to discharge `b ≠ 0`, so the correctness proof
-also certifies that no `//` in the Python version can ever raise
-`ZeroDivisionError`.
+The obvious worry about Option 2 — that threading an `Except` through
+every intermediate expression would drown the algorithm in plumbing — is
+dissolved by Lean's `do`-notation. Inside a `do` block, binding a raising
+operation with `←` (as in `let k ← pyFloordiv (c - 1) 2`) automatically
+short-circuits to the error on `.error` and continues with the unwrapped
+value on `.ok`. So each line that could raise in Python becomes a single
+`←` bind in Lean, the surrounding code never mentions the `Except`
+wrapper, and the translation reads almost verbatim like the Python
+source — the monad does the plumbing, not the reader.
 
 ### Shifts
 
 Python's `<<` and `>>` operators raise a `ValueError` if their second
-argument is negative. We handle this exactly the way we handled
-division by zero:
+argument is negative. We handle this exactly the way we handled division
+by zero — with `Except`:
 
-- Define Lean functions `pyLshift` and `pyRshift` that match Python's
-  semantics on all inputs with nonnegative second argument — including
-  the cases where the *first* argument is negative. (Python and Lean
-  both define those uniformly: `<<` is multiplication by a power of
-  two, `>>` is floor-division by a power of two.)
-- Have each function take a third argument: a *proof* that the second
-  argument is nonnegative, with the same `by omega` default as for
-  `//`.
-- Define infix operators `py<<` and `py>>` with the same relative
-  precedence as Python's. We can't reuse `>>` itself — it's already
-  spoken for as Lean's monadic "and then" operator.
-
-**By-product:** the correctness proof also certifies that no `<<` or
-`>>` in the Python version can raise `ValueError`.
+- `pyLshift` and `pyRshift` return `Except PyException Int`. On a negative
+  shift count they return `.error (.valueError "negative shift count")`;
+  otherwise they match Python's semantics on all inputs, including the
+  cases where the *first* argument is negative. (Python and Lean both
+  define those uniformly: `<<` is multiplication by a power of two, `>>`
+  is floor-division by a power of two.)
+- As with `//`, each call site binds the result with `←` inside the `do`
+  block, so Python's `n >> (2 * k + 2)` becomes
+  `let nShift ← pyRshift n (2 * k + 2)` and the surrounding code never
+  sees the `Except` wrapper explicitly.
 
 ### Bit length
 
 Python's `int.bit_length()` returns the number of bits needed to
 represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
-`>>`, this method can't raise on any integer input, so we don't need to
-attach a proof obligation at call sites; it's just a function.
+`>>`, this method can't raise on any integer input, so it needs no
+`Except` wrapper — it's just a function. It lives in
+`Isqrt/BitLengthLemmas.lean`, alongside the lemmas about it, rather than
+with the raising operations in `Isqrt/PythonOps.lean`.
 
 On the Lean side it's named `pyBitLength : ℤ → ℤ`, defined as
 `natBitLength n.natAbs` (where `natBitLength : ℕ → ℕ` is built on top of
-core Lean's `Nat.log2`). The intermediate trip through `ℕ` is one of
-the bridging costs anticipated in "Why `Int` and not `Nat`" above: the
+core Lean's `Nat.log2`). The intermediate trip through `ℕ` is one of the
+bridging costs anticipated in "Why `Int` and not `Nat`" above: the
 natural home for a bit-count is `ℕ`, but the top-level signature
 returns `ℤ` to keep the public interface uniformly integer-valued and
 to match Python's signature (Python's `int.bit_length()` returns `int`,
 not some separate "nonneg int" type).
 
-### Proof-carrying signatures
+### The structural counter `s`
 
-So far the translation concerns have all been at the level of
-individual Python operations. The next two subsections move up to the
-algorithm itself, where Lean requires things Python doesn't.
+The translation concerns so far have all been at the level of individual
+Python operations. Two more appear at the level of the recursive function
+itself, where Lean asks for things Python doesn't.
 
-The first of these is at the function-signature level. The algorithm's
-top-level functions carry their own preconditions: `isqrt` takes a
-proof `0 ≤ n`, and `isqrtAux` takes proofs `0 ≤ c` and `0 ≤ n`. (Both
-default to `by omega`, the same convenience used for the Python
-operators.) These nonnegativity hypotheses are needed to discharge the proof
-obligations on the operators and on the recursive call inside the
-body.
+The first is **termination**. Python doesn't require a recursive function
+to be proved terminating — in principle it could recurse forever, and in
+practice it would eventually raise `RecursionError`. Lean requires every
+recursive definition to be justified by a measure that provably decreases
+on each call.
 
-`isqrtAux` adds one more twist that doesn't appear anywhere else in
-the proof: it doesn't return a plain integer. Its return type is the
-subtype `{ a : ℤ // 0 < a }` — a pair of an integer together with a
-proof that it's strictly positive. The reason is the recursive case,
-which contains an expression of the form `... + (n py>> (k + 2)) py// a`.
-The `py// a` requires a proof that `a ≠ 0`, and since `a` is the
-result of a recursive call, that proof has to come out of the
-recursion. The cleanest way to thread it through is to bundle the
-proof into the return type itself: every `isqrtAux` result comes with
-a witness that it's positive, and a caller writes
-`let ⟨a, a_pos⟩ := isqrtAux ...` to unpack both pieces.
+The second is specific to going monadic, and it's the interesting one.
+The natural translation of `isqrt_aux` recurses on `c // 2` with `c == 0`
+as the base case. But under Option 2 that division is a monadic
+`let cHalf ← pyFloordiv c 2`, and the value `cHalf` bound by `←` is
+*opaque* to Lean's termination checker: it has no way to see that `cHalf`
+is smaller than `c`, so it won't accept `c // 2` as a decreasing measure.
+(A verbatim `c // 2` recursion would also misbehave on negative input —
+`(-1) // 2 = -1` in Python, so it would self-loop — but the size
+conditions rule `c < 0` out; the termination checker's blindness is the
+real obstacle.)
 
-### Termination of `isqrtAux`
-
-The other thing Lean asks for that Python doesn't is that every
-recursive function be proved to terminate on all inputs. Python's
-`isqrtAux` is recursive, but Python doesn't require any such
-guarantee — in principle a recursive Python function could call
-itself forever; in practice it eventually hits the interpreter's
-recursion limit and raises `RecursionError`. Either way, "this
-terminates" isn't part of the language's contract.
-
-This has visible cost in the Lean definition of `isqrtAux`. At the
-end of the `def` you'll find two extra clauses:
+The fix is to recurse on something the checker *can* see, without giving
+up the monadic division. We add an explicit counter `s : ℕ`, seed it at
+`c.bit_length()`, and recurse **structurally** on `s`:
 
 ```
-termination_by c.toNat
-decreasing_by
-  simp_wf
-  exact fdiv_two_decreasing c_nonneg ‹¬c = 0›
+def isqrtAux (s : ℕ) (c n : Int) : Except PyException Int :=
+  match s with
+  | 0 => pure 1
+  | s + 1 => do
+    let k ← pyFloordiv (c - 1) 2
+    let cHalf ← pyFloordiv c 2
+    let nShift ← pyRshift n (2 * k + 2)
+    let a ← isqrtAux s cHalf nShift
+    let lsh ← pyLshift a k
+    let rsh ← pyRshift n (k + 2)
+    let q ← pyFloordiv rsh a
+    pure (lsh + q)
 ```
 
-These have no analog in Python. They tell Lean that the natural number
-`c.toNat` strictly decreases on every recursive call, which — via the
-standard well-founded recursion principle on `Nat` — is enough to
-guarantee that recursion bottoms out after finitely many steps.
+Structural recursion on `s` is accepted automatically — `s` literally
+loses a constructor on each call — so there is no `termination_by` and no
+`decreasing_by`. And because the recursion variable is now `s`, the
+division `c // 2` stays a genuine `pyFloordiv c 2`: every operation that
+can raise in Python is still an honest monadic `←` bind. (Notice this also
+illustrates the `do`-block claim from "Floor division": each of the six
+raising operations is a single `←` bind — as is the recursive call — and
+the body otherwise reads almost like the Python.)
 
-**By-product:** the correctness proof also rules out the Python version
-recursing indefinitely.
+`s` has no counterpart in the Python source; it's pure Lean scaffolding.
+What makes it faithful is that it tracks `c.bit_length()` exactly. For
+`c > 0` we have `(c // 2).bit_length() = c.bit_length() - 1`, so seeding
+`s = c.bit_length()` makes the counter fall by exactly one per recursive
+step and reach `0` at precisely the moment `c` does — so `match s`
+reproduces the `if c == 0` base case faithfully. The invariant has to be
+*tight*: seeding `s` too large would let the recursion run past `c = 0`,
+where `k = (c - 1) // 2 = -1` and the body's `a << k` would raise a
+`ValueError`. Accordingly the correctness proof carries
+`s = c.bit_length()` — not merely `s ≥ c.bit_length()` — as an invariant.
+
+The recursive body also divides by the result of the recursive call,
+`(n >> (k + 2)) // a`, which in Python would raise if `a` were ever `0`.
+Under Option 2 that's just one more `←` bind; no special return type is
+needed to thread a positivity proof out of the recursion. The correctness
+proof shows `a > 0` at every step, so that `.error` branch is never taken
+— one more strand of the certificate below.
+
+Finally, the counter unifies the two formulations. Seeding it at
+`c.bit_length()` makes the recursion run exactly as many steps as
+CPython's *iterative* loop, `for s in reversed(range(c.bit_length()))`,
+runs iterations. (The two `s`'s aren't the same quantity — here `s`
+counts the steps still to come, while the loop's `s` is the shift amount
+at each step — but both walk `c.bit_length()` rungs from the top down to
+zero.) The recursive and iterative translations therefore share a
+skeleton, which is why their correctness proofs can share the same
+per-iteration algebra (`key_isqrt_lemma` in `Isqrt/KeyLemma.lean`).
+
+### The `.ok` result is a certificate
+
+Modelling every raising operation with `Except` does more than keep the
+translation honest — it turns the finished proof into a certificate about
+the Python algorithm.
+
+The top-level theorems are *total* specifications. `isqrt_eq_ok_iff`
+(and its iterative twin `isqrtIterative_eq_ok_iff`) characterise the
+result by cases:
+
+```
+match isqrt n with
+| .ok v    => 0 ≤ n ∧ isIntegerSquareRoot v n
+| .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative"
+```
+
+Read the two branches together. The `.error` branch is pinned to a single
+possibility: the *only* error the function can return is the `ValueError`
+Python raises for negative input, and it returns that error for exactly
+the negative inputs. Every other input — every `n ≥ 0` — lands in the
+`.ok` branch with `v = ⌊√n⌋`.
+
+That is the certificate. A `do` block short-circuits to `.error` the
+moment any operation raises, so the only way `isqrt n` can be `.ok` is if
+*no* operation raised along the way. The theorem proves `isqrt n` is `.ok`
+for every `n ≥ 0` — which means that for every nonnegative input:
+
+- no `//` was handed a zero divisor (no `ZeroDivisionError`),
+- no `<<` or `>>` saw a negative shift count (no `ValueError` from a shift),
+- and the recursion bottomed out (no runaway recursion).
+
+The proof-carrying Option 3 would have established these as three separate
+facts, discharged at scattered call sites. Under Option 2 they are
+corollaries of one theorem about one return value.
 
 ### What do I need to trust?
 
@@ -374,19 +421,24 @@ that Python's `math.isqrt` is correct, here's where to put your attention
 **Read carefully.** The fidelity of the translation lives in two places:
 
 - The Lean *definitions* of `isqrt` and `isqrtAux` (in
-  `Isqrt/Algorithm.lean`) and the `pyFloordiv` / `pyRshift` / `pyLshift`
-  / `pyBitLength` operations (in `Isqrt/PythonOps.lean`). These are the
-  only places where a translation error could plausibly creep in: if a
-  Lean function isn't actually computing the same thing as the Python
-  function it claims to mirror, the proof is proving something about a
-  different algorithm.
-- The *statement* of the correctness theorem `isIntegerSquareRoot_isqrt` (in
-  `Isqrt/Correctness.lean`). This is where we say what "correct" means.
-  Concretely, the theorem asserts `isIntegerSquareRoot (isqrt n hn) n`, where the
-  predicate `isIntegerSquareRoot a n` (in `Isqrt/KeyLemma.lean`) unfolds to
-  `a * a ≤ n ∧ n < (a + 1) * (a + 1)` — i.e., `a` is the floor of √n. If the
-  statement (or the predicate) is too weak, the proof being valid doesn't buy
-  us what we wanted.
+  `Isqrt/Algorithm.lean`), of `isqrtIterative` (in `Isqrt/Iterative.lean`),
+  of the `pyFloordiv` / `pyRshift` / `pyLshift` operations (in
+  `Isqrt/PythonOps.lean`), and of `pyBitLength` (in
+  `Isqrt/BitLengthLemmas.lean`). These are the only places where a
+  translation error could plausibly creep in: if a Lean function isn't
+  actually computing the same thing as the Python function it claims to
+  mirror, the proof is proving something about a different algorithm.
+- The *statements* of the correctness theorems `isqrt_eq_ok_iff` (in
+  `Isqrt/Correctness.lean`) and `isqrtIterative_eq_ok_iff` (in
+  `Isqrt/IterativeCorrectness.lean`). This is where we say what "correct"
+  means. Each is a total specification by cases on the result, spelled out
+  in "The `.ok` result is a certificate" above: on `.ok v` it asserts
+  `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
+  `isIntegerSquareRoot a n` (in `Isqrt/KeyLemma.lean`) unfolds to
+  `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor of √n — and
+  on `.error e` it pins `e` to exactly Python's `ValueError`. If a
+  statement (or the predicate) is too weak, the proof being valid doesn't
+  buy us what we wanted.
 
 **Trust without rereading.** The proofs of theorems and lemmas don't
 require human verification. Lean's job is to check them, and if `lake
@@ -397,10 +449,10 @@ individual proof steps.
 
 **Sanity check.** Beyond the proofs, the repository contains
 `#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrt`,
-`pyFloordiv`, `pyRshift`, `pyLshift`, and `pyBitLength` on concrete
-inputs and verify the outputs against expected values. These tests are
-load-bearing in a way the proofs aren't: a proof can only ever talk
-about the Lean definitions, so if a Lean definition silently disagrees
-with its Python counterpart, the proof won't catch it. Running the
-Python and Lean operations on the same inputs and comparing outputs is
+`isqrtIterative`, `pyFloordiv`, `pyRshift`, `pyLshift`, and `pyBitLength`
+on concrete inputs and verify the outputs against expected values. These
+tests are load-bearing in a way the proofs aren't: a proof can only ever
+talk about the Lean definitions, so if a Lean definition silently
+disagrees with its Python counterpart, the proof won't catch it. Running
+the Python and Lean operations on the same inputs and comparing outputs is
 exactly the check that fills that gap.
