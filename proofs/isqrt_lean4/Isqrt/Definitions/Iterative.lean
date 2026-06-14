@@ -52,7 +52,7 @@ approximation `a` and the previous shift `d` as `let mut` state, and returns
 `a - (if a*a > n then 1 else 0)` (Python's `a - (a*a > n)`, with the implicit
 bool-to-int spelled out). Each `←` binds an operation that could raise; the
 correctness proof shows none of them ever does for `n ≥ 0`. -/
-def isqrtIterative (n : Int) : Except PyException Int := do
+def isqrtIterative (n : Int) : PyExcept Int := do
   if n < 0 then
     throw (.valueError "isqrt() argument must be nonnegative")
   if n = 0 then

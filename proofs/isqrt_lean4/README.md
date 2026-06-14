@@ -323,7 +323,8 @@ covering both the success and the failure case (see "The `.ok` result is
 a certificate" below).
 
 Concretely, the Lean side defines a function `pyFloordiv` taking two
-integers `a` and `b` and returning `Except PyException Int`: when `b = 0`
+integers `a` and `b` and returning `PyExcept Int` (this project's
+abbreviation for `Except PyException Int`): when `b = 0`
 it returns `.error .zeroDivisionError`, mirroring Python's
 `ZeroDivisionError`; otherwise it returns `.ok (Int.fdiv a b)`.
 
@@ -343,7 +344,7 @@ Python's `<<` and `>>` operators raise a `ValueError` if their second
 argument is negative. We handle this exactly the way we handled division
 by zero — with `Except`:
 
-- `pyLshift` and `pyRshift` return `Except PyException Int`. On a negative
+- `pyLshift` and `pyRshift` return `PyExcept Int`. On a negative
   shift count they return `.error (.valueError "negative shift count")`;
   otherwise they match Python's semantics on all inputs, including the
   cases where the *first* argument is negative. (Python and Lean both
@@ -400,7 +401,7 @@ up the monadic division. We add an explicit counter `s : Nat`, seed it at
 `c.bit_length()`, and recurse **structurally** on `s`:
 
 ```
-def nsqrt (s : Nat) (c n : Int) : Except PyException Int :=
+def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
@@ -464,7 +465,7 @@ The top-level theorems are *total* specifications. Both
 we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
-def isCorrectIsqrt (isqrt : Int → Except PyException Int) : Prop :=
+def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
   (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
   ∧
   (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")

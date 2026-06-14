@@ -4,7 +4,7 @@ division `//`, right/left shift `>>`/`<<`, the helper `range`, and
 `int.bit_length()`. Part of the **definitions** layer — trust surface the reader
 checks against Python.
 
-Each operation that can raise in Python returns an `Except PyException`, carrying
+Each operation that can raise in Python returns a `PyExcept`, carrying
 either the result or the exception it would raise — `ZeroDivisionError` for `//`
 by zero, `ValueError` for a negative shift count. This is the approach the README
 calls "Option 2": the cost lands in the correctness proofs (`Isqrt.Proofs.RecursiveCorrectness`,
@@ -23,27 +23,27 @@ a plain `Int`-valued function. Its supporting lemmas live in
 
 import Isqrt.Definitions.Exceptions
 
-/-- Python's `a // b` (floor division) as an `Except`: raises `ZeroDivisionError`
+/-- Python's `a // b` (floor division) as a `PyExcept`: raises `ZeroDivisionError`
 when `b = 0`, otherwise returns `Int.fdiv a b` — which rounds toward `-∞`, matching
 Python's `//` for every sign combination. -/
-def pyFloordiv (a b : Int) : Except PyException Int :=
+def pyFloordiv (a b : Int) : PyExcept Int :=
   if b = 0 then
     throw .zeroDivisionError
   else
     return Int.fdiv a b
 
-/-- Python's `n << k` (left shift) as an `Except`: raises `ValueError` on a
+/-- Python's `n << k` (left shift) as a `PyExcept`: raises `ValueError` on a
 negative shift count, otherwise returns `n * 2 ^ k`. -/
-def pyLshift (n k : Int) : Except PyException Int :=
+def pyLshift (n k : Int) : PyExcept Int :=
   if k < 0 then
     throw (.valueError "negative shift count")
   else
     return n * (2 ^ k.toNat)
 
-/-- Python's `n >> k` (right shift) as an `Except`: raises `ValueError` on a
+/-- Python's `n >> k` (right shift) as a `PyExcept`: raises `ValueError` on a
 negative shift count, otherwise returns `Int.fdiv n (2 ^ k)` (floor division by
 `2 ^ k`). -/
-def pyRshift (n k : Int) : Except PyException Int :=
+def pyRshift (n k : Int) : PyExcept Int :=
   if k < 0 then
     throw (.valueError "negative shift count")
   else

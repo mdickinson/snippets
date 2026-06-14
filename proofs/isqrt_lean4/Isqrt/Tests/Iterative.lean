@@ -1,9 +1,9 @@
 /-
 Sanity checks for the iterative integer square root `isqrtIterative` and the
-Python operations it uses: the `Except`-returning `pyFloordiv` / `pyLshift` /
-`pyRshift` / `pyRange`, plus the plain `pyBitLength`. The `Except` results run
-through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap an
-`Except PyException Int` — a bare `#guard` cannot, since `PyException` has no
+Python operations it uses: the `PyExcept`-returning `pyFloordiv` / `pyLshift` /
+`pyRshift` / `pyRange`, plus the plain `pyBitLength`. The `PyExcept` results run
+through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap a
+`PyExcept Int` — a bare `#guard` cannot, since `PyException` has no
 `DecidableEq`; `pyBitLength` returns a plain `Int`, so it is checked with `#guard`
 directly. A failing `#guard` causes a build error.
 -/

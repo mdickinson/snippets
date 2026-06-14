@@ -46,7 +46,7 @@ recursive on the counter `s`. Intended to be called with `s = c.bit_length()`;
 under that invariant the `match s` reproduces `isqrt_aux`'s `if c == 0` base case.
 Each `←` binds an operation that could raise; the correctness proof shows none of
 them ever does when `s = c.bit_length()` and `c ≥ 0`. -/
-def nsqrt (s : Nat) (c n : Int) : Except PyException Int :=
+def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
@@ -66,7 +66,7 @@ For `n < 0` it raises `ValueError`; for `n = 0` it returns `0`; otherwise it
 computes `c = (n.bit_length() - 1) // 2`, calls `nsqrt` with the
 structural counter seeded at `c.bit_length()`, and applies the final `a-1`/`a`
 adjustment. Correctness is `Isqrt.Proofs.RecursiveCorrectness`. -/
-def isqrtRecursive (n : Int) : Except PyException Int := do
+def isqrtRecursive (n : Int) : PyExcept Int := do
   if n < 0 then
     throw (.valueError "isqrt() argument must be nonnegative")
   if n = 0 then

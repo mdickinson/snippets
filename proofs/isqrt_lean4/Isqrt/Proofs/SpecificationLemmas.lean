@@ -14,12 +14,12 @@ import Isqrt.Definitions.Specification
 /-- From `x = .ok a` and `p a`: the computation `x` succeeded, and its returned
 value satisfies `p`. Repackages the `.ok` equality a reduced `do`-block produces
 into the dependent existential `isCorrectIsqrt` uses. -/
-theorem returnValue_satisfies {ε α : Type _} {x : Except ε α} {a : α} (hx : x = .ok a)
+theorem returnValue_satisfies {α : Type} {x : PyExcept α} {a : α} (hx : x = .ok a)
     (p : α → Prop) (hp : p a) : ∃ h : Isqrt.succeeds x, p (Isqrt.returnValue x h) := by
   subst hx; exact ⟨True.intro, hp⟩
 
 /-- From `x = .error e` and `q e`: the computation `x` failed, and its raised
 exception satisfies `q`. The `fails`/`exceptionRaised` twin of `returnValue_satisfies`. -/
-theorem exceptionRaised_satisfies {ε α : Type _} {x : Except ε α} {e : ε} (hx : x = .error e)
-    (q : ε → Prop) (hq : q e) : ∃ h : Isqrt.fails x, q (Isqrt.exceptionRaised x h) := by
+theorem exceptionRaised_satisfies {α : Type} {x : PyExcept α} {e : PyException} (hx : x = .error e)
+    (q : PyException → Prop) (hq : q e) : ∃ h : Isqrt.fails x, q (Isqrt.exceptionRaised x h) := by
   subst hx; exact ⟨True.intro, hq⟩

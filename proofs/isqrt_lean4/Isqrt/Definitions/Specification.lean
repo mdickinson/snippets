@@ -4,7 +4,7 @@ the **definitions** layer, the trust surface: a reader must read and trust this
 module to know the correctness proofs (`Isqrt.Proofs.RecursiveCorrectness`,
 `Isqrt.Proofs.IterativeCorrectness`) prove the right thing.
 
-The contract `isCorrectIsqrt` is stated with the four small `Except` helpers from
+The contract `isCorrectIsqrt` is stated with the four small `PyExcept` helpers from
 `Isqrt.Definitions.Exceptions` — `succeeds`/`fails` (it returned / it raised) and
 the proof-carrying extractors `returnValue`/`exceptionRaised` (the returned value /
 the raised exception, total only given a proof that the computation took that
@@ -14,7 +14,7 @@ hypothesis: for nonnegative `n` the function returns the integer square root; fo
 negative `n` it raises CPython's `ValueError`.
 
 `isCorrectIsqrt` is parameterised by the implementation `f`, so this module
-depends only on the `Except`/`PyException` vocabulary (`Isqrt.Definitions.Exceptions`),
+depends only on the `PyExcept`/`PyException` vocabulary (`Isqrt.Definitions.Exceptions`),
 never on the `isqrt` definitions themselves. (The proof-only companion predicate
 `isNearSquareRoot` lives with the key algebraic lemma in `Isqrt.Proofs.KeyLemma`.)
 -/
@@ -36,7 +36,7 @@ def isIntegerSquareRoot (a n : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a +
 Stated with the proof-carrying `succeeds`/`returnValue` and `fails`/`exceptionRaised`
 helpers, so each clause reads as the property we want of the actual returned value
 or raised exception. The error message is part of the contract. -/
-def isCorrectIsqrt (isqrt : Int → Except PyException Int) : Prop :=
+def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
   (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
   ∧
   (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")

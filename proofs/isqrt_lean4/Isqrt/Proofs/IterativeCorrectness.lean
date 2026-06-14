@@ -10,7 +10,7 @@ import Isqrt.Proofs.BitLengthLemmas
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
 body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes
 `d = c >> s`, and returns the new `⟨a, d⟩`. Each `←` is an operation that could raise. -/
-def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : Except PyException (MProd ℤ ℤ) := do
+def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : PyExcept (MProd ℤ ℤ) := do
   let dNew ← pyRshift c s
   let lsh ← pyLshift r.fst (dNew - r.snd - 1)
   let rsh ← pyRshift n (2 * c - r.snd - dNew + 1)
@@ -32,7 +32,7 @@ Reading `motive i x` as "`x` is a valid `.ok` state with `i` iterations still to
 the seed lands at `i = L`, the result at `i = 0`, and the conclusion packages both the
 `.ok`-ness of the whole fold and the final invariant. -/
 theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A → Prop)
-    (g : A → ℕ → Except PyException A) :
+    (g : A → ℕ → PyExcept A) :
     ∀ (L : ℕ) (init : A), motive L init →
       (∀ s, s < L → ∀ x, motive (s + 1) x → ∃ y, g x s = .ok y ∧ motive s y) →
       ∃ y, (List.range L).reverse.foldlM g init = .ok y ∧ motive 0 y := by
@@ -213,7 +213,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         conv_lhs => unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
-        rw [show (Except.ok ((pyBitLength n - 1).fdiv 2) : Except PyException ℤ)
+        rw [show (Except.ok ((pyBitLength n - 1).fdiv 2) : PyExcept ℤ)
               = pure ((pyBitLength n - 1).fdiv 2) from rfl, pure_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((pyBitLength n - 1).fdiv 2) n)
           (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩

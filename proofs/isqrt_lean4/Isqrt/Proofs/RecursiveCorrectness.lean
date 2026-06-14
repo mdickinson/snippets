@@ -149,7 +149,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
         conv_lhs => unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hc_def]
-        rw [show (Except.ok c : Except PyException ℤ) = pure c from rfl, pure_bind, ha_eq]
+        rw [show (Except.ok c : PyExcept ℤ) = pure c from rfl, pure_bind, ha_eq]
         rfl
       exact returnValue_satisfies hred (fun a => isIntegerSquareRoot a n)
         a_near.toIntegerSquareRoot
