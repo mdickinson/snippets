@@ -47,7 +47,8 @@ Isqrt/
   Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
   IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
   Tests/
-    Iterative.lean           -- assert* helpers; #guard checks for the Python ops and isqrtIterative
+    Assertions.lean          -- assert* helpers shared by both test files
+    Iterative.lean           -- #guard checks for the Python ops and isqrtIterative
     Isqrt.lean               -- #guard checks for the recursive isqrt
 ```
 

@@ -2,34 +2,14 @@
 Sanity checks for the iterative integer square root `isqrtIterative` and the
 Python operations it uses: the `Except`-returning `pyFloordiv` / `pyLshift` /
 `pyRshift` / `pyRange`, plus the plain `pyBitLength`. The `Except` results run
-through the `assert*` helpers below, which unwrap an `Except PyException Int` — a
-bare `#guard` cannot, since `PyException` has no `DecidableEq`; `pyBitLength`
-returns a plain `Int`, so it is checked with `#guard` directly. `Isqrt.Tests.Isqrt`
-reuses these helpers for the recursive `isqrt`. A failing `#guard` causes a build
-error.
+through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap an
+`Except PyException Int` — a bare `#guard` cannot, since `PyException` has no
+`DecidableEq`; `pyBitLength` returns a plain `Int`, so it is checked with `#guard`
+directly. A failing `#guard` causes a build error.
 -/
 
 import Isqrt.Iterative
-
-/-! ## Assertion helpers for `Except PyException Int` results -/
-
-/-- True when the computation returned `.ok expected`. -/
-def assertReturns (actual : Except PyException Int) (expected : Int) : Bool :=
-  match actual with
-  | .ok v => v == expected
-  | .error _ => false
-
-/-- True when the computation raised `ZeroDivisionError`. -/
-def assertRaisesZeroDivisionError (actual : Except PyException Int) : Bool :=
-  match actual with
-  | .error .zeroDivisionError => true
-  | _ => false
-
-/-- True when the computation raised `ValueError msg`. -/
-def assertRaisesValueError (msg : String) (actual : Except PyException Int) : Bool :=
-  match actual with
-  | .error (.valueError m) => m == msg
-  | _ => false
+import Isqrt.Tests.Assertions
 
 /-! ## pyFloordiv -/
 

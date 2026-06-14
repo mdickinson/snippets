@@ -1,12 +1,12 @@
 /-
 Sanity checks for the *recursive* monadic (`Except`) integer square root
-`isqrt`. These mirror the `isqrtIterative` checks in
-`Isqrt.Tests.Iterative`, reusing its `assert*` helpers. A failing `#guard`
-causes a build error.
+`isqrt`. These mirror the `isqrtIterative` checks in `Isqrt.Tests.Iterative`,
+using the shared `assert*` helpers of `Isqrt.Tests.Assertions`. A failing
+`#guard` causes a build error.
 -/
 
 import Isqrt.Algorithm
-import Isqrt.Tests.Iterative
+import Isqrt.Tests.Assertions
 
 /-! ## isqrt -/
 
