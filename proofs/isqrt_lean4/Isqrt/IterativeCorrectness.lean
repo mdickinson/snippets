@@ -2,8 +2,6 @@ import Isqrt.Iterative
 import Isqrt.KeyLemma
 import Isqrt.SizeConditions
 
-set_option maxHeartbeats 1000000
-
 /-- One iteration of the monadic loop, as a standalone `Except`-returning step on the
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
 body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes

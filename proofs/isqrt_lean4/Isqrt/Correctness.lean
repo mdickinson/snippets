@@ -18,8 +18,6 @@ import Isqrt.Algorithm
 import Isqrt.SizeConditions
 import Isqrt.KeyLemma
 
-set_option maxHeartbeats 1000000
-
 /-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
     (2 * j + 2).toNat = 2 * j.toNat + 2 := by
