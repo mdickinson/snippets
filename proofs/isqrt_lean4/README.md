@@ -463,21 +463,23 @@ The top-level theorems are *total* specifications. Both
 we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
-def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
-  (∀ n, 0 ≤ n → let v := f n; ∃ h : succeeded v, isIntegerSquareRoot (returnValue v h) n)
+def isCorrectIsqrt (isqrt : Int → Except PyException Int) : Prop :=
+  (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
   ∧
-  (∀ n, n < 0 → let v := f n; ∃ h : failed v, exception v h = .valueError "isqrt() argument must be nonnegative")
+  (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")
 ```
 
-Here `succeeded v` and `failed v` assert that `v` returned (took the `.ok` branch)
-or raised (took the `.error` branch); `returnValue v h` and `exception v h` then
-extract the returned value or the raised exception, each total only given the
+Here, writing `v` for the result `isqrt n` (and dropping the helpers' `Isqrt.`
+namespace prefix): `succeeds v` and `fails v` assert that
+`v` returned (took the `.ok` branch) or raised (took the `.error` branch);
+`returnValue v h` and `exceptionRaised v h` then extract the returned value or the
+raised exception, each total only given the
 proof `h` that the computation took that branch. So the first clause reads "for
 nonnegative `n`, `f n` succeeds, and the value it returns is `⌊√n⌋`"; the second,
 "for negative `n`, `f n` fails, and the exception it raises is exactly the
 `ValueError` Python raises for negative input, message and all." (These four
-helpers are our own, defined alongside the contract rather than grafted onto
-`Except`.)
+helpers live in the project's own `Isqrt` namespace, defined alongside the
+contract rather than grafted onto `Except`.)
 
 That is the certificate. A `do` block short-circuits to `.error` the
 moment any operation raises, so the only way `isqrtRecursive n` can return (be

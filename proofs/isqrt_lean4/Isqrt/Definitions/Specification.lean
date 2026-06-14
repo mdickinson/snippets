@@ -5,8 +5,9 @@ module to know the correctness proofs (`Isqrt.Proofs.RecursiveCorrectness`,
 `Isqrt.Proofs.IterativeCorrectness`) prove the right thing.
 
 The contract `isCorrectIsqrt` is stated with four small helpers on an `Except`
-result — `succeeded`/`failed` (it returned / it raised) and the proof-carrying
-extractors `returnValue`/`exception` (the returned value / the raised exception,
+result, in the project's own `Isqrt` namespace — `succeeds`/`fails` (it returned /
+it raised) and the proof-carrying extractors `returnValue`/`exceptionRaised` (the
+returned value / the raised exception,
 total only given a proof that the computation took that branch). Each clause then
 reads as the property we actually want, applied to the real returned value or
 raised exception, with the sign of the argument as a hypothesis: for nonnegative
@@ -27,25 +28,29 @@ Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the Python postconditio
 `a * a <= n < (a + 1) * (a + 1)`. -/
 def isIntegerSquareRoot (a n : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
+namespace Isqrt
+
 /-- Assertion that a computation didn't raise. -/
-def succeeded {ε α : Type _} (x : Except ε α) : Prop := match x with
+def succeeds {ε α : Type _} (x : Except ε α) : Prop := match x with
   | .ok _ => True
   | .error _ => False
 
 /-- The return value from a computation that didn't raise. -/
-def returnValue {ε α : Type _} (x : Except ε α) (p : succeeded x) : α :=
+def returnValue {ε α : Type _} (x : Except ε α) (p : succeeds x) : α :=
   match x with
   | .ok a => a
 
 /-- Assertion that a computation failed. -/
-def failed {ε α : Type _} (x : Except ε α) : Prop := match x with
+def fails {ε α : Type _} (x : Except ε α) : Prop := match x with
   | .ok _ => False
   | .error _ => True
 
 /-- The exception raised by a failed computation. -/
-def exception {ε α : Type _} (x : Except ε α) (p : failed x) : ε :=
+def exceptionRaised {ε α : Type _} (x : Except ε α) (p : fails x) : ε :=
   match x with
   | .error e => e
+
+end Isqrt
 
 /-- `f` is a correct integer square root:
 * for every nonnegative `n`, `f n` succeeds (does not raise) and the value it
@@ -53,10 +58,10 @@ def exception {ε α : Type _} (x : Except ε α) (p : failed x) : ε :=
 * for every negative `n`, `f n` raises exactly the `ValueError` CPython's
   `math.isqrt` raises, message and all.
 
-Stated with the proof-carrying `succeeded`/`returnValue` and `failed`/`exception`
+Stated with the proof-carrying `succeeds`/`returnValue` and `fails`/`exceptionRaised`
 helpers, so each clause reads as the property we want of the actual returned value
 or raised exception. The error message is part of the contract. -/
-def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
-  (∀ n, 0 ≤ n → let v := f n; ∃ h : succeeded v, isIntegerSquareRoot (returnValue v h) n)
+def isCorrectIsqrt (isqrt : Int → Except PyException Int) : Prop :=
+  (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
   ∧
-  (∀ n, n < 0 → let v := f n; ∃ h : failed v, exception v h = .valueError "isqrt() argument must be nonnegative")
+  (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")

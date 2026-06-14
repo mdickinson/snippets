@@ -197,8 +197,8 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ h : succeeded (isqrtIterative n),
-      isIntegerSquareRoot (returnValue (isqrtIterative n) h) n
+    show ∃ h : Isqrt.succeeds (isqrtIterative n),
+      isIntegerSquareRoot (Isqrt.returnValue (isqrtIterative n) h) n
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
       refine returnValue_satisfies (by unfold isqrtIterative; norm_num; rfl)
@@ -227,10 +227,10 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       exact returnValue_satisfies hred (fun a => isIntegerSquareRoot a n) hp
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
-    show ∃ h : failed (isqrtIterative n),
-      exception (isqrtIterative n) h = .valueError "isqrt() argument must be nonnegative"
+    show ∃ h : Isqrt.fails (isqrtIterative n),
+      Isqrt.exceptionRaised (isqrtIterative n) h = .valueError "isqrt() argument must be nonnegative"
     have herr : isqrtIterative n
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtIterative; rw [if_pos hn]; rfl
-    exact exception_satisfies herr
+    exact exceptionRaised_satisfies herr
       (fun e => e = .valueError "isqrt() argument must be nonnegative") rfl

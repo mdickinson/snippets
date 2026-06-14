@@ -132,8 +132,8 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ h : succeeded (isqrtRecursive n),
-      isIntegerSquareRoot (returnValue (isqrtRecursive n) h) n
+    show ∃ h : Isqrt.succeeds (isqrtRecursive n),
+      isIntegerSquareRoot (Isqrt.returnValue (isqrtRecursive n) h) n
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
       refine returnValue_satisfies (by unfold isqrtRecursive; norm_num; rfl)
@@ -155,10 +155,10 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
         a_near.toIntegerSquareRoot
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
-    show ∃ h : failed (isqrtRecursive n),
-      exception (isqrtRecursive n) h = .valueError "isqrt() argument must be nonnegative"
+    show ∃ h : Isqrt.fails (isqrtRecursive n),
+      Isqrt.exceptionRaised (isqrtRecursive n) h = .valueError "isqrt() argument must be nonnegative"
     have herr : isqrtRecursive n
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtRecursive; rw [if_pos hn]; rfl
-    exact exception_satisfies herr
+    exact exceptionRaised_satisfies herr
       (fun e => e = .valueError "isqrt() argument must be nonnegative") rfl
