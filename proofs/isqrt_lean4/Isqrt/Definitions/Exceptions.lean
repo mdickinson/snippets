@@ -36,23 +36,23 @@ abbrev PyExcept := Except PyException
 
 namespace Isqrt
 
-/-- Assertion that a computation didn't raise. -/
+/-- Assertion that a computation returned a value (did not raise). -/
 def succeeds {α : Type} (x : PyExcept α) : Prop := match x with
   | .ok _ => True
   | .error _ => False
 
-/-- The return value from a computation that didn't raise. -/
-def returnValue {α : Type} (x : PyExcept α) (p : succeeds x) : α :=
+/-- The value returned by a computation that did not raise. -/
+def returnValue {α : Type} (x : PyExcept α) (h : succeeds x) : α :=
   match x with
   | .ok a => a
 
-/-- Assertion that a computation failed. -/
+/-- Assertion that a computation raised (did not return a value). -/
 def fails {α : Type} (x : PyExcept α) : Prop := match x with
   | .ok _ => False
   | .error _ => True
 
-/-- The exception raised by a failed computation. -/
-def exceptionRaised {α : Type} (x : PyExcept α) (p : fails x) : PyException :=
+/-- The exception raised by a computation that did not return. -/
+def exceptionRaised {α : Type} (x : PyExcept α) (h : fails x) : PyException :=
   match x with
   | .error e => e
 

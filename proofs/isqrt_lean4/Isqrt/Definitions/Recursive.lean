@@ -13,6 +13,8 @@ actually ships was derived from it. The algorithm:
             return (a << k) + (n >> (k + 2)) // a
 
     def isqrt(n):
+        if n < 0:
+            raise ValueError("isqrt() argument must be nonnegative")
         if n == 0:
             return 0
         else:
@@ -41,11 +43,16 @@ Correctness is proved in `Isqrt.Proofs.RecursiveCorrectness`.
 
 import Isqrt.Definitions.PythonOps
 
-/-- Recursive auxiliary for the monadic integer square root, structurally
-recursive on the counter `s`. Intended to be called with `s = c.bit_length()`;
-under that invariant the `match s` reproduces `isqrt_aux`'s `if c == 0` base case.
-Each `←` binds an operation that could raise; the correctness proof shows none of
-them ever does when `s = c.bit_length()` and `c ≥ 0`. -/
+/-- Recursive auxiliary for the monadic integer square root. It returns a *near*
+square root of `n`: a value within one of `⌊√n⌋` that `isqrtRecursive` corrects
+with its final `a-1`/`a` step — hence the name `nsqrt` (the precise
+near-square-root property is `isNearSquareRoot` in `Isqrt.Proofs.KeyLemma`).
+
+Structurally recursive on the counter `s`, intended to be called with
+`s = c.bit_length()`; under that invariant the `match s` reproduces `isqrt_aux`'s
+`if c == 0` base case. Each `←` binds an operation that could raise; the
+correctness proof shows none of them ever does when `s = c.bit_length()` and
+`c ≥ 0`. -/
 def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
   match s with
   | 0 => pure 1
@@ -60,7 +67,7 @@ def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
     pure (lsh + q)
 
 /-- Integer square root of `n`, recursive monadic (`Except`) form — the direct
-translation of the recursive CPython source above.
+translation of the recursive Python listing above.
 
 For `n < 0` it raises `ValueError`; for `n = 0` it returns `0`; otherwise it
 computes `c = (n.bit_length() - 1) // 2`, calls `nsqrt` with the

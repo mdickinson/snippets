@@ -21,6 +21,8 @@ never on the `isqrt` definitions themselves. (The proof-only companion predicate
 
 import Isqrt.Definitions.Exceptions
 
+open Isqrt
+
 /-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
 `a = ⌊√n⌋` exactly. This is the postcondition asserted of a returned value.
 Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the Python postcondition
@@ -37,6 +39,6 @@ Stated with the proof-carrying `succeeds`/`returnValue` and `fails`/`exceptionRa
 helpers, so each clause reads as the property we want of the actual returned value
 or raised exception. The error message is part of the contract. -/
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
-  (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
+  (∀ n, 0 ≤ n → ∃ h : succeeds (isqrt n), isIntegerSquareRoot (returnValue (isqrt n) h) n)
   ∧
-  (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")
+  (∀ n, n < 0 → ∃ h : fails (isqrt n), exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")

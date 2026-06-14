@@ -58,12 +58,12 @@ def isqrtIterative (n : Int) : PyExcept Int := do
   if n = 0 then
     return 0
 
-  let c := <- pyFloordiv (pyBitLength n - 1) 2
+  let c ← pyFloordiv (pyBitLength n - 1) 2
   let mut a := (1 : Int)
   let mut d := (0 : Int)
   for s in (pyRange (pyBitLength c)).reverse do
     let e := d
-    d := (<- pyRshift c s)
-    a := (<- pyLshift a (d - e - 1)) + (<- pyFloordiv (<- pyRshift n (2 * c - e - d + 1)) a)
+    d := (← pyRshift c s)
+    a := (← pyLshift a (d - e - 1)) + (← pyFloordiv (← pyRshift n (2 * c - e - d + 1)) a)
 
   return a - (if a * a > n then 1 else 0)
