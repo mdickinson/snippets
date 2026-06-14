@@ -10,11 +10,12 @@ not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
 Each inductive step discharges the `.ok`-ness of every monadic operation — proving
 no `//`, `>>`, or `<<` ever raises when `s = c.bit_length()` and `c ≥ 0` — and then
 applies the core algebraic step `key_isqrt_lemma` (`Isqrt.Proofs.KeyLemma`) to the
-recursive subproblem's value. The top-level result `isqrtRecursive_eq_ok_iff` is a faithful
-total spec, mirroring the iterative `isqrtIterative_eq_ok_iff`.
+recursive subproblem's value. The top-level result `isCorrectIsqrt_isqrtRecursive`
+establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsqrt_isqrtIterative`.
 -/
 
 import Isqrt.Definitions.Recursive
+import Isqrt.Definitions.Spec
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonOpsLemmas
@@ -124,12 +125,10 @@ For `n < 0` it raises exactly the `ValueError` CPython does; otherwise it return
 — establishing en route that none of the `Except` operations ever takes its error
 branch for `n ≥ 0` — and closes the `n ≥ 1` case with the final `a-1`/`a`
 adjustment (`isNearSquareRoot.toIntegerSquareRoot`), which the recursive source's
-`a - 1 if n < a * a else a` already matches verbatim. The total spec is identical
-to the iterative `isqrtIterative_eq_ok_iff`. -/
-theorem isqrtRecursive_eq_ok_iff (n : ℤ) :
-    (match isqrtRecursive n with
-     | .ok v => 0 ≤ n ∧ isIntegerSquareRoot v n
-     | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative") := by
+`a - 1 if n < a * a else a` already matches verbatim. The contract `isCorrectIsqrt`
+is the same one the iterative `isCorrectIsqrt_isqrtIterative` establishes. -/
+theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
+  intro n
   rcases lt_trichotomy n 0 with hneg | hzero | hpos
   · -- n < 0: the first guard raises, short-circuiting the `do` block.
     have herr : isqrtRecursive n

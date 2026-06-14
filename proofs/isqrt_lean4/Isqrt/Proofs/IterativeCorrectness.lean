@@ -1,4 +1,5 @@
 import Isqrt.Definitions.Iterative
+import Isqrt.Definitions.Spec
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonOpsLemmas
@@ -191,10 +192,8 @@ with `v = ⌊√n⌋` (`isIntegerSquareRoot v n`). The proof reduces the `do`-bl
 `Except` operations ever take their error branch for `n ≥ 0` — and closes the `n ≥ 1`
 case with the same final `a-1`/`a` adjustment (`isNearSquareRoot.toIntegerSquareRoot`) as
 the recursive and iterative proofs. -/
-theorem isqrtIterative_eq_ok_iff (n : ℤ) :
-    (match isqrtIterative n with
-     | .ok v => 0 ≤ n ∧ isIntegerSquareRoot v n
-     | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative") := by
+theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
+  intro n
   rcases lt_trichotomy n 0 with hneg | hzero | hpos
   · -- n < 0: the first guard raises, short-circuiting the `do` block.
     have herr : isqrtIterative n = .error (.valueError "isqrt() argument must be nonnegative") := by

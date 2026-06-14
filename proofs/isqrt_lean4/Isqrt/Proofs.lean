@@ -1,10 +1,11 @@
 /-
 Library root for the **proofs** component — the correctness theorems and every
-supporting lemma. A reader who trusts Lean's checker need not read any of this
-beyond the *statements* of the two top-level theorems (`isqrtRecursive_eq_ok_iff` in
-`Isqrt.Proofs.RecursiveCorrectness`, `isqrtIterative_eq_ok_iff` in
-`Isqrt.Proofs.IterativeCorrectness`). This component depends on
-`Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
+supporting lemma. A reader who trusts Lean's checker need only confirm that the two
+top-level theorems (`isCorrectIsqrt_isqrtRecursive` in
+`Isqrt.Proofs.RecursiveCorrectness`, `isCorrectIsqrt_isqrtIterative` in
+`Isqrt.Proofs.IterativeCorrectness`) assert `isCorrectIsqrt` of the two `isqrt`
+translations; the contract itself lives in `Isqrt.Definitions.Spec`. This component
+depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 -/
 
 import Isqrt.Proofs.FDivLemmas

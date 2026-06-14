@@ -114,6 +114,7 @@ Isqrt/
     IntegerSquareRoot.lean     -- isIntegerSquareRoot specification predicate
     Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
+    Spec.lean                  -- isCorrectIsqrt: the top-level correctness contract
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔Nat bridge
@@ -121,8 +122,8 @@ Isqrt/
     PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
     SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
-    RecursiveCorrectness.lean  -- recursive correctness proof (isqrtRecursive_eq_ok_iff)
-    IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
+    RecursiveCorrectness.lean  -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
+    IterativeCorrectness.lean  -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
   Tests/
     Assertions.lean            -- assert* helpers shared by both test files
     Iterative.lean             -- #guard checks for the Python ops and isqrtIterative
@@ -188,7 +189,7 @@ the same algorithm, derived from the recursive one for efficiency. That
 formulation is verified here too: `isqrtIterative` (`Isqrt/Definitions/Iterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
-as Lean's own `for … in … do`. `isqrtIterative_eq_ok_iff`
+as Lean's own `for … in … do`. `isCorrectIsqrt_isqrtIterative`
 (`Isqrt/Proofs/IterativeCorrectness.lean`) then proves it meets the same
 specification as the recursive `isqrtRecursive`: it reduces the monadic `for … in`
 loop to a `List.foldlM` over the reversed range and reuses the recursive
@@ -455,14 +456,17 @@ Modelling every raising operation with `Except` does more than keep the
 translation honest — it turns the finished proof into a certificate about
 the Python algorithm.
 
-The top-level theorems are *total* specifications. `isqrtRecursive_eq_ok_iff`
-(and its iterative twin `isqrtIterative_eq_ok_iff`) characterise the
-result by cases:
+The top-level theorems are *total* specifications. Both
+`isCorrectIsqrt_isqrtRecursive` and its iterative twin
+`isCorrectIsqrt_isqrtIterative` prove the same contract, `isCorrectIsqrt`
+(in `Isqrt/Definitions/Spec.lean`), which characterises an `isqrt`
+implementation `f` by cases on its result:
 
 ```
-match isqrtRecursive n with
-| .ok v    => 0 ≤ n ∧ isIntegerSquareRoot v n
-| .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative"
+def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
+  ∀ n, match f n with
+       | .ok v    => 0 ≤ n ∧ isIntegerSquareRoot v n
+       | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative"
 ```
 
 Read the two branches together. The `.error` branch is pinned to a single
@@ -490,30 +494,31 @@ If you're reading this repository hoping to come away with confidence
 that Python's `math.integer.isqrt` is correct, here's where to put your attention
 — and where you can let your guard down.
 
-**Read carefully.** The fidelity of the translation lives in two places:
+**Read carefully.** Everything that demands real scrutiny is concentrated in
+the *definitions* component, `Isqrt/Definitions/`, which imports nothing but
+Lean's own core (not even Mathlib) — so scrutinising it means trusting only
+Lean itself. Two concerns live there:
 
-- The Lean *definitions* of `isqrtRecursive` and `nsqrt` (in
-  `Isqrt/Definitions/Recursive.lean`), of `isqrtIterative` (in
-  `Isqrt/Definitions/Iterative.lean`), and of the `pyFloordiv` / `pyRshift` /
+- The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrt` (in
+  `Isqrt/Definitions/Recursive.lean`), `isqrtIterative` (in
+  `Isqrt/Definitions/Iterative.lean`), and the `pyFloordiv` / `pyRshift` /
   `pyLshift` operations together with `pyBitLength` (all in
-  `Isqrt/Definitions/PythonOps.lean`) — that is, everything
-  under `Isqrt/Definitions/`, which imports nothing but Lean's own core (not
-  even Mathlib), so scrutinising it means trusting only Lean itself. These are
-  the only places where a
+  `Isqrt/Definitions/PythonOps.lean`). These are the only places where a
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.
-- The *statements* of the correctness theorems `isqrtRecursive_eq_ok_iff` (in
-  `Isqrt/Proofs/RecursiveCorrectness.lean`) and `isqrtIterative_eq_ok_iff` (in
-  `Isqrt/Proofs/IterativeCorrectness.lean`). This is where we say what "correct"
-  means. Each is a total specification by cases on the result, spelled out
-  in "The `.ok` result is a certificate" above: on `.ok v` it asserts
-  `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
+- The *specification* itself: the contract `isCorrectIsqrt` (in
+  `Isqrt/Definitions/Spec.lean`) that both top-level theorems prove. This is
+  where we say what "correct" means. It is a total specification by cases on the
+  result, spelled out in "The `.ok` result is a certificate" above: on `.ok v`
+  it asserts `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
   `isIntegerSquareRoot a n` (in `Isqrt/Definitions/IntegerSquareRoot.lean`) unfolds to
   `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor of √n — and
-  on `.error e` it pins `e` to exactly Python's `ValueError`. If a
-  statement (or the predicate) is too weak, the proof being valid doesn't
-  buy us what we wanted.
+  on `.error e` it pins `e` to exactly Python's `ValueError`. If the
+  specification (or the predicate) is too weak, the proof being valid doesn't
+  buy us what we wanted. In `Isqrt/Proofs/` it then suffices to glance that
+  `isCorrectIsqrt_isqrtRecursive` and `isCorrectIsqrt_isqrtIterative` prove
+  `isCorrectIsqrt` of the two translations.
 
 **Trust without rereading.** The proofs of theorems and lemmas don't
 require human verification. Lean's job is to check them, and if `lake
