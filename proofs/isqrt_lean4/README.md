@@ -40,8 +40,7 @@ Isqrt/
   FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔ℕ bridge
   BitLengthLemmas.lean       -- natBitLength / pyBitLength definitions and properties
   PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
-  RecursionDepth.lean        -- isqrt_c_nonneg, shared by both algorithm variants
-  SizeConditions.lean        -- size-condition invariants carried through the recursion
+  SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
   KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot / isIntegerSquareRoot predicates
   Algorithm.lean             -- recursive isqrtAux and isqrt definitions
   Correctness.lean           -- recursive correctness proof (isqrt_eq_ok_iff)

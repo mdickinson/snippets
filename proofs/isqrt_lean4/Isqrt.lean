@@ -1,6 +1,5 @@
 import Isqrt.FDivLemmas
 import Isqrt.BitLengthLemmas
-import Isqrt.RecursionDepth
 import Isqrt.SizeConditions
 import Isqrt.KeyLemma
 import Isqrt.PythonOps

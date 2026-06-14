@@ -1,7 +1,6 @@
 import Isqrt.Iterative
 import Isqrt.KeyLemma
 import Isqrt.SizeConditions
-import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 

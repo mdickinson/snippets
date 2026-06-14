@@ -17,7 +17,6 @@ total spec, mirroring the iterative `isqrtIterative_eq_ok_iff`.
 import Isqrt.Algorithm
 import Isqrt.SizeConditions
 import Isqrt.KeyLemma
-import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 

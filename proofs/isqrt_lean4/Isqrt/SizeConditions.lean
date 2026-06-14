@@ -112,6 +112,14 @@ exponent is a natural number). Intended for `0 ≤ c`. -/
 def hasSizeCondition (c n : ℤ) : Prop :=
   (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c.toNat + 1)
 
+/-- The recursion depth `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n` — the
+seed `c` both isqrt formulations hand to the recursion, paired at the same `c` with
+`size_condition_initial` just below. Stated in pure `Int.fdiv` form (the `Except` `//`,
+`pyFloordiv`, reduces to it on its `.ok` branch), so both formulations share it. -/
+theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
+    0 ≤ Int.fdiv (pyBitLength n - 1) 2 :=
+  Int.fdiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
+
 /-- Initial size condition holds for `c = ⌊(pyBitLength n - 1) / 2⌋`. -/
 theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
     hasSizeCondition (Int.fdiv (pyBitLength n - 1) 2) n := by
