@@ -193,34 +193,35 @@ with `v = ⌊√n⌋` (`isIntegerSquareRoot v n`). The proof reduces the `do`-bl
 case with the same final `a-1`/`a` adjustment (`isNearSquareRoot.toIntegerSquareRoot`) as
 the recursive and iterative proofs. -/
 theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
-  intro n
-  rcases lt_trichotomy n 0 with hneg | hzero | hpos
-  · -- n < 0: the first guard raises, short-circuiting the `do` block.
-    have herr : isqrtIterative n = .error (.valueError "isqrt() argument must be nonnegative") := by
-      unfold isqrtIterative; rw [if_pos hneg]; rfl
-    rw [herr]; exact ⟨hneg, rfl⟩
-  · -- n = 0: special-cased to 0.
-    subst hzero
-    have hok : isqrtIterative 0 = .ok 0 := by unfold isqrtIterative; norm_num; rfl
-    rw [hok]; exact ⟨le_refl 0, by unfold isIntegerSquareRoot; norm_num⟩
-  · -- 0 < n: the loop runs and never raises.
-    have hn0 : n ≠ 0 := ne_of_gt hpos
-    obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
-      monadicLoop_near (c := (pyBitLength n - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
-        (size_condition_initial hpos)
-    have hred : isqrtIterative n = .ok (y.fst - if y.fst * y.fst > n then 1 else 0) := by
-      conv_lhs => unfold isqrtIterative
-      simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-        pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
-      rw [show (Except.ok ((pyBitLength n - 1).fdiv 2) : Except PyException ℤ)
-            = pure ((pyBitLength n - 1).fdiv 2) from rfl, pure_bind]
-      have key := forIn_yield_bind_eq_foldlM (stepM ((pyBitLength n - 1).fdiv 2) n)
-        (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩
-      conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
-      rw [key, hy_eq]; rfl
-    rw [hred]
-    refine ⟨hpos.le, ?_⟩
-    have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
-        = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
-    rw [hadj]
-    exact hy_near.toIntegerSquareRoot
+  refine ⟨?_, ?_⟩
+  · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
+    intro n hn
+    show ∃ a, isqrtIterative n = .ok a ∧ isIntegerSquareRoot a n
+    rcases eq_or_lt_of_le hn with rfl | hpos
+    · -- n = 0: special-cased to 0.
+      exact ⟨0, by unfold isqrtIterative; norm_num; rfl,
+             by unfold isIntegerSquareRoot; norm_num⟩
+    · -- 0 < n: the loop runs and never raises.
+      have hn0 : n ≠ 0 := ne_of_gt hpos
+      obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
+        monadicLoop_near (c := (pyBitLength n - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
+          (size_condition_initial hpos)
+      have hred : isqrtIterative n = .ok (y.fst - if y.fst * y.fst > n then 1 else 0) := by
+        conv_lhs => unfold isqrtIterative
+        simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
+          pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
+        rw [show (Except.ok ((pyBitLength n - 1).fdiv 2) : Except PyException ℤ)
+              = pure ((pyBitLength n - 1).fdiv 2) from rfl, pure_bind]
+        have key := forIn_yield_bind_eq_foldlM (stepM ((pyBitLength n - 1).fdiv 2) n)
+          (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩
+        conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
+        rw [key, hy_eq]; rfl
+      refine ⟨_, hred, ?_⟩
+      have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
+          = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
+      rw [hadj]
+      exact hy_near.toIntegerSquareRoot
+  · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
+    intro n hn
+    show isqrtIterative n = .error (.valueError "isqrt() argument must be nonnegative")
+    unfold isqrtIterative; rw [if_pos hn]; rfl

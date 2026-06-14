@@ -458,26 +458,27 @@ the Python algorithm.
 The top-level theorems are *total* specifications. Both
 `isCorrectIsqrt_isqrtRecursive` and its iterative twin
 `isCorrectIsqrt_isqrtIterative` prove the same contract, `isCorrectIsqrt`
-(in `Isqrt/Definitions/Specification.lean`), which characterises an `isqrt`
-implementation `f` by cases on its result:
+(in `Isqrt/Definitions/Specification.lean`), which states the two properties
+we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
 def isCorrectIsqrt (f : Int → Except PyException Int) : Prop :=
-  ∀ n, match f n with
-       | .ok v    => 0 ≤ n ∧ isIntegerSquareRoot v n
-       | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative"
+  (∀ n, 0 ≤ n → (f n).returns (fun a => isIntegerSquareRoot a n)) ∧
+  (∀ n, n < 0 → (f n).raises (.valueError "isqrt() argument must be nonnegative"))
 ```
 
-Read the two branches together. The `.error` branch is pinned to a single
-possibility: the *only* error the function can return is the `ValueError`
-Python raises for negative input, and it returns that error for exactly
-the negative inputs. Every other input — every `n ≥ 0` — lands in the
-`.ok` branch with `v = ⌊√n⌋`.
+Here `(f n).returns p` means `f n` evaluated to `.ok a` for some `a` with `p a` —
+it returned a value, rather than raising — and `(f n).raises e` means it evaluated
+to `.error e`. So: for every nonnegative input, `f` *returns* (never raises) a
+value that is `⌊√n⌋`; for every negative input, `f` *raises*, and the error is
+pinned to a single possibility — exactly the `ValueError` Python raises for
+negative input, message and all.
 
 That is the certificate. A `do` block short-circuits to `.error` the
-moment any operation raises, so the only way `isqrtRecursive n` can be `.ok` is
-if *no* operation raised along the way. The theorem proves `isqrtRecursive n` is `.ok`
-for every `n ≥ 0` — which means that for every nonnegative input:
+moment any operation raises, so the only way `isqrtRecursive n` can return (be
+`.ok`) is if *no* operation raised along the way. The theorem proves
+`isqrtRecursive n` returns for every `n ≥ 0` — which means that for every
+nonnegative input:
 
 - no `//` was handed a zero divisor (no `ZeroDivisionError`),
 - no `<<` or `>>` saw a negative shift count (no `ValueError` from a shift),
@@ -508,16 +509,15 @@ Lean itself. Two concerns live there:
   mirror, the proof is proving something about a different algorithm.
 - The *specification* itself: the contract `isCorrectIsqrt` (in
   `Isqrt/Definitions/Specification.lean`) that both top-level theorems prove. This
-  is where we say what "correct" means. It is a total specification by cases on the
-  result, spelled out in "The `.ok` result is a certificate" above: on `.ok v`
-  it asserts `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
-  `isIntegerSquareRoot a n` (in the same module) unfolds to
-  `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor of √n — and
-  on `.error e` it pins `e` to exactly Python's `ValueError`. If the
-  specification (or the predicate) is too weak, the proof being valid doesn't
-  buy us what we wanted. In `Isqrt/Proofs/` it then suffices to glance that
-  `isCorrectIsqrt_isqrtRecursive` and `isCorrectIsqrt_isqrtIterative` prove
-  `isCorrectIsqrt` of the two translations.
+  is where we say what "correct" means, spelled out in "The `.ok` result is a
+  certificate" above: for nonnegative `n` the function *returns* a value `a`
+  satisfying `isIntegerSquareRoot a n`, and for negative `n` it *raises* exactly
+  Python's `ValueError`. The predicate `isIntegerSquareRoot a n` (in the same
+  module) unfolds to `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor
+  of √n. If the specification (or the predicate) is too weak, the proof being
+  valid doesn't buy us what we wanted. In `Isqrt/Proofs/` it then suffices to
+  glance that `isCorrectIsqrt_isqrtRecursive` and `isCorrectIsqrt_isqrtIterative`
+  prove `isCorrectIsqrt` of the two translations.
 
 **Trust without rereading.** The proofs of theorems and lemmas don't
 require human verification. Lean's job is to check them, and if `lake
