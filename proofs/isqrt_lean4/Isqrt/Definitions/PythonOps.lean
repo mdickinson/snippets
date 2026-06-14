@@ -6,10 +6,10 @@ the **definitions** layer — trust surface the reader checks against Python.
 Each operation that can raise in Python returns an `Except PyException`, carrying
 either the result or the exception it would raise — `ZeroDivisionError` for `//`
 by zero, `ValueError` for a negative shift count. This is the approach the README
-calls "Option 2": the cost lands in the correctness proofs (`Isqrt.Proofs.Correctness`,
+calls "Option 2": the cost lands in the correctness proofs (`Isqrt.Proofs.RecursiveCorrectness`,
 `Isqrt.Proofs.IterativeCorrectness`), which must show those error branches are never
 taken for a nonnegative argument; the payoff is `do`-block translations of `isqrt`
-(`Isqrt.Definitions.Algorithm`, `Isqrt.Definitions.Iterative`) that read almost
+(`Isqrt.Definitions.Recursive`, `Isqrt.Definitions.Iterative`) that read almost
 verbatim like the CPython source — every line that could raise in Python becomes a
 monadic bind `←`. The lemmas that step a `do`-block past these operations on their
 non-raising branch live in `Isqrt.Proofs.PythonOpsLemmas`.

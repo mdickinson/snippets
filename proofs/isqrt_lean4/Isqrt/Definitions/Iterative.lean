@@ -30,10 +30,10 @@ Python code, reproduced verbatim here for easy reference.
 This module gives a direct translation of the above Python into *monadic* Lean:
 the operations that can raise (`//`, `>>`, `<<`) become the `Except`-returning
 `pyFloordiv` / `pyRshift` / `pyLshift` of `Isqrt.Definitions.PythonOps`,
-and `isqrt` itself is a `do` block — `let mut a/d`, a `for … in`, and monadic binds
-(`←`) for each operation that could raise. The function is named `isqrtIterative`
-to set it apart from the recursive `isqrt` of `Isqrt.Definitions.Algorithm`: the two
-are the iterative and recursive translations of the same CPython algorithm, sharing
+and the function itself is a `do` block — `let mut a/d`, a `for … in`, and monadic
+binds (`←`) for each operation that could raise. It's named `isqrtIterative` to set
+it apart from the recursive translation `isqrtRecursive` (`Isqrt.Definitions.Recursive`):
+the two are the iterative and recursive translations of the same CPython algorithm, sharing
 the operators of `Isqrt.Definitions.PythonOps` and `pyBitLength` of
 `Isqrt.Definitions.BitLength`.
 

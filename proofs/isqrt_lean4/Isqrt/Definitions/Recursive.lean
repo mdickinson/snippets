@@ -1,7 +1,8 @@
 /-
 The *recursive* integer square root, in monadic (`Except`) form — the companion
-to the iterative `isqrtIterative` of `Isqrt.Definitions.Iterative`. The recursive
-algorithm, again taken verbatim from the comments in CPython's `math.isqrt` C source:
+to the iterative `isqrtIterative` of `Isqrt.Definitions.Iterative`. This recursive
+form is the algorithm's original derivation; the iterative formulation CPython
+actually ships was derived from it. The algorithm:
 
     def isqrt_aux(c, n):
         if c == 0:
@@ -35,7 +36,7 @@ no precondition, and `c // 2` left as a genuine `Except` operation. The same cou
 is CPython's *iterative* loop bound `reversed(range(c.bit_length()))`, so the two
 formulations share a skeleton.
 
-Correctness is proved in `Isqrt.Proofs.Correctness`.
+Correctness is proved in `Isqrt.Proofs.RecursiveCorrectness`.
 -/
 
 import Isqrt.Definitions.PythonOps
@@ -46,14 +47,14 @@ recursive on the counter `s`. Intended to be called with `s = c.bit_length()`;
 under that invariant the `match s` reproduces `isqrt_aux`'s `if c == 0` base case.
 Each `←` binds an operation that could raise; the correctness proof shows none of
 them ever does when `s = c.bit_length()` and `c ≥ 0`. -/
-def isqrtAux (s : Nat) (c n : Int) : Except PyException Int :=
+def nsqrt (s : Nat) (c n : Int) : Except PyException Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
     let k ← pyFloordiv (c - 1) 2
     let cHalf ← pyFloordiv c 2
     let nShift ← pyRshift n (2 * k + 2)
-    let a ← isqrtAux s cHalf nShift
+    let a ← nsqrt s cHalf nShift
     let lsh ← pyLshift a k
     let rsh ← pyRshift n (k + 2)
     let q ← pyFloordiv rsh a
@@ -63,15 +64,15 @@ def isqrtAux (s : Nat) (c n : Int) : Except PyException Int :=
 translation of the recursive CPython source above.
 
 For `n < 0` it raises `ValueError`; for `n = 0` it returns `0`; otherwise it
-computes `c = (n.bit_length() - 1) // 2`, calls `isqrtAux` with the
+computes `c = (n.bit_length() - 1) // 2`, calls `nsqrt` with the
 structural counter seeded at `c.bit_length()`, and applies the final `a-1`/`a`
-adjustment. Correctness is `Isqrt.Proofs.Correctness`. -/
-def isqrt (n : Int) : Except PyException Int := do
+adjustment. Correctness is `Isqrt.Proofs.RecursiveCorrectness`. -/
+def isqrtRecursive (n : Int) : Except PyException Int := do
   if n < 0 then
     throw (.valueError "isqrt() argument must be nonnegative")
   if n = 0 then
     return 0
 
   let c ← pyFloordiv (pyBitLength n - 1) 2
-  let a ← isqrtAux (pyBitLength c).toNat c n
+  let a ← nsqrt (pyBitLength c).toNat c n
   return (if n < a * a then a - 1 else a)

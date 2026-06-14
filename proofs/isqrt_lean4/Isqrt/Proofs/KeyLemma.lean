@@ -174,7 +174,7 @@ For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+
 — a left shift of `a` by `k`, plus the divided-down remainder — equals
 `Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
 correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
-recursive proof (`Isqrt.Proofs.Correctness`) with `ν = n`, the iterative proof
+recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
 (`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
 move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
 theorem key_isqrt_body_eq {ν a M : ℤ} {k : ℤ} (hk : 0 ≤ k) (ha : 0 < a)

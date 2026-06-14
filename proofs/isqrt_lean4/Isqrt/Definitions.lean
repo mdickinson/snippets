@@ -9,5 +9,5 @@ never on `Isqrt.Proofs.*` or `Isqrt.Tests.*`.
 import Isqrt.Definitions.PythonOps
 import Isqrt.Definitions.BitLength
 import Isqrt.Definitions.IntegerSquareRoot
-import Isqrt.Definitions.Algorithm
+import Isqrt.Definitions.Recursive
 import Isqrt.Definitions.Iterative

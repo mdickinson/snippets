@@ -1,2 +1,2 @@
-import Isqrt.Tests.Isqrt
+import Isqrt.Tests.Recursive
 import Isqrt.Tests.Iterative

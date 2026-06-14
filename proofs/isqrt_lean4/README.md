@@ -113,7 +113,7 @@ Isqrt/
     PythonOps.lean             -- PyException + Except-returning //, >>, <<, and range
     BitLength.lean             -- natBitLength / pyBitLength definitions
     IntegerSquareRoot.lean     -- isIntegerSquareRoot specification predicate
-    Algorithm.lean             -- recursive isqrtAux and isqrt definitions
+    Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
@@ -122,12 +122,12 @@ Isqrt/
     PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
     SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
-    Correctness.lean           -- recursive correctness proof (isqrt_eq_ok_iff)
+    RecursiveCorrectness.lean  -- recursive correctness proof (isqrtRecursive_eq_ok_iff)
     IterativeCorrectness.lean  -- iterative correctness proof (isqrtIterative_eq_ok_iff)
   Tests/
     Assertions.lean            -- assert* helpers shared by both test files
     Iterative.lean             -- #guard checks for the Python ops and isqrtIterative
-    Isqrt.lean                 -- #guard checks for the recursive isqrt
+    Recursive.lean             -- #guard checks for the recursive isqrtRecursive
 ```
 
 Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
@@ -135,7 +135,7 @@ the `#guard` checks. The implementation library does not import the tests.
 
 ## Python-to-Lean translation
 
-The goal of this proof is to give us confidence in the recursive
+The goal of this proof is to give us confidence in the
 integer square root algorithm behind CPython's `math.integer.isqrt`. We don't
 prove anything about the Python code directly; instead, we translate
 the relevant Python code into Lean and prove that the *Lean* code is
@@ -179,10 +179,10 @@ def isqrt(n: int) -> int:
         return a - 1 if n < a * a else a
 ```
 
-It's closely adapted from [a Stack Overflow answer][so-recursive] by
-the same author who designed the algorithm and wrote CPython's
-`math.integer.isqrt`. The code is also reproduced as a docstring at the top of
-`Isqrt/Definitions/Algorithm.lean`.
+This recursive form is the algorithm's original derivation, by the author of
+CPython's `math.integer.isqrt`; it's also written up in [a Stack Overflow
+answer][so-recursive], and reproduced as a docstring at the top of
+`Isqrt/Definitions/Recursive.lean`.
 
 CPython itself ships an [iterative formulation][cpython-iterative] of
 the same algorithm, derived from the recursive one for efficiency. That
@@ -191,7 +191,7 @@ is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
 as Lean's own `for … in … do`. `isqrtIterative_eq_ok_iff`
 (`Isqrt/Proofs/IterativeCorrectness.lean`) then proves it meets the same
-specification as the recursive `isqrt`: it reduces the monadic `for … in`
+specification as the recursive `isqrtRecursive`: it reduces the monadic `for … in`
 loop to a `List.foldlM` over the reversed range and reuses the recursive
 proof's per-iteration algebra unchanged.
 
@@ -260,7 +260,7 @@ Python's `==` takes two integers, compares them, and returns a Python
 `bool`; that `bool` is then used by `if` to pick a branch. Lean has a
 `==` operator that works similarly (returning something of type `Bool`),
 but the Lean definitions in this project use `=` rather than `==` — for
-example `if n = 0 then return 0` in `isqrt`. The `n = 0` here has
+example `if n = 0 then return 0` in `isqrtRecursive`. The `n = 0` here has
 type `Prop`, which lives in proof-world rather than in the
 concrete-computational-object world. At first glance that looks like the
 wrong tool for a runtime conditional.
@@ -401,14 +401,14 @@ up the monadic division. We add an explicit counter `s : Nat`, seed it at
 `c.bit_length()`, and recurse **structurally** on `s`:
 
 ```
-def isqrtAux (s : Nat) (c n : Int) : Except PyException Int :=
+def nsqrt (s : Nat) (c n : Int) : Except PyException Int :=
   match s with
   | 0 => pure 1
   | s + 1 => do
     let k ← pyFloordiv (c - 1) 2
     let cHalf ← pyFloordiv c 2
     let nShift ← pyRshift n (2 * k + 2)
-    let a ← isqrtAux s cHalf nShift
+    let a ← nsqrt s cHalf nShift
     let lsh ← pyLshift a k
     let rsh ← pyRshift n (k + 2)
     let q ← pyFloordiv rsh a
@@ -458,12 +458,12 @@ Modelling every raising operation with `Except` does more than keep the
 translation honest — it turns the finished proof into a certificate about
 the Python algorithm.
 
-The top-level theorems are *total* specifications. `isqrt_eq_ok_iff`
+The top-level theorems are *total* specifications. `isqrtRecursive_eq_ok_iff`
 (and its iterative twin `isqrtIterative_eq_ok_iff`) characterise the
 result by cases:
 
 ```
-match isqrt n with
+match isqrtRecursive n with
 | .ok v    => 0 ≤ n ∧ isIntegerSquareRoot v n
 | .error e => n < 0 ∧ e = .valueError "isqrt() argument must be nonnegative"
 ```
@@ -475,8 +475,8 @@ the negative inputs. Every other input — every `n ≥ 0` — lands in the
 `.ok` branch with `v = ⌊√n⌋`.
 
 That is the certificate. A `do` block short-circuits to `.error` the
-moment any operation raises, so the only way `isqrt n` can be `.ok` is if
-*no* operation raised along the way. The theorem proves `isqrt n` is `.ok`
+moment any operation raises, so the only way `isqrtRecursive n` can be `.ok` is
+if *no* operation raised along the way. The theorem proves `isqrtRecursive n` is `.ok`
 for every `n ≥ 0` — which means that for every nonnegative input:
 
 - no `//` was handed a zero divisor (no `ZeroDivisionError`),
@@ -495,8 +495,8 @@ that Python's `math.integer.isqrt` is correct, here's where to put your attentio
 
 **Read carefully.** The fidelity of the translation lives in two places:
 
-- The Lean *definitions* of `isqrt` and `isqrtAux` (in
-  `Isqrt/Definitions/Algorithm.lean`), of `isqrtIterative` (in
+- The Lean *definitions* of `isqrtRecursive` and `nsqrt` (in
+  `Isqrt/Definitions/Recursive.lean`), of `isqrtIterative` (in
   `Isqrt/Definitions/Iterative.lean`), of the `pyFloordiv` / `pyRshift` /
   `pyLshift` operations (in `Isqrt/Definitions/PythonOps.lean`), and of
   `pyBitLength` (in `Isqrt/Definitions/BitLength.lean`) — that is, everything
@@ -506,8 +506,8 @@ that Python's `math.integer.isqrt` is correct, here's where to put your attentio
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.
-- The *statements* of the correctness theorems `isqrt_eq_ok_iff` (in
-  `Isqrt/Proofs/Correctness.lean`) and `isqrtIterative_eq_ok_iff` (in
+- The *statements* of the correctness theorems `isqrtRecursive_eq_ok_iff` (in
+  `Isqrt/Proofs/RecursiveCorrectness.lean`) and `isqrtIterative_eq_ok_iff` (in
   `Isqrt/Proofs/IterativeCorrectness.lean`). This is where we say what "correct"
   means. Each is a total specification by cases on the result, spelled out
   in "The `.ok` result is a certificate" above: on `.ok v` it asserts
@@ -526,7 +526,7 @@ A reader looking for confidence in the result doesn't need to follow
 individual proof steps.
 
 **Sanity check.** Beyond the proofs, the repository contains
-`#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrt`,
+`#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrtRecursive`,
 `isqrtIterative`, `pyFloordiv`, `pyRshift`, `pyLshift`, and `pyBitLength`
 on concrete inputs and verify the outputs against expected values. These
 tests are load-bearing in a way the proofs aren't: a proof can only ever
