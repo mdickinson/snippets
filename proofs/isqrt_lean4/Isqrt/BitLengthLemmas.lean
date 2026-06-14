@@ -35,6 +35,18 @@ def pyBitLength (n : ℤ) : ℤ := ↑(natBitLength n.natAbs)
 theorem pyBitLength_def (n : ℤ) :
     pyBitLength n = ↑(natBitLength n.natAbs) := rfl
 
+/-- `pyBitLength` of a `ℕ`-cast drops the `natAbs`: `pyBitLength ↑m = natBitLength m`.
+The nat-cast specialisation of `pyBitLength_def` — the form the ℤ↔ℕ bridges below
+(and in `Isqrt.SizeConditions`) repeatedly need, since `(↑m).natAbs` reduces to `m`. -/
+@[simp]
+theorem pyBitLength_natCast (m : ℕ) : pyBitLength (↑m : ℤ) = ↑(natBitLength m) := rfl
+
+/-- `.toNat` of `pyBitLength_natCast`: `(pyBitLength ↑m).toNat = natBitLength m`. -/
+@[simp]
+theorem toNat_pyBitLength_natCast (m : ℕ) :
+    (pyBitLength (↑m : ℤ)).toNat = natBitLength m := by
+  rw [pyBitLength_natCast, Int.toNat_natCast]
+
 /-! ## natBitLength: basic properties -/
 
 theorem natBitLength_eq_zero_iff {n : ℕ} : natBitLength n = 0 ↔ n = 0 := by
@@ -147,8 +159,7 @@ theorem one_le_fdiv_two_pow_of_lt_pyBitLength {c s : ℤ}
     1 ≤ Int.fdiv c (2 ^ s.toNat) := by
   rw [Int.le_fdiv_iff_mul_le (by positivity), one_mul]
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-  rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
-        simp [pyBitLength]] at hs_lt
+  rw [pyBitLength_natCast] at hs_lt
   have hbl_pos : 0 < natBitLength cn := by omega
   have hcn_pos : 0 < cn := natBitLength_pos_iff.mp hbl_pos
   have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
@@ -166,11 +177,7 @@ theorem fdiv_two_pow_pyBitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
   rw [Int.fdiv_eq_ediv_of_nonneg c (by positivity)]
   apply Int.ediv_eq_zero_of_lt hc
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-  have hbl : (pyBitLength (↑cn : ℤ)).toNat = natBitLength cn := by
-    rw [show pyBitLength (↑cn : ℤ) = ↑(natBitLength cn) from by
-          simp [pyBitLength]]
-    exact Int.toNat_natCast _
-  rw [hbl]
+  rw [toNat_pyBitLength_natCast]
   exact_mod_cast lt_two_pow_natBitLength cn
 
 /-- Each recursive `c ↦ c // 2` step drops exactly one from `c.bit_length()`
@@ -184,13 +191,9 @@ theorem toNat_pyBitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
     rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
     rfl
-  rw [h_half]
-  -- Both bit-lengths reduce to `natBitLength` on the underlying ℕ (introduce a
-  -- fresh `↑m` so `simp` can't rewrite a cast-of-division).
-  have key : ∀ m : ℕ, (pyBitLength (↑m : ℤ)).toNat = natBitLength m := fun m => by
-    rw [show pyBitLength (↑m : ℤ) = ↑(natBitLength m) from by simp [pyBitLength]]
-    exact Int.toNat_natCast _
-  rw [key (cn / 2), key cn, natBitLength_div_two hcn]
+  -- Both bit-lengths reduce to `natBitLength` on the underlying ℕ (via the targeted
+  -- `toNat_pyBitLength_natCast`, which leaves the `cn / 2` cast untouched).
+  rw [h_half, toNat_pyBitLength_natCast, toNat_pyBitLength_natCast, natBitLength_div_two hcn]
 
 /-! ## Loop-body shift-amount nonnegativity
 

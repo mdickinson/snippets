@@ -121,7 +121,7 @@ theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
   -- Convert recursion-depth expression to ℕ.
   have h_toNat : (Int.fdiv (pyBitLength (↑m : ℤ) - 1) 2).toNat
                   = (natBitLength m - 1) / 2 := by
-    rw [show pyBitLength (↑m : ℤ) = ((natBitLength m : ℕ) : ℤ) from rfl,
+    rw [pyBitLength_natCast,
         show ((natBitLength m : ℕ) : ℤ) - 1 = ((natBitLength m - 1 : ℕ) : ℤ) from by
           omega,
         show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
