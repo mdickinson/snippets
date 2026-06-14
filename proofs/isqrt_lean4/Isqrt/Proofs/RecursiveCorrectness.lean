@@ -15,7 +15,7 @@ establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsq
 -/
 
 import Isqrt.Definitions.Recursive
-import Isqrt.Definitions.Spec
+import Isqrt.Definitions.Specification
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonOpsLemmas

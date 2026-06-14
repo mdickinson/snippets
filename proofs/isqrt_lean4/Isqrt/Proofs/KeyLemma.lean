@@ -6,7 +6,7 @@ integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
 `⌊√n⌋` or `⌈√n⌉`. This is a proof-only notion: `isNearSquareRoot` is defined here,
 alongside the key lemma that uses it. Its companion `isIntegerSquareRoot` — the
 exact `a = ⌊√n⌋` postcondition the top-level theorems assert — is trust surface, so
-it lives in `Isqrt.Definitions.IntegerSquareRoot`; the algorithm's final `a-1`/`a`
+it lives in `Isqrt.Definitions.Specification`; the algorithm's final `a-1`/`a`
 choice (`isNearSquareRoot.toIntegerSquareRoot` below) is what turns a near square
 root into the integer square root.
 
@@ -15,7 +15,7 @@ if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
 near square root of `n`.
 -/
 
-import Isqrt.Definitions.IntegerSquareRoot
+import Isqrt.Definitions.Specification
 import Isqrt.Proofs.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
@@ -23,7 +23,7 @@ import Mathlib.Tactic.Positivity
 /-! ## The near-square-root predicate
 
 `isNearSquareRoot` is stated multiplicatively — `x * x`, never `x ^ 2` — for
-symmetry with `isIntegerSquareRoot` (in `Isqrt.Definitions.IntegerSquareRoot`),
+symmetry with `isIntegerSquareRoot` (in `Isqrt.Definitions.Specification`),
 which mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)` that the
 top-level theorems assert. The doc-comment prose, by contrast, writes squares as
 `x²`: the `*` rule governs compiled statements that mirror Python source, while

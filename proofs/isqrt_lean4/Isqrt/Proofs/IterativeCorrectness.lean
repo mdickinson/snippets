@@ -1,5 +1,5 @@
 import Isqrt.Definitions.Iterative
-import Isqrt.Definitions.Spec
+import Isqrt.Definitions.Specification
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonOpsLemmas

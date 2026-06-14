@@ -111,10 +111,9 @@ Isqrt/
   Definitions.lean             -- component root: the trust surface
   Definitions/
     PythonOps.lean             -- PyException; //, >>, <<, range, bit_length mirrors
-    IntegerSquareRoot.lean     -- isIntegerSquareRoot specification predicate
     Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
-    Spec.lean                  -- isCorrectIsqrt: the top-level correctness contract
+    Specification.lean         -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔Nat bridge
@@ -459,7 +458,7 @@ the Python algorithm.
 The top-level theorems are *total* specifications. Both
 `isCorrectIsqrt_isqrtRecursive` and its iterative twin
 `isCorrectIsqrt_isqrtIterative` prove the same contract, `isCorrectIsqrt`
-(in `Isqrt/Definitions/Spec.lean`), which characterises an `isqrt`
+(in `Isqrt/Definitions/Specification.lean`), which characterises an `isqrt`
 implementation `f` by cases on its result:
 
 ```
@@ -508,11 +507,11 @@ Lean itself. Two concerns live there:
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.
 - The *specification* itself: the contract `isCorrectIsqrt` (in
-  `Isqrt/Definitions/Spec.lean`) that both top-level theorems prove. This is
-  where we say what "correct" means. It is a total specification by cases on the
+  `Isqrt/Definitions/Specification.lean`) that both top-level theorems prove. This
+  is where we say what "correct" means. It is a total specification by cases on the
   result, spelled out in "The `.ok` result is a certificate" above: on `.ok v`
   it asserts `0 ≤ n` and `isIntegerSquareRoot v n` — where the predicate
-  `isIntegerSquareRoot a n` (in `Isqrt/Definitions/IntegerSquareRoot.lean`) unfolds to
+  `isIntegerSquareRoot a n` (in the same module) unfolds to
   `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor of √n — and
   on `.error e` it pins `e` to exactly Python's `ValueError`. If the
   specification (or the predicate) is too weak, the proof being valid doesn't

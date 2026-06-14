@@ -4,7 +4,7 @@ supporting lemma. A reader who trusts Lean's checker need only confirm that the 
 top-level theorems (`isCorrectIsqrt_isqrtRecursive` in
 `Isqrt.Proofs.RecursiveCorrectness`, `isCorrectIsqrt_isqrtIterative` in
 `Isqrt.Proofs.IterativeCorrectness`) assert `isCorrectIsqrt` of the two `isqrt`
-translations; the contract itself lives in `Isqrt.Definitions.Spec`. This component
+translations; the contract itself lives in `Isqrt.Definitions.Specification`. This component
 depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 -/
 
