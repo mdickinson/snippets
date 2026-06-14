@@ -21,12 +21,6 @@ import Isqrt.RecursionDepth
 
 set_option maxHeartbeats 1000000
 
-/-- `(j + 2).toNat = j.toNat + 2` for `0 ≤ j`. -/
-private theorem toNat_add_two {j : ℤ} (hj : 0 ≤ j) :
-    (j + 2).toNat = j.toNat + 2 := by
-  obtain ⟨j0, rfl⟩ := Int.eq_ofNat_of_zero_le hj
-  rw [Int.toNat_natCast]; omega
-
 /-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
     (2 * j + 2).toNat = 2 * j.toNat + 2 := by
@@ -114,11 +108,8 @@ private theorem isqrtAux_correctness :
     have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
     have val_eq :
         a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
-          = M * a + Int.fdiv n (4 * M * a) := by
-      rw [toNat_add_two k_nn]
-      have h_pow : (2 : ℤ) ^ (k.toNat + 2) = 4 * M := by rw [hM_def, pow_add]; ring
-      rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity : (0 : ℤ) ≤ 4 * M) a_pos.le, hM_def]
-      ring
+          = M * a + Int.fdiv n (4 * M * a) :=
+      key_isqrt_body_eq k_nn a_pos hM_def
     refine ⟨_, hred, ?_, ?_⟩
     · -- positivity of the returned value
       exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))

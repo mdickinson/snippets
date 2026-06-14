@@ -171,3 +171,22 @@ theorem key_isqrt_lemma {n M a : ℤ}
     exact lt_of_mul_lt_mul_right h_squared h4Ma_sq_nonneg
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
+
+/-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
+For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
+— a left shift of `a` by `k`, plus the divided-down remainder — equals
+`Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
+correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
+recursive proof (`Isqrt.Correctness`) with `ν = n`, the iterative proof
+(`Isqrt.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
+move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
+theorem key_isqrt_body_eq {ν a M : ℤ} {k : ℤ} (hk : 0 ≤ k) (ha : 0 < a)
+    (hM : M = 2 ^ k.toNat) :
+    a * 2 ^ k.toNat + Int.fdiv (Int.fdiv ν (2 ^ (k + 2).toNat)) a
+      = M * a + Int.fdiv ν (4 * M * a) := by
+  subst hM
+  have h_pow : (2 : ℤ) ^ (k + 2).toNat = 4 * 2 ^ k.toNat := by
+    have hkt : (k + 2).toNat = k.toNat + 2 := by omega
+    rw [hkt, pow_add]; ring
+  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν (by positivity : (0 : ℤ) ≤ 4 * 2 ^ k.toNat) ha.le]
+  ring

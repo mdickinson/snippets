@@ -121,6 +121,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
           Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : ℤ) ≤ 2),
           Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : ℤ) ≤ 2)]
       omega
+    have hk_nn : 0 ≤ k := by omega
     set M := (2 : ℤ) ^ k.toNat with hM_def
     have hM_pos : 0 < M := by rw [hM_def]; positivity
     have hsc_new : hasSizeCondition d_new N_new := by
@@ -143,26 +144,23 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       omega
     have h_near : isNearSquareRoot a_old (Int.fdiv N_new (4 * M ^ 2)) := by
       rw [h_div_bridge]; exact hx_near
-    have hMa_nn : (0 : ℤ) ≤ 4 * M * a_old :=
-      mul_nonneg (mul_nonneg (by norm_num) hM_pos.le) ha_old_pos.le
     have hX :
         a_old * 2 ^ (d_new - d_old - 1).toNat
             + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old
           = M * a_old + Int.fdiv N_new (4 * M * a_old) := by
-      congr 1
-      · rw [hM_def, show (d_new - d_old - 1).toNat = k.toNat from by rw [hk_eq]]
-        ring
-      · rw [hN_new_def,
-            Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) ha_old_pos.le,
-            Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) hMa_nn]
+      -- The depth-shift glue: rewrite the body's `n`-divisor into the `N_new`-divisor
+      -- shape `key_isqrt_body_eq` expects (factoring out `4 ^ (c - d_new)`); the rest
+      -- of the algebra is the shared lemma.
+      have hbridge : Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)
+          = Int.fdiv N_new (2 ^ (k + 2).toNat) := by
+        rw [hN_new_def, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
         congr 1
-        have hpow_a : (2 : ℤ) ^ (2 * c - d_old - d_new + 1).toNat
-                        = 4 ^ (c - d_new).toNat * (4 * M) := by
-          rw [hM_def, show (4 : ℤ) = 2 ^ 2 by norm_num]
-          simp only [← pow_mul, ← pow_add]
-          congr 1
-          omega
-        rw [hpow_a]; ring
+        rw [show (4 : ℤ) = 2 ^ 2 by norm_num]
+        simp only [← pow_mul, ← pow_add]
+        congr 1
+        omega
+      rw [show (d_new - d_old - 1).toNat = k.toNat from by rw [hk_eq], hbridge]
+      exact key_isqrt_body_eq hk_nn ha_old_pos hM_def
     -- assemble: `stepM` succeeds, and its new `a` is the `key_isqrt_lemma` output
     refine ⟨_, stepM_eq_ok x sZ hs_nn ha_old_pos ?_ ?_, ?_, ?_, ?_⟩
     · rw [hsi, hx_snd]; exact hK
