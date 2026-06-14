@@ -174,8 +174,7 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
     rw [h_shamt,
         show ((2 : ℤ) ^ (2 * ((cn - 1) / 2) + 2))
               = ((2 ^ (2 * ((cn - 1) / 2) + 2) : ℕ) : ℤ) by push_cast; rfl,
-        Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
-    rfl
+        Int.fdiv_natCast_natCast]
   -- Apply ℕ-level lemma.
   have h_lo_nat : 4 ^ cn ≤ nn := by
     have := h_lo; rw [hcN] at this; exact_mod_cast this
@@ -237,8 +236,7 @@ theorem size_condition_at_depth {c n d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c
   have h_bridge : Int.fdiv (↑nn : ℤ) ((4 : ℤ) ^ (cn - dn))
                     = ((nn / 4 ^ (cn - dn) : ℕ) : ℤ) := by
     rw [show ((4 : ℤ) ^ (cn - dn)) = ((4 ^ (cn - dn) : ℕ) : ℤ) from by push_cast; rfl,
-        Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
-    rfl
+        Int.fdiv_natCast_natCast]
   -- Apply the ℕ-level lemma.
   have h_lo_nat : 4 ^ cn ≤ nn := by
     have := h_lo; rw [hcN] at this; exact_mod_cast this

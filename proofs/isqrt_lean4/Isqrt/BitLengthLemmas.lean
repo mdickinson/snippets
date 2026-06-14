@@ -188,9 +188,7 @@ theorem toNat_pyBitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn : 0 < cn := by exact_mod_cast hc
   have h_half : Int.fdiv (↑cn : ℤ) 2 = ((cn / 2 : ℕ) : ℤ) := by
-    rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
-        Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg _)]
-    rfl
+    rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl, Int.fdiv_natCast_natCast]
   -- Both bit-lengths reduce to `natBitLength` on the underlying ℕ (via the targeted
   -- `toNat_pyBitLength_natCast`, which leaves the `cn / 2` cast untouched).
   rw [h_half, toNat_pyBitLength_natCast, toNat_pyBitLength_natCast, natBitLength_div_two hcn]

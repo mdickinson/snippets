@@ -59,3 +59,11 @@ theorem Int.toNat_fdiv_of_nonneg {x y : ℤ} (hx : 0 ≤ x) (hy : 0 ≤ y) :
   obtain ⟨b, rfl⟩ := Int.eq_ofNat_of_zero_le hy
   rw [Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg b)]
   rfl
+
+/-- `Int.fdiv` of two `ℕ`-casts is the cast of the `Nat` quotient:
+`(↑a).fdiv ↑b = ↑(a / b)`. The value-level companion to `Int.toNat_fdiv_of_nonneg`;
+once a divisor is exposed as a `ℕ`-cast, this collapses the `fdiv` into a single
+`Nat` division, which is the bridge the size-condition and bit-length proofs lean on. -/
+theorem Int.fdiv_natCast_natCast (a b : ℕ) : (↑a : ℤ).fdiv ↑b = ↑(a / b) := by
+  rw [Int.fdiv_eq_ediv_of_nonneg _ (Int.natCast_nonneg b)]
+  rfl
