@@ -8,7 +8,7 @@ test file, so the iterative and recursive test files can share them without one
 importing the other.
 -/
 
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.PythonPrimitives
 
 /-- True when the computation returned `.ok expected`. -/
 def assertReturns (actual : PyExcept Int) (expected : Int) : Bool :=

@@ -5,7 +5,7 @@ correctness specification. Depends only on the Lean core; no Mathlib dependence.
 -/
 
 import Isqrt.Definitions.Exceptions
-import Isqrt.Definitions.PythonOps
-import Isqrt.Definitions.Iterative
-import Isqrt.Definitions.Recursive
+import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Definitions.IsqrtIterative
+import Isqrt.Definitions.IsqrtRecursive
 import Isqrt.Definitions.Specification

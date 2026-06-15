@@ -21,7 +21,7 @@ original derivation (CPython ships the iterative `isqrtIterative`). The algorith
             return a - 1 if n < a * a else a
 -/
 
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.PythonPrimitives
 
 /-- Recursive auxiliary computing a *near* square root of `n` — a value within one
 of `⌊√n⌋`, which `isqrtRecursive` corrects with its final `a-1`/`a` step (hence

@@ -5,7 +5,7 @@ using the shared `assert*` helpers of `Isqrt.Tests.Assertions`. A failing
 `#guard` causes a build error.
 -/
 
-import Isqrt.Definitions.Recursive
+import Isqrt.Definitions.IsqrtRecursive
 import Isqrt.Tests.Assertions
 
 /-! ## isqrtRecursive -/

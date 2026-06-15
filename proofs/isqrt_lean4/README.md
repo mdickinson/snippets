@@ -111,15 +111,15 @@ Isqrt/
   Definitions.lean             -- component root: the trust surface
   Definitions/
     Exceptions.lean            -- PyException + the succeeds/fails return-or-raise helpers
-    PythonOps.lean             -- //, >>, <<, range, bit_length mirrors
-    Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
-    Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
+    PythonPrimitives.lean      -- //, >>, <<, range, bit_length mirrors
+    IsqrtIterative.lean        -- iterative isqrtIterative definition (Lean for … in loop)
+    IsqrtRecursive.lean        -- recursive nsqrt and isqrtRecursive definitions
     Specification.lean         -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔Nat bridge
     BitLengthLemmas.lean       -- power-of-two / floor-division facts about pyBitLength
-    PythonOpsLemmas.lean       -- .ok-branch value-extraction lemmas for the operators
+    PythonPrimitivesLemmas.lean -- .ok-branch value-extraction lemmas for the operators
     SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
     SpecificationLemmas.lean   -- bridges plain .ok/.error equalities to the proof-carrying spec
@@ -183,11 +183,11 @@ def isqrt(n: int) -> int:
 This recursive form is the algorithm's original derivation, by the author of
 CPython's `math.integer.isqrt`; it's also written up in [a Stack Overflow
 answer][so-recursive], and reproduced as a docstring at the top of
-`Isqrt/Definitions/Recursive.lean`.
+`Isqrt/Definitions/IsqrtRecursive.lean`.
 
 CPython itself ships an [iterative formulation][cpython-iterative] of
 the same algorithm, derived from the recursive one for efficiency. That
-formulation is verified here too: `isqrtIterative` (`Isqrt/Definitions/Iterative.lean`)
+formulation is verified here too: `isqrtIterative` (`Isqrt/Definitions/IsqrtIterative.lean`)
 is a faithful, lightly-rewritten transcription of the CPython source
 comment, with its `for s in reversed(range(c.bit_length()))` loop rendered
 as Lean's own `for … in … do`. `isCorrectIsqrt_isqrtIterative`
@@ -365,7 +365,7 @@ Python's `int.bit_length()` returns the number of bits needed to
 represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 `>>`, this method can't raise on any integer input, so it needs no
 `Except` wrapper — it's just a function. It's defined as `pyBitLength` in
-`Isqrt/Definitions/PythonOps.lean`, alongside the operator mirrors it joins;
+`Isqrt/Definitions/PythonPrimitives.lean`, alongside the operator mirrors it joins;
 the lemmas about it live in `Isqrt/Proofs/BitLengthLemmas.lean`.
 
 On the Lean side it's named `pyBitLength : Int → Int`, defined as
@@ -514,10 +514,10 @@ Lean's own core (not even Mathlib) — so scrutinising it means trusting only
 Lean itself. Two concerns live there:
 
 - The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrt` (in
-  `Isqrt/Definitions/Recursive.lean`), `isqrtIterative` (in
-  `Isqrt/Definitions/Iterative.lean`), and the `pyFloordiv` / `pyRshift` /
+  `Isqrt/Definitions/IsqrtRecursive.lean`), `isqrtIterative` (in
+  `Isqrt/Definitions/IsqrtIterative.lean`), and the `pyFloordiv` / `pyRshift` /
   `pyLshift` operations together with `pyBitLength` (all in
-  `Isqrt/Definitions/PythonOps.lean`). These are the only places where a
+  `Isqrt/Definitions/PythonPrimitives.lean`). These are the only places where a
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
   mirror, the proof is proving something about a different algorithm.

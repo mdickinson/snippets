@@ -26,7 +26,7 @@ verbatim here:
         return a - (a*a > n)
 -/
 
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.PythonPrimitives
 
 /-- Integer square root of `n`, monadic (`Except`) form — the direct `do`-block
 translation of the Python listing above: raises `ValueError` for `n < 0`, returns

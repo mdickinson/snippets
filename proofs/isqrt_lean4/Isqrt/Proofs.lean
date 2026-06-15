@@ -10,7 +10,7 @@ depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 
 import Isqrt.Proofs.FDivLemmas
 import Isqrt.Proofs.BitLengthLemmas
-import Isqrt.Proofs.PythonOpsLemmas
+import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SpecificationLemmas

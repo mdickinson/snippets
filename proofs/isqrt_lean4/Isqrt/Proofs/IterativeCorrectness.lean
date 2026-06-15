@@ -1,9 +1,9 @@
-import Isqrt.Definitions.Iterative
+import Isqrt.Definitions.IsqrtIterative
 import Isqrt.Definitions.Specification
 import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
-import Isqrt.Proofs.PythonOpsLemmas
+import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.BitLengthLemmas
 
 /-- One iteration of the monadic loop, as a standalone `Except`-returning step on the

@@ -1,6 +1,6 @@
 /-
 Value-extraction lemmas for the `Except`-returning Python operations of
-`Isqrt.Definitions.PythonOps`.
+`Isqrt.Definitions.PythonPrimitives`.
 
 On its non-raising branch each operation returns `.ok` of the corresponding
 `Int.fdiv` / power-of-two value. These are the bridges the correctness proofs use
@@ -9,7 +9,7 @@ to step through the `do`-block once they have discharged the side conditions
 and powers of two, so the proofs can rewrite with them directly.
 -/
 
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.PythonPrimitives
 
 /-- For a nonzero divisor, `pyFloordiv` takes its `.ok` branch. -/
 theorem pyFloordiv_eq_ok {a b : Int} (hb : b ≠ 0) :

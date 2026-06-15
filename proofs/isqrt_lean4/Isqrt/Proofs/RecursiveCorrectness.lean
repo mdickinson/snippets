@@ -14,12 +14,12 @@ recursive subproblem's value. The top-level result `isCorrectIsqrt_isqrtRecursiv
 establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsqrt_isqrtIterative`.
 -/
 
-import Isqrt.Definitions.Recursive
+import Isqrt.Definitions.IsqrtRecursive
 import Isqrt.Definitions.Specification
 import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.PythonOpsLemmas
+import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.BitLengthLemmas
 
 /-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/

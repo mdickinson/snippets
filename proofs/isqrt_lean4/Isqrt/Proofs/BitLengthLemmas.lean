@@ -3,7 +3,7 @@ Lemmas about `int.bit_length()` — the power-of-two and floor-division facts th
 isqrt proof needs, stated in pure `Int.fdiv` / `2 ^ ·` form (no Python operators).
 
 Part of the **proofs** layer. The public `pyBitLength` lives in
-`Isqrt.Definitions.PythonOps` (trust surface), where it inlines its bit-length
+`Isqrt.Definitions.PythonPrimitives` (trust surface), where it inlines its bit-length
 computation directly. This file re-declares that computation as the named ℕ-level
 `natBitLength` — the workhorse the lemmas below run on — and keeps it honest against
 `pyBitLength` by the bridge lemma `pyBitLength_natCast` (a one-line `cases`). It then connects
@@ -17,7 +17,7 @@ import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
 import Mathlib.Data.Int.DivMod
-import Isqrt.Definitions.PythonOps
+import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.FDivLemmas
 
 /-! ## natBitLength: the ℕ-level bit length -/
@@ -27,7 +27,7 @@ with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2` for
 access to core Lean 4's `log2` lemma library.
 
 This is the ℕ-level workhorse the bit-length proofs run on. It is *not* trust
-surface: the public `pyBitLength` (`Isqrt.Definitions.PythonOps`) inlines this same
+surface: the public `pyBitLength` (`Isqrt.Definitions.PythonPrimitives`) inlines this same
 computation, and `pyBitLength_natCast` below verifies — by a one-line `cases` — that
 the two agree, so this re-declaration cannot silently drift from it. -/
 def natBitLength : Nat → Nat
