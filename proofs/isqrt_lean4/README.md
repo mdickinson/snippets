@@ -112,8 +112,8 @@ Isqrt/
   Definitions/
     Exceptions.lean            -- PyException + the succeeds/fails return-or-raise helpers
     PythonOps.lean             -- //, >>, <<, range, bit_length mirrors
-    Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Iterative.lean             -- iterative isqrtIterative definition (Lean for … in loop)
+    Recursive.lean             -- recursive nsqrt and isqrtRecursive definitions
     Specification.lean         -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
   Proofs.lean                  -- component root: theorems and supporting lemmas
   Proofs/
