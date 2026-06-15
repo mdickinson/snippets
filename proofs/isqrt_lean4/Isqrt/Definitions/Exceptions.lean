@@ -1,30 +1,15 @@
 /-
-The exception vocabulary: how this development models a computation that may
-raise, and how it inspects the outcome. Part of the **definitions** layer — the
-trust surface — and the foundation both the Python operations
-(`Isqrt.Definitions.PythonOps`) and the specification
-(`Isqrt.Definitions.Specification`) build on. Core-only: no Mathlib.
+The exception vocabulary: `PyException` (the Python exceptions `math.isqrt` and its
+operations can raise), the alias `PyExcept α := Except PyException α`, and four
+accessors on a `PyExcept` outcome — `succeeds`/`fails` (did it return / raise) and
+the proof-carrying `returnValue`/`exceptionRaised` (the returned value / raised
+exception, given a proof the computation took that branch). Core-only: no Mathlib.
 
-Two pieces:
-
-* `PyException`, the concrete Python exceptions `math.isqrt` and the operations it
-  uses can raise, together with the alias `PyExcept α := Except PyException α` for
-  the result of a computation that may raise one. Every Python operation that can
-  raise returns a `PyExcept`, carrying either its result or the exception Python
-  would have raised.
-
-* `succeeds`/`fails` and the proof-carrying `returnValue`/`exceptionRaised` —
-  accessors on a `PyExcept α` outcome. `succeeds`/`fails` assert that a
-  computation returned / raised; `returnValue`/`exceptionRaised` then extract the
-  returned value / raised exception, each total only given a proof that the
-  computation took that branch. They live in the project's own `Isqrt` namespace
-  (not grafted onto `Except`) so the specification can write
-  `Isqrt.succeeds (isqrt n)` without colliding with Mathlib's own `succeeds`.
+The accessors sit in the project's `Isqrt` namespace to avoid a clash with
+Mathlib's own `succeeds`.
 -/
 
-/-- The Python exceptions that `math.isqrt` and the operations it uses can raise.
-`deriving Repr` lets `#eval` print the exception's contents in tests (the analogue
-of a Python `__repr__`). -/
+/-- The Python exceptions that `math.isqrt` and the operations it uses can raise. -/
 inductive PyException where
   | zeroDivisionError
   | valueError (msg : String)

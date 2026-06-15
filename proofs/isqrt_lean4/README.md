@@ -336,7 +336,11 @@ short-circuits to the error on `.error` and continues with the unwrapped
 value on `.ok`. So each line that could raise in Python becomes a single
 `←` bind in Lean, the surrounding code never mentions the `Except`
 wrapper, and the translation reads almost verbatim like the Python
-source — the monad does the plumbing, not the reader.
+source — the monad does the plumbing, not the reader. (For a full
+account of how Lean's `do`-notation desugars, see the paper
+[*'do' unchained*][do-unchained].)
+
+[do-unchained]: https://lean-lang.org/papers/do.pdf
 
 ### Shifts
 

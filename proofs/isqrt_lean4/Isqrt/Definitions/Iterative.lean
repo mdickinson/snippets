@@ -1,9 +1,7 @@
 /-
-
-Python's `math` module defines an `isqrt` function that computes the integer
-part of the square root of a nonnegative integer input. The implementation of
-`math.isqrt` is in C, but the comments in the C source include equivalent
-Python code, reproduced verbatim here for easy reference.
+The *iterative* integer square root in monadic (`Except`) form — the formulation
+CPython ships. The C source gives the equivalent Python in a comment, reproduced
+verbatim here:
 
     def isqrt(n):
         """
@@ -26,32 +24,15 @@ Python code, reproduced verbatim here for easy reference.
             a = (a << d - e - 1) + (n >> 2*c - e - d + 1) // a
 
         return a - (a*a > n)
-
-This module gives a direct translation of the above Python into *monadic* Lean:
-the operations that can raise (`//`, `>>`, `<<`) become the `Except`-returning
-`pyFloordiv` / `pyRshift` / `pyLshift` of `Isqrt.Definitions.PythonOps`,
-and the function itself is a `do` block — `let mut a/d`, a `for … in`, and monadic
-binds (`←`) for each operation that could raise. It's named `isqrtIterative` to set
-it apart from the recursive translation `isqrtRecursive` (`Isqrt.Definitions.Recursive`):
-the two are the iterative and recursive translations of the same CPython algorithm, sharing
-the operators and `pyBitLength` of `Isqrt.Definitions.PythonOps`.
-
-Correctness is proved in `Isqrt.Proofs.IterativeCorrectness`.
-
-Key reference: https://lean-lang.org/papers/do.pdf
 -/
 
 import Isqrt.Definitions.PythonOps
 
 /-- Integer square root of `n`, monadic (`Except`) form — the direct `do`-block
-translation of the CPython source above.
-
-For `n < 0` it raises `ValueError`; for `n = 0` it returns `0`; otherwise it runs
-the `for s in reversed(range(c.bit_length()))` loop, carrying the running
-approximation `a` and the previous shift `d` as `let mut` state, and returns
-`a - (if a*a > n then 1 else 0)` (Python's `a - (a*a > n)`, with the implicit
-bool-to-int spelled out). Each `←` binds an operation that could raise; the
-correctness proof shows none of them ever does for `n ≥ 0`. -/
+translation of the Python listing above: raises `ValueError` for `n < 0`, returns
+`0` for `n = 0`, otherwise runs the loop carrying the running approximation `a` and
+previous shift `d` as `let mut` state, and returns `a - (if a*a > n then 1 else 0)`
+(Python's `a - (a*a > n)`, bool-to-int spelled out). -/
 def isqrtIterative (n : Int) : PyExcept Int := do
   if n < 0 then
     throw (.valueError "isqrt() argument must be nonnegative")
