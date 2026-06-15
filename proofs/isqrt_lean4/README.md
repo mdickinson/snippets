@@ -103,32 +103,32 @@ nothing else in the project. (Lean doesn't enforce this across a single package;
 it's a convention the directory split keeps visible in review.)
 
 ```
-lakefile.lean                  -- project configuration and dependencies
-lean-toolchain                 -- Lean version pin
-Isqrt.lean                     -- library root (imports Definitions + Proofs)
-IsqrtTests.lean                -- tests root (imports the #guard files)
+lakefile.lean                   -- project configuration and dependencies
+lean-toolchain                  -- Lean version pin
+Isqrt.lean                      -- library root (imports Definitions + Proofs)
+IsqrtTests.lean                 -- tests root (imports the #guard files)
 Isqrt/
-  Definitions.lean             -- component root: the trust surface
+  Definitions.lean              -- component root: the trust surface
   Definitions/
-    Exceptions.lean            -- PyException + the succeeds/fails return-or-raise helpers
-    PythonPrimitives.lean      -- //, >>, <<, range, bit_length mirrors
-    IsqrtIterative.lean        -- iterative isqrtIterative definition (Lean for … in loop)
-    IsqrtRecursive.lean        -- recursive nsqrt and isqrtRecursive definitions
-    Specification.lean         -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
-  Proofs.lean                  -- component root: theorems and supporting lemmas
+    Exceptions.lean             -- PyException + the succeeds/fails return-or-raise helpers
+    PythonPrimitives.lean       -- //, >>, <<, range, bit_length mirrors
+    IsqrtIterative.lean         -- iterative isqrtIterative definition (Lean for … in loop)
+    IsqrtRecursive.lean         -- recursive nsqrt and isqrtRecursive definitions
+    Specification.lean          -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
+  Proofs.lean                   -- component root: theorems and supporting lemmas
   Proofs/
-    FDivLemmas.lean            -- Int.fdiv ordering lemmas and Int↔Nat bridge
-    BitLengthLemmas.lean       -- power-of-two / floor-division facts about pyBitLength
+    FDivLemmas.lean             -- Int.fdiv ordering lemmas and Int↔Nat bridge
+    BitLengthLemmas.lean        -- power-of-two / floor-division facts about pyBitLength
     PythonPrimitivesLemmas.lean -- .ok-branch value-extraction lemmas for the operators
-    SizeConditions.lean        -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
-    KeyLemma.lean              -- key algebraic lemma; isNearSquareRoot predicate
-    SpecificationLemmas.lean   -- bridges plain .ok/.error equalities to the proof-carrying spec
-    RecursiveCorrectness.lean  -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
-    IterativeCorrectness.lean  -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
+    SizeConditions.lean         -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
+    KeyLemma.lean               -- key algebraic lemma; isNearSquareRoot predicate
+    SpecificationLemmas.lean    -- bridges plain .ok/.error equalities to the proof-carrying spec
+    RecursiveCorrectness.lean   -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
+    IterativeCorrectness.lean   -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
   Tests/
-    Assertions.lean            -- assert* helpers shared by both test files
-    Iterative.lean             -- #guard checks for the Python ops and isqrtIterative
-    Recursive.lean             -- #guard checks for the recursive isqrtRecursive
+    Assertions.lean             -- assert* helpers shared by both test files
+    Iterative.lean              -- #guard checks for the Python ops and isqrtIterative
+    Recursive.lean              -- #guard checks for the recursive isqrtRecursive
 ```
 
 Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
