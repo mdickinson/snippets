@@ -12,6 +12,5 @@ import Isqrt.Proofs.FDivLemmas
 import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.RecursiveCorrectness
 import Isqrt.Proofs.IterativeCorrectness

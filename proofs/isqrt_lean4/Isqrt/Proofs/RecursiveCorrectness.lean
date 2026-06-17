@@ -16,7 +16,6 @@ establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsq
 
 import Isqrt.Definitions.IsqrtRecursive
 import Isqrt.Definitions.Specification
-import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
@@ -131,13 +130,12 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ h : Isqrt.succeeds (isqrtRecursive n),
-      isIntegerSquareRoot (Isqrt.returnValue (isqrtRecursive n) h) n
+    show ∃ a, returns (isqrtRecursive n) a ∧ isIntegerSquareRoot a n
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
-      refine returnValue_satisfies (by unfold isqrtRecursive; norm_num; rfl)
-        (fun a => isIntegerSquareRoot a 0) ?_
-      show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
+      refine ⟨0, ?_, ?_⟩
+      · show isqrtRecursive 0 = .ok 0; unfold isqrtRecursive; norm_num; rfl
+      · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
     · -- 0 < n: the recursion runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
       set c : ℤ := Int.fdiv (pyBitLength n - 1) 2 with hc_def
@@ -150,14 +148,11 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hc_def]
         rw [show (Except.ok c : PyExcept ℤ) = pure c from rfl, pure_bind, ha_eq]
         rfl
-      exact returnValue_satisfies hred (fun a => isIntegerSquareRoot a n)
-        a_near.toIntegerSquareRoot
+      exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
-    show ∃ h : Isqrt.fails (isqrtRecursive n),
-      Isqrt.exceptionRaised (isqrtRecursive n) h = .valueError "isqrt() argument must be nonnegative"
+    show raises (isqrtRecursive n) (.valueError "isqrt() argument must be nonnegative")
     have herr : isqrtRecursive n
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtRecursive; rw [if_pos hn]; rfl
-    exact exceptionRaised_satisfies herr
-      (fun e => e = .valueError "isqrt() argument must be nonnegative") rfl
+    exact herr

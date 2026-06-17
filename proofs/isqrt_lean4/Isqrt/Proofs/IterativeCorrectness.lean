@@ -1,6 +1,5 @@
 import Isqrt.Definitions.IsqrtIterative
 import Isqrt.Definitions.Specification
-import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonPrimitivesLemmas
@@ -196,13 +195,12 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ h : Isqrt.succeeds (isqrtIterative n),
-      isIntegerSquareRoot (Isqrt.returnValue (isqrtIterative n) h) n
+    show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot a n
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
-      refine returnValue_satisfies (by unfold isqrtIterative; norm_num; rfl)
-        (fun a => isIntegerSquareRoot a 0) ?_
-      show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
+      refine ⟨0, ?_, ?_⟩
+      · show isqrtIterative 0 = .ok 0; unfold isqrtIterative; norm_num; rfl
+      · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
@@ -223,13 +221,11 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
             = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
         rw [hadj]
         exact hy_near.toIntegerSquareRoot
-      exact returnValue_satisfies hred (fun a => isIntegerSquareRoot a n) hp
+      exact ⟨_, hred, hp⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
-    show ∃ h : Isqrt.fails (isqrtIterative n),
-      Isqrt.exceptionRaised (isqrtIterative n) h = .valueError "isqrt() argument must be nonnegative"
+    show raises (isqrtIterative n) (.valueError "isqrt() argument must be nonnegative")
     have herr : isqrtIterative n
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtIterative; rw [if_pos hn]; rfl
-    exact exceptionRaised_satisfies herr
-      (fun e => e = .valueError "isqrt() argument must be nonnegative") rfl
+    exact herr

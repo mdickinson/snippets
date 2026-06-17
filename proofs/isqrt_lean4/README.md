@@ -110,7 +110,7 @@ IsqrtTests.lean                 -- tests root (imports the #guard files)
 Isqrt/
   Definitions.lean              -- component root: the trust surface
   Definitions/
-    Exceptions.lean             -- PyException + the succeeds/fails return-or-raise helpers
+    Exceptions.lean             -- PyException + the returns/raises outcome predicates
     PythonPrimitives.lean       -- //, >>, <<, range, bit_length mirrors
     IsqrtIterative.lean         -- iterative isqrtIterative definition (Lean for … in loop)
     IsqrtRecursive.lean         -- recursive nsqrt and isqrtRecursive definitions
@@ -121,7 +121,6 @@ Isqrt/
     PythonPrimitivesLemmas.lean -- .ok value-extraction + pyBitLength power-of-two/floor-division facts
     SizeConditions.lean         -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean               -- key algebraic lemma; isNearSquareRoot predicate
-    SpecificationLemmas.lean    -- bridges plain .ok/.error equalities to the proof-carrying spec
     RecursiveCorrectness.lean   -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
     IterativeCorrectness.lean   -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
   Tests/
@@ -469,23 +468,19 @@ we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
-  (∀ n, 0 ≤ n → ∃ h : Isqrt.succeeds (isqrt n), isIntegerSquareRoot (Isqrt.returnValue (isqrt n) h) n)
+  (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot a n)
   ∧
-  (∀ n, n < 0 → ∃ h : Isqrt.fails (isqrt n), Isqrt.exceptionRaised (isqrt n) h = .valueError "isqrt() argument must be nonnegative")
+  (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
 ```
 
-Here, writing `v` for the result `isqrt n` (and dropping the helpers' `Isqrt.`
-namespace prefix): `succeeds v` and `fails v` assert that
-`v` returned (took the `.ok` branch) or raised (took the `.error` branch);
-`returnValue v h` and `exceptionRaised v h` then extract the returned value or the
-raised exception, each total only given the
-proof `h` that the computation took that branch. So the first clause reads "for
-nonnegative `n`, `f n` succeeds, and the value it returns is `⌊√n⌋`"; the second,
-"for negative `n`, `f n` fails, and the exception it raises is exactly the
-`ValueError` Python raises for negative input, message and all." (These four
-helpers live in the project's own `Isqrt` namespace, in
-`Isqrt/Definitions/Exceptions.lean` alongside `PyException`, rather than grafted
-onto `Except`.)
+Here `returns (isqrt n) a` asserts that `isqrt n` took the `.ok` branch with value
+`a`, and `raises (isqrt n) e` that it took the `.error` branch with exception `e` —
+each is just the corresponding `Except` equality (`isqrt n = .ok a` and
+`isqrt n = .error e`). So the first clause reads "for nonnegative `n`, `f n` returns
+some `a`, and that `a` is `⌊√n⌋`"; the second, "for negative `n`, `f n` raises exactly
+the `ValueError` Python raises for negative input, message and all." (`returns` and
+`raises` live in `Isqrt/Definitions/Exceptions.lean` alongside `PyException`, rather
+than grafted onto `Except`.)
 
 That is the certificate. A `do` block short-circuits to `.error` the
 moment any operation raises, so the only way `isqrtRecursive n` can return (be
