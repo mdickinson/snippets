@@ -110,11 +110,11 @@ IsqrtTests.lean                 -- tests root (imports the #guard files)
 Isqrt/
   Definitions.lean              -- component root: the trust surface
   Definitions/
-    Exceptions.lean             -- PyException + the returns/raises outcome predicates
+    Exceptions.lean             -- PyException and the PyExcept alias
     PythonPrimitives.lean       -- //, >>, <<, range, bit_length mirrors
     IsqrtIterative.lean         -- iterative isqrtIterative definition (Lean for … in loop)
     IsqrtRecursive.lean         -- recursive nsqrt and isqrtRecursive definitions
-    Specification.lean          -- isIntegerSquareRoot postcondition + isCorrectIsqrt contract
+    Specification.lean          -- returns/raises, isIntegerSquareRoot postcondition, isCorrectIsqrt contract
   Proofs.lean                   -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean             -- Int.fdiv ordering lemmas and Int↔Nat bridge
@@ -479,8 +479,8 @@ each is just the corresponding `Except` equality (`isqrt n = .ok a` and
 `isqrt n = .error e`). So the first clause reads "for nonnegative `n`, `f n` returns
 some `a`, and that `a` is `⌊√n⌋`"; the second, "for negative `n`, `f n` raises exactly
 the `ValueError` Python raises for negative input, message and all." (`returns` and
-`raises` live in `Isqrt/Definitions/Exceptions.lean` alongside `PyException`, rather
-than grafted onto `Except`.)
+`raises` are defined in `Isqrt/Definitions/Specification.lean`, rather than grafted
+onto `Except`.)
 
 That is the certificate. A `do` block short-circuits to `.error` the
 moment any operation raises, so the only way `isqrtRecursive n` can return (be

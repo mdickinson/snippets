@@ -1,10 +1,18 @@
 /-
-The specification — *what "correct" means* for an integer square root: the
-postcondition predicate `isIntegerSquareRoot` and the top-level contract
-`isCorrectIsqrt`. Core-only: no Mathlib.
+The specification — *what "correct" means* for an integer square root: the outcome
+predicates `returns`/`raises` on a `PyExcept` result, the postcondition predicate
+`isIntegerSquareRoot`, and the top-level contract `isCorrectIsqrt`. Core-only: no Mathlib.
 -/
 
 import Isqrt.Definitions.Exceptions
+
+/-- `returns x a` asserts that the computation `x` returned the value `a` —
+i.e. took its `.ok` branch with payload `a`. -/
+def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
+
+/-- `raises x e` asserts that the computation `x` raised the exception `e` —
+i.e. took its `.error` branch with payload `e`. -/
+def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error e
 
 /-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
 `a = ⌊√n⌋` exactly. Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the
