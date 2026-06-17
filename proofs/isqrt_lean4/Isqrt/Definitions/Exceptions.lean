@@ -15,30 +15,30 @@ inductive PyException where
   | valueError (msg : String)
   deriving Repr
 
-/-- `PyExcept α` is the type of the result of a computation that either returns a
-value of type `α` or raises a Python exception. -/
+/--
+`PyExcept α` represents the result of a computation that either returns a value of type
+`α` or raises a Python exception.
+-/
 abbrev PyExcept := Except PyException
 
 namespace Isqrt
 
 /-- Assertion that a computation returned a value (did not raise). -/
-def succeeds {α : Type} (x : PyExcept α) : Prop := match x with
+def succeeds {α : Type} : (x : PyExcept α) → Prop
   | .ok _ => True
   | .error _ => False
 
-/-- The value returned by a computation that did not raise. -/
-def returnValue {α : Type} (x : PyExcept α) (h : succeeds x) : α :=
-  match x with
-  | .ok a => a
-
 /-- Assertion that a computation raised (did not return a value). -/
-def fails {α : Type} (x : PyExcept α) : Prop := match x with
+def fails {α : Type} : (x : PyExcept α) → Prop
   | .ok _ => False
   | .error _ => True
 
+/-- The value returned by a computation that did not raise. -/
+def returnValue {α : Type} : (x : PyExcept α) → (h : succeeds x) → α
+  | .ok a, _ => a
+
 /-- The exception raised by a computation that did not return. -/
-def exceptionRaised {α : Type} (x : PyExcept α) (h : fails x) : PyException :=
-  match x with
-  | .error e => e
+def exceptionRaised {α : Type} : (x : PyExcept α) → (h : fails x) → PyException
+  | .error e, _ => e
 
 end Isqrt

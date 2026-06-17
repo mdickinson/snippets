@@ -14,6 +14,7 @@ infrastructure; the ℤ-level corollaries at the end, stated in terms of
 owns `isqrt_c_nonneg`, the nonnegativity of the initial recursion depth.
 -/
 
+import Mathlib.Tactic.Ring
 import Isqrt.Proofs.BitLengthLemmas
 import Isqrt.Proofs.FDivLemmas
 

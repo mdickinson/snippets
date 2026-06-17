@@ -13,10 +13,7 @@ is stated purely in `Int.fdiv` / `2 ^ ·` form, mentioning no Python operators, 
 both the iterative and recursive correctness proofs build on it directly.
 -/
 
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
-import Mathlib.Data.Int.DivMod
 import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.FDivLemmas
 
