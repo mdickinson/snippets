@@ -4,7 +4,6 @@ import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonPrimitivesLemmas
-import Isqrt.Proofs.BitLengthLemmas
 
 /-- One iteration of the monadic loop, as a standalone `Except`-returning step on the
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop

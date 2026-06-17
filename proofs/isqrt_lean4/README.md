@@ -118,8 +118,7 @@ Isqrt/
   Proofs.lean                   -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean             -- Int.fdiv ordering lemmas and Int↔Nat bridge
-    BitLengthLemmas.lean        -- power-of-two / floor-division facts about pyBitLength
-    PythonPrimitivesLemmas.lean -- .ok-branch value-extraction lemmas for the operators
+    PythonPrimitivesLemmas.lean -- .ok value-extraction + pyBitLength power-of-two/floor-division facts
     SizeConditions.lean         -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean               -- key algebraic lemma; isNearSquareRoot predicate
     SpecificationLemmas.lean    -- bridges plain .ok/.error equalities to the proof-carrying spec
@@ -366,7 +365,7 @@ represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 `>>`, this method can't raise on any integer input, so it needs no
 `Except` wrapper — it's just a function. It's defined as `pyBitLength` in
 `Isqrt/Definitions/PythonPrimitives.lean`, alongside the operator mirrors it joins;
-the lemmas about it live in `Isqrt/Proofs/BitLengthLemmas.lean`.
+the lemmas about it live in `Isqrt/Proofs/PythonPrimitivesLemmas.lean`.
 
 On the Lean side it's named `pyBitLength : Int → Int`, defined as
 `natBitLength n.natAbs` (where `natBitLength : Nat → Nat` is built on top of

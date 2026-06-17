@@ -15,7 +15,7 @@ owns `isqrt_c_nonneg`, the nonnegativity of the initial recursion depth.
 -/
 
 import Mathlib.Tactic.Ring
-import Isqrt.Proofs.BitLengthLemmas
+import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
 
 /-! ## Helper arithmetic identity -/

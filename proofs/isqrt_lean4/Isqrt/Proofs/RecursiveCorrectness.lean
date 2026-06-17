@@ -20,7 +20,6 @@ import Isqrt.Proofs.SpecificationLemmas
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
-import Isqrt.Proofs.BitLengthLemmas
 
 /-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
 private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
