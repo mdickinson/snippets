@@ -63,11 +63,11 @@ theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
 /-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
 near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
 running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
-`isNearSquareRoot a ⌊n / 4^(c - c>>s)⌋`. -/
+`isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
 theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition c n) :
     ∃ y : MProd ℤ ℤ, (pyRange (pyBitLength c)).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
-      ∧ 0 < y.fst ∧ isNearSquareRoot y.fst n := by
+      ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
   -- Bridge the `pyRange` list to `(List.range L).reverse` with ℕ indices.
   have hlist : (pyRange (pyBitLength c)).reverse
       = (List.range (pyBitLength c).toNat).reverse.map Int.ofNat := by
@@ -78,8 +78,8 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
   have hz : Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := fdiv_two_pow_pyBitLength_eq_zero hc
   set motive : ℕ → MProd ℤ ℤ → Prop := fun (s : ℕ) (r : MProd ℤ ℤ) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
-      ∧ isNearSquareRoot r.fst (Int.fdiv n (4 ^ (c - Int.fdiv c (2 ^ s)).toNat)) with hmotive
-  -- Seed at `s = L`: `c >> L = 0`, base case `isNearSquareRoot 1 ⌊n/4^c⌋`.
+      ∧ isNearSquareRoot (Int.fdiv n (4 ^ (c - Int.fdiv c (2 ^ s)).toNat)) r.fst with hmotive
+  -- Seed at `s = L`: `c >> L = 0`, base case `isNearSquareRoot ⌊n/4^c⌋ 1`.
   have hseed : motive (pyBitLength c).toNat ⟨1, 0⟩ := by
     refine ⟨one_pos, hz.symm, ?_⟩
     rw [hz]
@@ -141,7 +141,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       simp only [← pow_mul, ← pow_add]
       congr 1
       omega
-    have h_near : isNearSquareRoot a_old (Int.fdiv N_new (4 * M ^ 2)) := by
+    have h_near : isNearSquareRoot (Int.fdiv N_new (4 * M ^ 2)) a_old := by
       rw [h_div_bridge]; exact hx_near
     have hX :
         a_old * 2 ^ (d_new - d_old - 1).toNat
@@ -172,8 +172,8 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       rfl
     · -- near-√ at the new depth: the body's new `a` is the `key_isqrt_lemma` output
       rw [hx_snd]
-      show isNearSquareRoot (a_old * 2 ^ (d_new - d_old - 1).toNat
-          + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old) N_new
+      show isNearSquareRoot N_new (a_old * 2 ^ (d_new - d_old - 1).toNat
+          + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old)
       rw [hX]
       exact key_isqrt_lemma hM_pos ha_old_pos hM4 h_near
   obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
@@ -186,7 +186,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
 /-- Correctness of the monadic integer square root `isqrtIterative`.
 
 For `n < 0` it raises exactly the `ValueError` CPython does; otherwise it returns `.ok v`
-with `v = ⌊√n⌋` (`isIntegerSquareRoot v n`). The proof reduces the `do`-block to the
+with `v = ⌊√n⌋` (`isIntegerSquareRoot n v`). The proof reduces the `do`-block to the
 `foldlM` characterised by `monadicLoop_near` — establishing en route that none of the
 `Except` operations ever take their error branch for `n ≥ 0` — and closes the `n ≥ 1`
 case with the same final `a-1`/`a` adjustment (`isNearSquareRoot.toIntegerSquareRoot`) as
@@ -195,7 +195,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot a n
+    show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot n a
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
       refine ⟨0, ?_, ?_⟩
@@ -216,7 +216,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
           (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
-      have hp : isIntegerSquareRoot (y.fst - if y.fst * y.fst > n then 1 else 0) n := by
+      have hp : isIntegerSquareRoot n (y.fst - if y.fst * y.fst > n then 1 else 0) := by
         have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
             = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
         rw [hadj]

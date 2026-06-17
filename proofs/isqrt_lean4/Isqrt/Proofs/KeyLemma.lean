@@ -31,14 +31,14 @@ informal math in comments follows ordinary mathematical notation. -/
 
 /-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
 For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
-def isNearSquareRoot (a n : ℤ) : Prop :=
+def isNearSquareRoot (n a : ℤ) : Prop :=
   (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
 
 /-- The algorithm's final return adjustment: a near square root `a` is either
 `⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
 yields the integer square root. Both correctness proofs close with this step. -/
-theorem isNearSquareRoot.toIntegerSquareRoot {a n : ℤ} (h : isNearSquareRoot a n) :
-    isIntegerSquareRoot (if n < a * a then a - 1 else a) n := by
+theorem isNearSquareRoot.toIntegerSquareRoot {a n : ℤ} (h : isNearSquareRoot n a) :
+    isIntegerSquareRoot n (if n < a * a then a - 1 else a) := by
   obtain ⟨h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a
   · simp only [h_lt, ↓reduceIte]
@@ -106,8 +106,8 @@ private theorem n_lower {n M a : ℤ} (hM : 0 < M)
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 theorem key_isqrt_lemma {n M a : ℤ}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
-    (h_near : isNearSquareRoot a (n.fdiv (4 * M^2))) :
-    isNearSquareRoot (M * a + n.fdiv (4 * M * a)) n := by
+    (h_near : isNearSquareRoot (n.fdiv (4 * M^2)) a) :
+    isNearSquareRoot n (M * a + n.fdiv (4 * M * a)) := by
   obtain ⟨ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [← pow_two] at ha_lo ha_hi

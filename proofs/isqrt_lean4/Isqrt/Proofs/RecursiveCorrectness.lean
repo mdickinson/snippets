@@ -40,7 +40,7 @@ proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem nsqrt_correctness :
     ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
       (pyBitLength c).toNat = s → hasSizeCondition c n →
-      ∃ a, nsqrt s c n = .ok a ∧ 0 < a ∧ isNearSquareRoot a n := by
+      ∃ a, nsqrt s c n = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
@@ -103,7 +103,7 @@ private theorem nsqrt_correctness :
     have hM4 : 4 * M ^ 4 ≤ n := by
       have h := M_bound_from_size hc_pos hsc
       rwa [← hk_def, ← hM_def] at h
-    have a_near' : isNearSquareRoot a (Int.fdiv n (4 * M ^ 2)) := hm_eq ▸ a_near
+    have a_near' : isNearSquareRoot (Int.fdiv n (4 * M ^ 2)) a := hm_eq ▸ a_near
     have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
     have val_eq :
         a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
@@ -118,7 +118,7 @@ private theorem nsqrt_correctness :
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
-For nonnegative `n` it returns a value `a = ⌊√n⌋` (`isIntegerSquareRoot a n`); for
+For nonnegative `n` it returns a value `a = ⌊√n⌋` (`isIntegerSquareRoot n a`); for
 negative `n` it raises exactly the `ValueError` CPython does. The returns proof
 reduces the `do`-block to the `nsqrt` call characterised by `nsqrt_correctness`
 — establishing en route that none of the `Except` operations ever takes its error
@@ -130,7 +130,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
     intro n hn
-    show ∃ a, returns (isqrtRecursive n) a ∧ isIntegerSquareRoot a n
+    show ∃ a, returns (isqrtRecursive n) a ∧ isIntegerSquareRoot n a
     rcases eq_or_lt_of_le hn with rfl | hpos
     · -- n = 0: special-cased to 0.
       refine ⟨0, ?_, ?_⟩

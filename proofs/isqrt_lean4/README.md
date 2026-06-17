@@ -468,7 +468,7 @@ we want of an `isqrt` implementation `f`, one for each sign of the argument:
 
 ```
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
-  (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot a n)
+  (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
   ∧
   (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
 ```
@@ -519,8 +519,8 @@ Lean itself. Two concerns live there:
   `Isqrt/Definitions/Specification.lean`) that both top-level theorems prove. This
   is where we say what "correct" means, spelled out in "The `.ok` result is a
   certificate" above: for nonnegative `n` the function *returns* a value `a`
-  satisfying `isIntegerSquareRoot a n`, and for negative `n` it *raises* exactly
-  Python's `ValueError`. The predicate `isIntegerSquareRoot a n` (in the same
+  satisfying `isIntegerSquareRoot n a`, and for negative `n` it *raises* exactly
+  Python's `ValueError`. The predicate `isIntegerSquareRoot n a` (in the same
   module) unfolds to `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor
   of √n. If the specification (or the predicate) is too weak, the proof being
   valid doesn't buy us what we wanted. In `Isqrt/Proofs/` it then suffices to
