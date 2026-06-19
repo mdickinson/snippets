@@ -19,7 +19,7 @@ def assertReturns (actual : PyExcept Int) (expected : Int) : Bool :=
 /-- True when the computation raised `ZeroDivisionError`. -/
 def assertRaisesZeroDivisionError (actual : PyExcept Int) : Bool :=
   match actual with
-  | .error .zeroDivisionError => true
+  | .error (.zeroDivisionError _) => true
   | _ => false
 
 /-- True when the computation raised `ValueError msg`. -/

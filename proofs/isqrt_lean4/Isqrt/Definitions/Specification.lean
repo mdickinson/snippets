@@ -1,29 +1,23 @@
 /-
-The specification — *what "correct" means* for an integer square root: the outcome
-predicates `returns`/`raises` on a `PyExcept` result, the postcondition predicate
-`isIntegerSquareRoot`, and the top-level contract `isCorrectIsqrt`. Core-only: no Mathlib.
+Definition of correctness for a function claiming to be an integer square root.
 -/
 
 import Isqrt.Definitions.Exceptions
 
-/-- `returns x a` asserts that the computation `x` returned the value `a` —
-i.e. took its `.ok` branch with payload `a`. -/
+/-- Statement that a possibly-exception-raising computation returns a value. -/
 def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
 
-/-- `raises x e` asserts that the computation `x` raised the exception `e` —
-i.e. took its `.error` branch with payload `e`. -/
+/-- Statement that a possibly-exception-raising computation raises an exception. -/
 def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error e
 
-/-- `a` is *the* integer square root of `n` if `a² ≤ n < (a + 1)²`, i.e.
-`a = ⌊√n⌋` exactly. Stated multiplicatively (`a * a`, not `a ^ 2`) to mirror the
-Python postcondition `a * a <= n < (a + 1) * (a + 1)`. -/
+/-- What it means for an integer `a` to be an integer square root of `n`. -/
 def isIntegerSquareRoot (n a : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
-/-- `isqrt` is a correct integer square root:
-* for every nonnegative `n`, `isqrt n` returns a value that is the integer square
-  root of `n` (`isIntegerSquareRoot`);
-* for every negative `n`, `isqrt n` raises exactly the `ValueError` CPython raises,
-  message and all (the message is part of the contract). -/
+/--
+Statement that a function `isqrt` has the correct behaviour: returns an integer
+square root for all nonnegative inputs, and raises a valueError with the expected
+message for all negative inputs.
+-/
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
   (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
   ∧

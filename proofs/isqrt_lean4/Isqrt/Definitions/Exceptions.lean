@@ -1,12 +1,12 @@
 /-
-The exception vocabulary: `PyException` (the Python exceptions `math.isqrt` and its
-operations can raise) and the alias `PyExcept α := Except PyException α`.
-Core-only: no Mathlib.
+This module introduces a `PyException` type representing the Python exceptions that
+we need to model (just `ValueError` and `ZeroDivisionError`), and the corresponding
+`PyExcept` monad.
 -/
 
 /-- The Python exceptions that `math.isqrt` and the operations it uses can raise. -/
 inductive PyException where
-  | zeroDivisionError
+  | zeroDivisionError (msg : String)
   | valueError (msg : String)
   deriving Repr
 
