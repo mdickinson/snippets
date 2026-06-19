@@ -372,8 +372,10 @@ the lemmas about it live in `Isqrt/Proofs/PythonPrimitivesLemmas.lean`.
 
 On the Lean side it's named `Int.bitLength : Int → Int` — invoked as
 `n.bitLength`, mirroring Python's `n.bit_length()` — and defined as
-`natBitLength n.natAbs` (where `natBitLength : Nat → Nat` is built on top of
-core Lean's `Nat.log2`). The intermediate trip through `Nat` is one of the
+`if n = 0 then 0 else Nat.log2 n.natAbs + 1`, on top of core Lean's
+`Nat.log2`. (Zero is special-cased: `Nat.log2 0 = 0`, so the `+ 1` branch
+would otherwise report one bit for it.) The intermediate trip through `Nat`
+is one of the
 bridging costs anticipated in "Why `Int` and not `Nat`" above: the
 natural home for a bit-count is `Nat`, but the top-level signature
 returns `Int` to keep the public interface uniformly integer-valued and

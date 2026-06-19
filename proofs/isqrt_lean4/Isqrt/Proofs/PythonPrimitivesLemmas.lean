@@ -65,30 +65,30 @@ with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2` for
 access to core Lean 4's `log2` lemma library.
 
 This is the ℕ-level workhorse the bit-length proofs run on. It is *not* trust
-surface: the public `Int.bitLength` (`Isqrt.Definitions.PythonPrimitives`) inlines this same
-computation, and `Int.bitLength_natCast` below verifies — by a one-line `cases` — that
+surface: the public `Int.bitLength` (`Isqrt.Definitions.PythonPrimitives`) computes the same
+bit length, and `Int.bitLength_natCast` below verifies — by a one-line `cases` — that
 the two agree, so this re-declaration cannot silently drift from it. -/
-def natBitLength : Nat → Nat
-  | 0 => 0
-  | n + 1 => Nat.log2 (n + 1) + 1
+def natBitLength (n : Nat) : Nat := if n = 0 then 0 else Nat.log2 n + 1
 
 /-! ## Int.bitLength: defining-equation lemmas -/
 
 /-- `Int.bitLength` of a `ℕ`-cast drops the `natAbs`: `(↑m : ℤ).bitLength = ↑(natBitLength m)`.
-This is the bridge tying the trust-surface `Int.bitLength` (whose inlined bit-length match
-is a distinct match-auxiliary) to the named `natBitLength` above: `cases m <;> rfl` checks
-they agree on each constructor, so the re-declaration cannot silently drift. It's also the
+This is the bridge tying the trust-surface `Int.bitLength` to the named `natBitLength` above:
+`cases m <;> rfl` checks they agree on each constructor — splitting `m` lets the `n = 0`
+conditional reduce — so the re-declaration cannot silently drift. It's also the
 form the ℤ↔ℕ bridges below (and in `Isqrt.Proofs.SizeConditions`) `rw` with directly;
 the general `Int.bitLength_def` is the `@[simp]` normal form, so this one isn't `@[simp]`. -/
 theorem Int.bitLength_natCast (m : ℕ) : (↑m : ℤ).bitLength = ↑(natBitLength m) := by
   cases m <;> rfl
 
-/-- `Int.bitLength` unfolds to `natBitLength` on the underlying `natAbs`. The general form
-of `Int.bitLength_natCast`, applied at `n.natAbs` — `Int.bitLength` depends on `n` only through
-`n.natAbs`, so the two are definitionally interchangeable. -/
+/-- `Int.bitLength` unfolds to `natBitLength` on the underlying `natAbs`. Generalises
+`Int.bitLength_natCast` from a `ℕ`-cast to any `n : ℤ`: both sides depend on `n` only
+through `n.natAbs` (and `Int.bitLength`'s `n = 0` guard agrees with `n.natAbs = 0`). -/
 @[simp]
-theorem Int.bitLength_def (n : ℤ) : n.bitLength = ↑(natBitLength n.natAbs) :=
-  Int.bitLength_natCast n.natAbs
+theorem Int.bitLength_def (n : ℤ) : n.bitLength = ↑(natBitLength n.natAbs) := by
+  rw [← Int.bitLength_natCast]
+  unfold Int.bitLength
+  simp [Int.natAbs_abs]
 
 /-- `.toNat` of `Int.bitLength_natCast`: `((↑m : ℤ).bitLength).toNat = natBitLength m`. Not
 `@[simp]` (simp derives it from `Int.bitLength_def` + casts); kept as a named target for
@@ -100,9 +100,7 @@ theorem Int.toNat_bitLength_natCast (m : ℕ) :
 /-! ## natBitLength: basic properties -/
 
 theorem natBitLength_eq_zero_iff {n : ℕ} : natBitLength n = 0 ↔ n = 0 := by
-  cases n with
-  | zero => simp [natBitLength]
-  | succ n => simp [natBitLength]
+  by_cases h : n = 0 <;> simp [natBitLength, h]
 
 theorem natBitLength_pos_iff {n : ℕ} : 0 < natBitLength n ↔ 0 < n := by
   rw [Nat.pos_iff_ne_zero, Nat.pos_iff_ne_zero]
@@ -112,34 +110,23 @@ theorem natBitLength_pos_iff {n : ℕ} : 0 < natBitLength n ↔ 0 < n := by
 
 /-- Upper bound: `n < 2 ^ (natBitLength n)` for all `n`. -/
 theorem lt_two_pow_natBitLength (n : ℕ) : n < 2 ^ natBitLength n := by
-  cases n with
-  | zero => simp [natBitLength]
-  | succ n =>
-    simp only [natBitLength]
-    exact Nat.lt_log2_self
+  by_cases h : n = 0
+  · subst h; simp [natBitLength]
+  · simp only [natBitLength, if_neg h]; exact Nat.lt_log2_self
 
 /-- Lower bound: `2 ^ (natBitLength n - 1) ≤ n` when `n > 0`. -/
 theorem two_pow_pred_natBitLength_le {n : ℕ} (hn : 0 < n) :
     2 ^ (natBitLength n - 1) ≤ n := by
-  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hn)
-  simp only [natBitLength, Nat.add_sub_cancel]
-  exact Nat.log2_self_le (Nat.succ_ne_zero m)
+  simp only [natBitLength, if_neg (by omega : ¬ n = 0), Nat.add_sub_cancel]
+  exact Nat.log2_self_le (by omega)
 
 /-! ## natBitLength: iff characterizations -/
 
 /-- `natBitLength n ≤ k ↔ n < 2^k`. -/
 theorem natBitLength_le_iff {n k : ℕ} : natBitLength n ≤ k ↔ n < 2 ^ k := by
-  cases n with
-  | zero => simp [natBitLength]
-  | succ n =>
-    simp only [natBitLength]
-    constructor
-    · intro h
-      have : Nat.log2 (n + 1) < k := by omega
-      exact (Nat.log2_lt (Nat.succ_ne_zero n)).mp this
-    · intro h
-      have : Nat.log2 (n + 1) < k := (Nat.log2_lt (Nat.succ_ne_zero n)).mpr h
-      omega
+  by_cases h : n = 0
+  · subst h; exact iff_of_true (Nat.zero_le k) (by positivity)
+  · simp only [natBitLength, if_neg h, Nat.add_one_le_iff]; exact Nat.log2_lt h
 
 /-- `k < natBitLength n ↔ 2^k ≤ n`. Dual of `natBitLength_le_iff`. -/
 theorem lt_natBitLength_iff {n k : ℕ} : k < natBitLength n ↔ 2 ^ k ≤ n := by

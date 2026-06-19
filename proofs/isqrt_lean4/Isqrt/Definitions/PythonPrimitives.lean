@@ -33,7 +33,4 @@ def pyRange (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
 Equivalent of Python's int.bit_length - the minimum number of bits needed
 to represent abs(n) - with `Int.bitLength 0 = 0`.
 -/
-def Int.bitLength (n : Int) : Int :=
-  ↑(match n.natAbs with
-    | 0 => 0
-    | m + 1 => Nat.log2 (m + 1) + 1)
+def Int.bitLength (n : Int) : Int := if n = 0 then 0 else Nat.log2 n.natAbs + 1
