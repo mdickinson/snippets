@@ -73,12 +73,12 @@ local infixl:60 "<<" => pyLshift
 local infixl:60 (priority := high) ">>" => pyRshift
 
 /-- Return a near square root of a positive integer n. -/
-def nsqrt (n c : Int) (s : Nat) : PyExcept Int := do
+def nsqrtRecursive (n c : Int) (s : Nat) : PyExcept Int := do
   if s = 0 then
     return 1
   else
     let k ← (c - 1) // 2
-    let a ← nsqrt (← n >> 2 * k + 2) (← c // 2) (s - 1)
+    let a ← nsqrtRecursive (← n >> 2 * k + 2) (← c // 2) (s - 1)
     return (← a << k) + (← (← n >> k + 2) // a)
 
 /-- Return the integer part of the square root of the input. -/
@@ -89,6 +89,6 @@ def isqrtRecursive (n : Int) : PyExcept Int := do
     return 0
 
   let c ← (n.bitLength - 1) // 2
-  let a ← nsqrt n c c.bitLength.toNat
+  let a ← nsqrtRecursive n c c.bitLength.toNat
 
   return if n < a * a then a - 1 else a

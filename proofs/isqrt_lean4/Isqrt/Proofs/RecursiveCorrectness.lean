@@ -1,7 +1,7 @@
 /-
 Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
-Strategy: structural induction on the counter `s` for `nsqrt`, carrying
+Strategy: structural induction on the counter `s` for `nsqrtRecursive`, carrying
 the **tight** invariant `c.bitLength.toNat = s` alongside the size condition
 `4^c ≤ n < 4^(c+1)` (from `Isqrt.Proofs.SizeConditions`). The invariant must be tight,
 not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
@@ -37,10 +37,10 @@ via the induction hypothesis (whose bit-length premise is `toNat_bitLength_fdiv_
 the shifts/divisions via their nonneg side conditions — then closes with the core
 `key_isqrt_lemma` algebra of `Isqrt.Proofs.KeyLemma` (the same per-step lemma the iterative
 proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
-private theorem nsqrt_correctness :
+private theorem nsqrtRecursive_correctness :
     ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
       c.bitLength.toNat = s → hasSizeCondition c n →
-      ∃ a, nsqrt n c s = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
+      ∃ a, nsqrtRecursive n c s = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
@@ -51,8 +51,8 @@ private theorem nsqrt_correctness :
     subst hc0
     obtain ⟨h_lo, h_hi⟩ := hsc
     simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
-    -- `nsqrt n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
-    exact ⟨1, by unfold nsqrt; rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
+    -- `nsqrtRecursive n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
+    exact ⟨1, by unfold nsqrtRecursive; rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
                             by show n < (1 + 1) * (1 + 1); omega⟩
   | succ s ih =>
     intro c n hc hn hbl hsc
@@ -85,9 +85,9 @@ private theorem nsqrt_correctness :
     -- Induction hypothesis on the recursive subproblem.
     obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih d_nn m_pos hbl_step hsc_step
     -- Reduce the `do`-block: every operation takes its `.ok` branch.
-    have hred : nsqrt n c (s + 1)
+    have hred : nsqrtRecursive n c (s + 1)
         = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
-      unfold nsqrt
+      unfold nsqrtRecursive
       simp only [Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel,
         pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
         ← hk_def, ← hd_def, Except.ok_bind,
@@ -121,7 +121,7 @@ private theorem nsqrt_correctness :
 
 For nonnegative `n` it returns a value `a = ⌊√n⌋` (`isIntegerSquareRoot n a`); for
 negative `n` it raises exactly the `ValueError` CPython does. The returns proof
-reduces the `do`-block to the `nsqrt` call characterised by `nsqrt_correctness`
+reduces the `do`-block to the `nsqrtRecursive` call characterised by `nsqrtRecursive_correctness`
 — establishing en route that none of the `Except` operations ever takes its error
 branch for `n ≥ 0` — and closes the `n ≥ 1` case with the final `a-1`/`a`
 adjustment (`isNearSquareRoot.toIntegerSquareRoot`), which the recursive source's
@@ -141,7 +141,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
       have hn0 : n ≠ 0 := ne_of_gt hpos
       set c : ℤ := Int.fdiv (n.bitLength - 1) 2 with hc_def
       obtain ⟨a, ha_eq, _a_pos, a_near⟩ :=
-        nsqrt_correctness c.bitLength.toNat
+        nsqrtRecursive_correctness c.bitLength.toNat
           (c := c) (n := n) (isqrt_c_nonneg hn0) hpos rfl (size_condition_initial hpos)
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         conv_lhs => unfold isqrtRecursive

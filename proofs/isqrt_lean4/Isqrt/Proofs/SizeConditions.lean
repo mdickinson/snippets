@@ -106,7 +106,7 @@ theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
 /-! ## ℤ-level size condition
 
 `hasSizeCondition c n` means `4^c ≤ n < 4^(c+1)`, the invariant maintained
-through the `nsqrt` recursion. The ℤ-level lemmas are corollaries of
+through the `nsqrtRecursive` recursion. The ℤ-level lemmas are corollaries of
 the ℕ-level ones, with the bridging done once here. -/
 
 /-- The size condition: `4^c ≤ n < 4^(c+1)` (using `c.toNat` so that the
