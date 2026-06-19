@@ -8,7 +8,7 @@ import Isqrt.Proofs.PythonPrimitivesLemmas
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
 body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes
 `d = c >> s`, and returns the new `⟨a, d⟩`. Each `←` is an operation that could raise. -/
-def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : PyExcept (MProd ℤ ℤ) := do
+private def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : PyExcept (MProd ℤ ℤ) := do
   let dNew ← pyRshift c s
   let lsh ← pyLshift r.fst (dNew - r.snd - 1)
   let rsh ← pyRshift n (2 * c - r.snd - dNew + 1)
@@ -18,7 +18,7 @@ def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : PyExcept (MProd ℤ ℤ) :
 /-- A `forIn` whose body always yields the result of a monadic step `g` is a `foldlM`
 over the same list, specialised to the "always yield" shape the `do` block produces —
 this is what lets the proof replace the loop's `forIn` with a `foldlM` it can induct on. -/
-theorem forIn_yield_bind_eq_foldlM {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+private theorem forIn_yield_bind_eq_foldlM {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
     (g : β → α → m β) (L : List α) (init : β) :
     forIn L init (fun a b => g b a >>= fun b' => pure (ForInStep.yield b')) = L.foldlM g init := by
   simp
@@ -29,7 +29,7 @@ threads `.ok`-ness through the whole fold alongside the invariant.
 Reading `motive i x` as "`x` is a valid `.ok` state with `i` iterations still to run",
 the seed lands at `i = L`, the result at `i = 0`, and the conclusion packages both the
 `.ok`-ness of the whole fold and the final invariant. -/
-theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A → Prop)
+private theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A → Prop)
     (g : A → ℕ → PyExcept A) :
     ∀ (L : ℕ) (init : A), motive L init →
       (∀ s, s < L → ∀ x, motive (s + 1) x → ∃ y, g x s = .ok y ∧ motive s y) →
@@ -48,7 +48,7 @@ theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A → Prop)
 
 /-- `stepM`'s `.ok` value, given the loop body's three preconditions discharged: nonneg
 shift count `s`, positive running `a = r.fst`, and the two derived shift-amount bounds. -/
-theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
+private theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
     (hK : 0 ≤ Int.fdiv c (2 ^ s.toNat) - r.snd - 1)
     (hJ : 0 ≤ 2 * c - r.snd - Int.fdiv c (2 ^ s.toNat) + 1) :
@@ -64,7 +64,7 @@ theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
 near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
 running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
 `isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
-theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
+private theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition c n) :
     ∃ y : MProd ℤ ℤ, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by

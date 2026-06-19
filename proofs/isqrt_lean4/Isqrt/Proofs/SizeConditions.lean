@@ -22,7 +22,7 @@ import Isqrt.Proofs.FDivLemmas
 
 /-- Initial size condition: for `0 < n`, the choice
 `c = (natBitLength n - 1) / 2` satisfies `4^c ≤ n < 4^(c+1)`. -/
-theorem size_condition_initial_nat {n : ℕ} (hn : 0 < n) :
+private theorem size_condition_initial_nat {n : ℕ} (hn : 0 < n) :
     4 ^ ((natBitLength n - 1) / 2) ≤ n ∧
     n < 4 ^ ((natBitLength n - 1) / 2 + 1) := by
   set b := natBitLength n with hb_def
@@ -46,7 +46,7 @@ from the top condition — it cannot be obtained by iterating the single
 recursive step `size_condition_step_nat`, whose per-level floor shifts don't
 compose to `4^(c-d)` for arbitrary `d`. The step lemma is conversely just the
 `d = c/2` corollary of this one. -/
-theorem size_condition_at_depth_nat {c n d : ℕ} (hd : d ≤ c)
+private theorem size_condition_at_depth_nat {c n d : ℕ} (hd : d ≤ c)
     (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
     4 ^ d ≤ n / 4 ^ (c - d) ∧ n / 4 ^ (c - d) < 4 ^ (d + 1) := by
   have hpos : 0 < 4 ^ (c - d) := by positivity
@@ -71,7 +71,7 @@ with `0 < c`, the recursive arguments `c' = c/2` and `m = n / 2^(2k+2)`
 This is `size_condition_at_depth_nat` specialised to depth `d = c/2`: the
 step's divisor `2^(2k+2)` equals the depth-`c/2` divisor `4^(c − c/2)`,
 since `2k+2 = 2((c-1)/2) + 2 = 2(c − c/2)`, an identity `omega` discharges. -/
-theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
+private theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
     (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
     4 ^ (c / 2) ≤ n / 2 ^ (2 * ((c - 1) / 2) + 2) ∧
     n / 2 ^ (2 * ((c - 1) / 2) + 2) < 4 ^ (c / 2 + 1) := by
@@ -84,7 +84,7 @@ theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
   exact size_condition_at_depth_nat (Nat.div_le_self c 2) h_lo h_hi
 
 /-- `4·M⁴ ≤ n` from the size condition's lower bound, where `M = 2^((c-1)/2)`. -/
-theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
+private theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
     4 * (2 ^ ((c - 1) / 2)) ^ 4 ≤ n := by
   set k := (c - 1) / 2 with hk_def
   calc 4 * (2 ^ k) ^ 4
@@ -107,13 +107,13 @@ def hasSizeCondition (c n : ℤ) : Prop :=
   (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c.toNat + 1)
 
 /-- The size condition forces `0 ≤ n`. -/
-theorem hasSizeCondition.nonneg {c n : ℤ} (h : hasSizeCondition c n) : 0 ≤ n :=
+private theorem hasSizeCondition.nonneg {c n : ℤ} (h : hasSizeCondition c n) : 0 ≤ n :=
   le_trans (by positivity) h.1
 
 /-- For `ℕ`-cast arguments the size condition is exactly its `ℕ`-level form. The single
 ℤ↔ℕ bridge the three ℤ-level corollaries below funnel through, sparing each its own
 `Int.eq_ofNat_of_zero_le` / `exact_mod_cast` unpacking. -/
-theorem hasSizeCondition_natCast_iff {c n : ℕ} :
+private theorem hasSizeCondition_natCast_iff {c n : ℕ} :
     hasSizeCondition (↑c) (↑n) ↔ 4 ^ c ≤ n ∧ n < 4 ^ (c + 1) := by
   unfold hasSizeCondition
   rw [Int.toNat_natCast]
