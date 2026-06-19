@@ -13,6 +13,9 @@ def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error 
 /-- What it means for an integer `a` to be an integer square root of `n`. -/
 def isIntegerSquareRoot (n a : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
+/-- What it means for an integer `a` to be a *near square root* of `n`. -/
+def isNearSquareRoot (n a : Int) : Prop := (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
+
 /--
 Statement that a function `isqrt` has the correct behaviour: returns an integer
 square root for all nonnegative inputs, and raises a valueError with the expected

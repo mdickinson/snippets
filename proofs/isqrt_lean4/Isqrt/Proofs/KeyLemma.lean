@@ -1,14 +1,13 @@
 /-
 Key algebraic lemma for the isqrt correctness proof.
 
-We say that a positive integer `a` is a **near square root** of a positive
-integer `n` if `(a - 1)² < n < (a + 1)²`. Equivalently, `a` is either
-`⌊√n⌋` or `⌈√n⌉`. This is a proof-only notion: `isNearSquareRoot` is defined here,
-alongside the key lemma that uses it. Its companion `isIntegerSquareRoot` — the
-exact `a = ⌊√n⌋` postcondition the top-level theorems assert — is trust surface, so
-it lives in `Isqrt.Definitions.Specification`; the algorithm's final `a-1`/`a`
-choice (`isNearSquareRoot.toIntegerSquareRoot` below) is what turns a near square
-root into the integer square root.
+The **near square root** predicate this works with, `isNearSquareRoot`
+(`(a - 1)² < n < (a + 1)²`; for positive `n`, `a` is `⌊√n⌋` or `⌈√n⌉`), is defined
+in `Isqrt.Definitions.Specification`, beside its companion postcondition
+`isIntegerSquareRoot`. This file supplies the two facts the correctness proofs need
+about it: `isNearSquareRoot.toIntegerSquareRoot`, the final `a-1`/`a` choice that
+turns a near square root into the integer square root, and the algebraic combining
+step below.
 
 This file proves: given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`,
 if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
@@ -20,19 +19,7 @@ import Isqrt.Proofs.FDivLemmas
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-/-! ## The near-square-root predicate
-
-`isNearSquareRoot` is stated multiplicatively — `x * x`, never `x ^ 2` — for
-symmetry with `isIntegerSquareRoot` (in `Isqrt.Definitions.Specification`),
-which mirrors the Python postcondition `a * a <= n < (a + 1) * (a + 1)` that the
-top-level theorems assert. The doc-comment prose, by contrast, writes squares as
-`x²`: the `*` rule governs compiled statements that mirror Python source, while
-informal math in comments follows ordinary mathematical notation. -/
-
-/-- `a` is a *near square root* of `n` if `(a - 1)² < n < (a + 1)²`.
-For positive `n`, this means `a` is either `⌊√n⌋` or `⌈√n⌉`. -/
-def isNearSquareRoot (n a : ℤ) : Prop :=
-  (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
+/-! ## From near square root to integer square root -/
 
 /-- The algorithm's final return adjustment: a near square root `a` is either
 `⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
