@@ -135,12 +135,10 @@ theorem key_isqrt_lemma {n M a : ℤ}
     have hsq := square_squeeze key1 key2 key3
     -- d_large: n < 4M²a² + 4M² + 8M²a  (rearranged from n_upper)
     have d_large : n < 4 * M^2 * a^2 + 4 * M^2 + 8 * M^2 * a := by
-      have := n_upper hM ha_hi
-      nlinarith [this]
+      nlinarith [n_upper hM ha_hi]
     -- d_small: 4M²a² + 4M² < n + 8M²a  (rearranged from n_lower)
     have d_small : 4 * M^2 * a^2 + 4 * M^2 < n + 8 * M^2 * a := by
-      have := n_lower hM ha_lo
-      nlinarith [this]
+      nlinarith [n_lower hM ha_lo]
     have hclose := close_to d_large d_small
     -- The two inequalities provide nonneg "gaps". Their sum equals
     -- `n*(4Ma)² - (M*a + q - 1)²*(4Ma)²` as a polynomial identity (by `ring`),
@@ -164,8 +162,7 @@ theorem key_isqrt_lemma {n M a : ℤ}
     have h_squared : (M * a + q - 1)^2 * (4 * M * a)^2 < n * (4 * M * a)^2 := by
       linarith [h_sq_gap, h_close_gap, h_identity]
     -- Cancel (4*M*a)²
-    have h4Ma_sq_nonneg : (0 : ℤ) ≤ (4 * M * a)^2 := sq_nonneg _
-    exact lt_of_mul_lt_mul_right h_squared h4Ma_sq_nonneg
+    exact lt_of_mul_lt_mul_right h_squared (sq_nonneg _)
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
 

@@ -20,12 +20,6 @@ import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
 
-/-- `(2 * j + 2).toNat = 2 * j.toNat + 2` for `0 ≤ j`. -/
-private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
-    (2 * j + 2).toNat = 2 * j.toNat + 2 := by
-  obtain ⟨j0, rfl⟩ := Int.eq_ofNat_of_zero_le hj
-  rw [Int.toNat_natCast]; omega
-
 /-- The recursive auxiliary is a positive near square root for any size-conformant
 `(c, n)`, **and never raises**, provided the counter is seeded tightly at
 `s = c.bit_length()`.
@@ -98,7 +92,7 @@ private theorem nsqrtRecursive_correctness :
     set M := (2 : ℤ) ^ k.toNat with hM_def
     have M_pos : 0 < M := by positivity
     have hm_eq : m = Int.fdiv n (4 * M ^ 2) := by
-      rw [hm_def, toNat_two_mul_add_two k_nn, hM_def]
+      rw [hm_def, show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega, hM_def]
       congr 1; ring
     have hM4 : 4 * M ^ 4 ≤ n := by
       have h := M_bound_from_size hc_pos hsc
@@ -145,7 +139,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
         conv_lhs => unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hc_def]
-        rw [show (Except.ok c : PyExcept ℤ) = pure c from rfl, pure_bind, ha_eq]
+        rw [Except.ok_bind, ha_eq]
         rfl
       exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

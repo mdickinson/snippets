@@ -108,7 +108,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     have hd_old_nonneg : 0 ≤ d_old := by rw [hd_old_def]; exact Int.fdiv_nonneg hc (by positivity)
     have hd_new_nonneg : 0 ≤ d_new := by rw [hd_new_def]; exact Int.fdiv_nonneg hc (by positivity)
     have hd_new_le : d_new ≤ c := by
-      rw [hd_new_def]; exact Int.fdiv_le_self_of_nonneg hc (by positivity)
+      rw [hd_new_def]; exact Int.fdiv_le_self _ hc
     have hK : 0 ≤ d_new - d_old - 1 := by
       rw [hd_new_fdiv]; exact fdiv_two_pow_lshift_nonneg hc hs_nn hs_lt hd_old_fdiv
     have hd_new_pos : 0 < d_new := by omega
@@ -130,7 +130,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       rwa [← hk_def, ← hM_def] at this
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
       have h1 : d_new ≤ c := hd_new_le
-      have h2 : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self_of_nonneg hc (by positivity)
+      have h2 : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
       omega
     -- the incoming near-√ property at the child depth
     have h_div_bridge :
@@ -210,8 +210,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         conv_lhs => unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
-        rw [show (Except.ok ((n.bitLength - 1).fdiv 2) : PyExcept ℤ)
-              = pure ((n.bitLength - 1).fdiv 2) from rfl, pure_bind]
+        rw [Except.ok_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
           (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]

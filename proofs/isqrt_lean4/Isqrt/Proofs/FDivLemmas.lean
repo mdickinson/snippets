@@ -17,13 +17,6 @@ theorem Int.fdiv_mul_le_self {x k : ℤ} (h : 0 < k) : x.fdiv k * k ≤ x := by
   rw [Int.mul_comm]
   exact Int.mul_fdiv_self_le h
 
-/-- Floor-dividing a nonneg integer by a positive integer cannot increase it. -/
-theorem Int.fdiv_le_self_of_nonneg {x k : ℤ} (hx : 0 ≤ x) (hk : 0 < k) :
-    x.fdiv k ≤ x := by
-  have h0 : 0 ≤ x.fdiv k := Int.fdiv_nonneg hx hk.le
-  have h1 : x.fdiv k * k ≤ x := Int.fdiv_mul_le_self hk
-  nlinarith [h1, mul_nonneg h0 (show (0 : ℤ) ≤ k - 1 by omega)]
-
 /-- `y ≤ x.fdiv k ↔ y * k ≤ x` when `0 < k`. -/
 theorem Int.le_fdiv_iff_mul_le {x y k : ℤ} (hk : 0 < k) :
     y ≤ x.fdiv k ↔ y * k ≤ x := by

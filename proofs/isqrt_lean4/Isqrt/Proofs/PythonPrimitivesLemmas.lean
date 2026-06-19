@@ -141,22 +141,23 @@ reaches `0` exactly when `c` does. -/
 theorem natBitLength_div_two {n : ℕ} (hn : 0 < n) :
     natBitLength (n / 2) = natBitLength n - 1 := by
   have hb : 0 < natBitLength n := natBitLength_pos_iff.mpr hn
+  -- peel one factor of two off a positive power
+  have two_pow_pred : ∀ m, 1 ≤ m → (2 : ℕ) ^ m = 2 * 2 ^ (m - 1) :=
+    fun m hm => by rw [← pow_succ']; congr 1; omega
   apply le_antisymm
   · -- `natBitLength (n/2) ≤ natBitLength n - 1`  ⟺  `n/2 < 2^(natBitLength n - 1)`
     rw [natBitLength_le_iff]
     have hub := lt_two_pow_natBitLength n
-    have hsplit : 2 ^ natBitLength n = 2 * 2 ^ (natBitLength n - 1) := by
-      rw [← pow_succ']; congr 1; omega
+    have hsplit := two_pow_pred (natBitLength n) hb
     omega
   · -- `natBitLength n - 1 ≤ natBitLength (n/2)`
     by_cases h1 : 2 ≤ natBitLength n
     · -- `natBitLength n ≥ 2`: from `2^(natBitLength n - 1) ≤ n` deduce `2^(b-2) ≤ n/2`.
       have hlow := two_pow_pred_natBitLength_le hn
-      have hsplit : 2 ^ (natBitLength n - 1) = 2 * 2 ^ (natBitLength n - 2) := by
-        rw [← pow_succ']; congr 1; omega
+      have hsplit := two_pow_pred (natBitLength n - 1) (by omega)
       rw [hsplit] at hlow
-      have hhalf : 2 ^ (natBitLength n - 2) ≤ n / 2 := by omega
-      have := (lt_natBitLength_iff (n := n / 2) (k := natBitLength n - 2)).mpr hhalf
+      have hhalf : 2 ^ (natBitLength n - 1 - 1) ≤ n / 2 := by omega
+      have := (lt_natBitLength_iff (n := n / 2) (k := natBitLength n - 1 - 1)).mpr hhalf
       omega
     · -- `natBitLength n = 1`: the bound is `0 ≤ _`.
       omega
