@@ -206,7 +206,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
         monadicLoop_near (c := (n.bitLength - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
           (size_condition_initial hpos)
-      have hred : isqrtIterative n = .ok (y.fst - if y.fst * y.fst > n then 1 else 0) := by
+      have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         conv_lhs => unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
@@ -216,12 +216,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
           (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
-      have hp : isIntegerSquareRoot n (y.fst - if y.fst * y.fst > n then 1 else 0) := by
-        have hadj : (y.fst - if y.fst * y.fst > n then 1 else 0)
-            = (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by split <;> simp
-        rw [hadj]
-        exact hy_near.toIntegerSquareRoot
-      exact ⟨_, hred, hp⟩
+      exact ⟨_, hred, hy_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtIterative n) (.valueError "isqrt() argument must be nonnegative")

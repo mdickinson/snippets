@@ -1,56 +1,94 @@
 /-
-The *recursive* integer square root in monadic (`Except`) form — the algorithm's
-original derivation (CPython ships the iterative `isqrtIterative`). The algorithm:
+Lean translation of the recursive form of the CPython `isqrt` algorithm.
 
-    def isqrt_aux(c, n):
+Here's the algorithm expressed recursively in Python. The core function `nsqrt`
+recursively computes a (positive) "near square root" of a positive integer `n`; the
+outer `isqrt` function deals with negative and zero inputs and for positive `n` applies
+the final correction to the near square root (if necessary) to turn it into the integer
+square root.
+
+    def nsqrt(n: int, c: int) -> int:
+        """Recursively compute a near square root of a positive integer n."""
         if c == 0:
             return 1
         else:
             k = (c - 1) // 2
-            a = isqrt_aux(c // 2, n >> (2 * k + 2))
-            return (a << k) + (n >> (k + 2)) // a
+            a = nsqrt(n >> 2 * k + 2, c // 2)
+            return (a << k) + (n >> k + 2) // a
 
-    def isqrt(n):
+    def isqrt(n: int) -> int:
+        """Return the integer part of the square root of the input."""
         if n < 0:
             raise ValueError("isqrt() argument must be nonnegative")
         if n == 0:
             return 0
+
+        a = nsqrt(n, (n.bit_length() - 1) // 2)
+
+        return a - 1 if n < a * a else a
+
+There's a barrier to a direct translation of the above code. By default Lean requires
+functions to be total, and our Python `nsqrt` isn't: `nsqrt` will recurse infinitely for
+negative `c`. To fix that we introduce an explicit loop counter, `s`, with `s =
+c.bit_length()` throughout the recursion. So the actual code that we'll translate looks
+like this:
+
+    def nsqrt(n: int, c: int, s: int) -> int:
+        """Recursively compute a near square root of a positive integer n."""
+        if s == 0:
+            return 1
         else:
-            c = (n.bit_length() - 1) // 2
-            a = isqrt_aux(c, n)
-            return a - 1 if n < a * a else a
+            k = (c - 1) // 2
+            a = nsqrt(n >> 2 * k + 2, c // 2, s - 1)
+            return (a << k) + (n >> k + 2) // a
+
+    def isqrt(n: int) -> int:
+        """Return the integer part of the square root of the input."""
+        if n < 0:
+            raise ValueError("isqrt() argument must be nonnegative")
+        if n == 0:
+            return 0
+
+        c = (n.bit_length() - 1) // 2
+        a = nsqrt(n, c, c.bit_length())
+
+        return a - 1 if n < a * a else a
+
+This Python code now clearly terminates provided that the input `s` is nonnegative; for
+negative `s` it still enters an unbounded recursion. In the Lean translation,
+nonnegativity of `s` is enforced by using type `Nat` instead of `Int` for `s`, and Lean
+can then deduce automatically that the recursion terminates.
 -/
 
 import Isqrt.Definitions.Exceptions
 import Isqrt.Definitions.PythonPrimitives
 
-/-- Recursive auxiliary computing a *near* square root of `n` — a value within one
-of `⌊√n⌋`, which `isqrtRecursive` corrects with its final `a-1`/`a` step (hence
-`nsqrt`). Structurally recursive on the counter `s`, called with `s = c.bit_length()`
-so that `match s` reproduces `isqrt_aux`'s `if c == 0` base case. -/
-def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
-  match s with
-  | 0 => pure 1
-  | s + 1 => do
-    let k ← pyFloordiv (c - 1) 2
-    let cHalf ← pyFloordiv c 2
-    let nShift ← pyRshift n (2 * k + 2)
-    let a ← nsqrt s cHalf nShift
-    let lsh ← pyLshift a k
-    let rsh ← pyRshift n (k + 2)
-    let q ← pyFloordiv rsh a
-    pure (lsh + q)
+/-
+A bit of local syntactic sugar: infix aliases for the Python operations.
+We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
+-/
 
-/-- Integer square root of `n`, recursive monadic (`Except`) form — the direct
-translation of the recursive Python listing above: raises `ValueError` for `n < 0`,
-returns `0` for `n = 0`, otherwise computes `c`, calls `nsqrt` (counter seeded at
-`c.bit_length()`), and applies the final `a-1`/`a` adjustment. -/
+local infixl:70 "//" => pyFloordiv
+local infixl:60 "<<" => pyLshift
+local infixl:60 (priority := high) ">>" => pyRshift
+
+/-- Return a near square root of a positive integer n. -/
+def nsqrt (n c : Int) (s : Nat) : PyExcept Int := do
+  if s = 0 then
+    return 1
+  else
+    let k ← (c - 1) // 2
+    let a ← nsqrt (← n >> 2 * k + 2) (← c // 2) (s - 1)
+    return (← a << k) + (← (← n >> k + 2) // a)
+
+/-- Return the integer part of the square root of the input. -/
 def isqrtRecursive (n : Int) : PyExcept Int := do
   if n < 0 then
     throw <| .valueError "isqrt() argument must be nonnegative"
   if n = 0 then
     return 0
 
-  let c ← pyFloordiv (n.bitLength - 1) 2
-  let a ← nsqrt c.bitLength.toNat c n
-  return (if n < a * a then a - 1 else a)
+  let c ← (n.bitLength - 1) // 2
+  let a ← nsqrt n c c.bitLength.toNat
+
+  return if n < a * a then a - 1 else a

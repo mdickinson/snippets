@@ -40,7 +40,7 @@ proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem nsqrt_correctness :
     ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
       c.bitLength.toNat = s → hasSizeCondition c n →
-      ∃ a, nsqrt s c n = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
+      ∃ a, nsqrt n c s = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
@@ -51,8 +51,8 @@ private theorem nsqrt_correctness :
     subst hc0
     obtain ⟨h_lo, h_hi⟩ := hsc
     simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
-    -- `nsqrt 0 0 n = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
-    exact ⟨1, rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
+    -- `nsqrt n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
+    exact ⟨1, by unfold nsqrt; rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
                             by show n < (1 + 1) * (1 + 1); omega⟩
   | succ s ih =>
     intro c n hc hn hbl hsc
@@ -85,10 +85,11 @@ private theorem nsqrt_correctness :
     -- Induction hypothesis on the recursive subproblem.
     obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih d_nn m_pos hbl_step hsc_step
     -- Reduce the `do`-block: every operation takes its `.ok` branch.
-    have hred : nsqrt (s + 1) c n
+    have hred : nsqrt n c (s + 1)
         = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
       unfold nsqrt
-      simp only [pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
+      simp only [Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel,
+        pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
         ← hk_def, ← hd_def, Except.ok_bind,
         pyRshift_eq_ok h2k2_nn, ← hm_def, ha_eq,
         pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn,
