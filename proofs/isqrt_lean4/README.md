@@ -71,10 +71,11 @@ The Lean code is organised into three subdirectories of `Isqrt`:
 The modules under `Isqrt/Proofs` are the only ones that depend on Mathlib, primarily for
 the `linarith`, `ring` and `positivity` proof tactics. The definitions are Mathlib-free.
 
-There are two root files: `Isqrt.lean` and `IsqrtTests.lean`. The
-former imports the definitions and proofs; the latter imports the definitions and tests.
-Both roots are marked as `@[default_target]` in `lakefile.lean`, so `lake build`
-exercises the `#guard` checks.
+There are three root files: `Isqrt.lean`, `IsqrtTests.lean` and `Main.lean`. The first
+imports the definitions and proofs; the second imports the definitions and tests; the
+third is the source for the `isqrt` command-line executable described below. All three
+roots are listed as default targets in `lakefile.toml`, so `lake build` builds the
+executable and exercises the `#guard` checks.
 
 ## Validating the proof
 
@@ -94,7 +95,8 @@ This should make `elan` and `lake` available on your `PATH`.
 
 ### Building the project
 
-The key commands are all executed via Lean's build tool, `lake`. The first time you run `lake` it will automatically download the correct Lean toolchain version (as specified
+The key commands are all executed via Lean's build tool, `lake`. The first time you run
+`lake` it will automatically download the correct Lean toolchain version (as specified
 in `lean-toolchain`). From this directory:
 
 ```
@@ -109,6 +111,19 @@ Lean was able to mechanically check every step of the proofs, and that the proof
 correct. The stronger `lake build --wfail` turns warnings into errors. Notably, `lake
 build` will still pass (with warnings) if there are incomplete proofs, marked by a
 `sorry` placeholder in Lean. `lake build --wfail` will fail in the presence of `sorry`s.
+
+## Running the algorithm
+
+This Lean project also includes a command-line executable `isqrt` that computes integer
+square roots via the same `isqrtIterative` function that's proved correct in the proofs.
+It can be executed via `lake exe isqrt`:
+
+```console
+$ lake exe isqrt 1729
+41
+```
+
+The single argument must be a nonnegative integer.
 
 ## What do I need to trust?
 

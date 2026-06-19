@@ -10,6 +10,11 @@ inductive PyException where
   | valueError (msg : String)
   deriving Repr
 
+instance : ToString PyException where
+  toString
+    | .zeroDivisionError msg => s!"ZeroDivisionError: {msg}"
+    | .valueError msg => s!"ValueError: {msg}"
+
 /--
 `PyExcept α` represents the result of a computation that either returns a value of type
 `α` or raises a Python exception.
