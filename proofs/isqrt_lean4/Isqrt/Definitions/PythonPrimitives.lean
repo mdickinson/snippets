@@ -8,21 +8,21 @@ import Isqrt.Definitions.Exceptions
 /-- The floor of a / b, raising zeroDivisionError if b = 0. -/
 def pyFloordiv (a b : Int) : PyExcept Int :=
   if b = 0 then
-    throw $ .zeroDivisionError "division by zero"
+    throw <| .zeroDivisionError "division by zero"
   else
     return Int.fdiv a b
 
 /-- Equivalent of Python's n << k, raising valueError if k is negative. -/
 def pyLshift (n k : Int) : PyExcept Int :=
   if k < 0 then
-    throw $ .valueError "negative shift count"
+    throw <| .valueError "negative shift count"
   else
     return n * (2 ^ k.toNat)
 
 /-- Equivalent of Python's n >> k, raising valueError if k is negative. -/
 def pyRshift (n k : Int) : PyExcept Int :=
   if k < 0 then
-    throw $ .valueError "negative shift count"
+    throw <| .valueError "negative shift count"
   else
     return Int.fdiv n (2 ^ k.toNat)
 

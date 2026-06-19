@@ -35,7 +35,7 @@ local infixl:60 (priority := high) ">>" => pyRshift
 /-- Return the integer part of the square root of the input. -/
 def isqrtIterative (n : Int) : PyExcept Int := do
   if n < 0 then
-    throw $ .valueError "isqrt() argument must be nonnegative"
+    throw <| .valueError "isqrt() argument must be nonnegative"
   if n = 0 then
     return 0
 

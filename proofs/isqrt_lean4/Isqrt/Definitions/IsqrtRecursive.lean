@@ -47,7 +47,7 @@ returns `0` for `n = 0`, otherwise computes `c`, calls `nsqrt` (counter seeded a
 `c.bit_length()`), and applies the final `a-1`/`a` adjustment. -/
 def isqrtRecursive (n : Int) : PyExcept Int := do
   if n < 0 then
-    throw $ .valueError "isqrt() argument must be nonnegative"
+    throw <| .valueError "isqrt() argument must be nonnegative"
   if n = 0 then
     return 0
 
