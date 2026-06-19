@@ -66,12 +66,12 @@ running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
 `isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
 theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition c n) :
-    ∃ y : MProd ℤ ℤ, (pyRange c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
+    ∃ y : MProd ℤ ℤ, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
-  -- Bridge the `pyRange` list to `(List.range L).reverse` with ℕ indices.
-  have hlist : (pyRange c.bitLength).reverse
+  -- Bridge the `range` list to `(List.range L).reverse` with ℕ indices.
+  have hlist : (range c.bitLength).reverse
       = (List.range c.bitLength.toNat).reverse.map Int.ofNat := by
-    rw [show pyRange c.bitLength = (List.range c.bitLength.toNat).map Int.ofNat from rfl,
+    rw [show range c.bitLength = (List.range c.bitLength.toNat).map Int.ofNat from rfl,
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `c >> L = 0`, where `L = c.bit_length()`.
@@ -213,7 +213,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         rw [show (Except.ok ((n.bitLength - 1).fdiv 2) : PyExcept ℤ)
               = pure ((n.bitLength - 1).fdiv 2) from rfl, pure_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
-          (pyRange ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
+          (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
       have hp : isIntegerSquareRoot n (y.fst - if y.fst * y.fst > n then 1 else 0) := by

@@ -27,7 +27,7 @@ def pyRshift (n k : Int) : PyExcept Int :=
     return n >>> k.toNat
 
 /-- Integers from 0 (inclusive) to n (exclusive); empty list if n is negative. -/
-def pyRange (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
+def range (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
 
 /--
 Equivalent of Python's int.bit_length - the minimum number of bits needed

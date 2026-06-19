@@ -1,11 +1,11 @@
 /-
 Sanity checks for the iterative integer square root `isqrtIterative` and the
 Python operations it uses: the `PyExcept`-returning `pyFloordiv` / `pyLshift` /
-`pyRshift` / `pyRange`, plus the plain `Int.bitLength`. The `PyExcept` results run
+`pyRshift`, plus the plain `range` and `Int.bitLength`. The `PyExcept` results run
 through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap a
 `PyExcept Int` — a bare `#guard` cannot, since `PyException` has no
-`DecidableEq`; `Int.bitLength` returns a plain `Int`, so it is checked with `#guard`
-directly. A failing `#guard` causes a build error.
+`DecidableEq`; `range` and `Int.bitLength` return ordinary values (no `PyExcept`),
+so they are checked with `#guard` directly. A failing `#guard` causes a build error.
 -/
 
 import Isqrt.Definitions.IsqrtIterative
@@ -38,12 +38,12 @@ import Isqrt.Tests.Assertions
 #guard assertRaisesValueError "negative shift count" (pyRshift 12 (-1))
 #guard assertRaisesValueError "negative shift count" (pyRshift (-12) (-1))
 
-/-! ## pyRange -/
+/-! ## range -/
 
-#guard pyRange 0 == []
-#guard pyRange 1 == [0]
-#guard pyRange 5 == [0, 1, 2, 3, 4]
-#guard pyRange (-5) == []
+#guard range 0 == []
+#guard range 1 == [0]
+#guard range 5 == [0, 1, 2, 3, 4]
+#guard range (-5) == []
 
 /-! ## Int.bitLength -/
 

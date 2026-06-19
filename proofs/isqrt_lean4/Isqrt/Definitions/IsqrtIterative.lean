@@ -1,6 +1,7 @@
 /-
 Translation of the Python `isqrt` code in iterative form into Lean. Here's the Python
-code we'll translate:
+code we'll translate. It's been tweaked slightly from the verbatim CPython source that's
+in the README, but the equivalency with that version should be self-evident.
 
     def isqrt(n : int) -> int:
         """Return the integer part of the square root of the input."""
@@ -17,7 +18,7 @@ code we'll translate:
             d = c >> s
             a = (a << d - e - 1) + (n >> 2 * c - e - d + 1) // a
 
-        return a - (a * a > n)
+        return a - (1 if a * a > n else 0)
 -/
 
 import Isqrt.Definitions.Exceptions
@@ -42,7 +43,7 @@ def isqrtIterative (n : Int) : PyExcept Int := do
   let c ← (n.bitLength - 1) // 2
   let mut a := 1
   let mut d := 0
-  for s in List.reverse (pyRange c.bitLength) do
+  for s in List.reverse (range c.bitLength) do
     let e := d
     d ← c >> s
     a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d + 1) // a)
