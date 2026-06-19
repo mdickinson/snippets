@@ -51,6 +51,6 @@ def isqrtRecursive (n : Int) : PyExcept Int := do
   if n = 0 then
     return 0
 
-  let c ← pyFloordiv (pyBitLength n - 1) 2
-  let a ← nsqrt (pyBitLength c).toNat c n
+  let c ← pyFloordiv (n.bitLength - 1) 2
+  let a ← nsqrt c.bitLength.toNat c n
   return (if n < a * a then a - 1 else a)

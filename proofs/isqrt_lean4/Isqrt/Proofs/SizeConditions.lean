@@ -119,19 +119,19 @@ seed `c` both isqrt formulations hand to the recursion, paired at the same `c` w
 `size_condition_initial` just below. Stated in pure `Int.fdiv` form (the `Except` `//`,
 `pyFloordiv`, reduces to it on its `.ok` branch), so both formulations share it. -/
 theorem isqrt_c_nonneg {n : ℤ} (hn : n ≠ 0) :
-    0 ≤ Int.fdiv (pyBitLength n - 1) 2 :=
-  Int.fdiv_nonneg (by have := pyBitLength_pos hn; omega) (by omega)
+    0 ≤ Int.fdiv (n.bitLength - 1) 2 :=
+  Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
 
-/-- Initial size condition holds for `c = ⌊(pyBitLength n - 1) / 2⌋`. -/
+/-- Initial size condition holds for `c = ⌊(n.bitLength - 1) / 2⌋`. -/
 theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
-    hasSizeCondition (Int.fdiv (pyBitLength n - 1) 2) n := by
+    hasSizeCondition (Int.fdiv (n.bitLength - 1) 2) n := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le hn.le
   have hm_pos : 0 < m := by exact_mod_cast hn
   have h_bl_pos : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
   -- Convert recursion-depth expression to ℕ.
-  have h_toNat : (Int.fdiv (pyBitLength (↑m : ℤ) - 1) 2).toNat
+  have h_toNat : (Int.fdiv ((↑m : ℤ).bitLength - 1) 2).toNat
                   = (natBitLength m - 1) / 2 := by
-    rw [pyBitLength_natCast,
+    rw [Int.bitLength_natCast,
         show ((natBitLength m : ℕ) : ℤ) - 1 = ((natBitLength m - 1 : ℕ) : ℤ) from by
           omega,
         show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,

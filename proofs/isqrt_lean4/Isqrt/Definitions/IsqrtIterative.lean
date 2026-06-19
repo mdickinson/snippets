@@ -39,10 +39,10 @@ def isqrtIterative (n : Int) : PyExcept Int := do
   if n = 0 then
     return 0
 
-  let c ← (pyBitLength n - 1) // 2
+  let c ← (n.bitLength - 1) // 2
   let mut a := 1
   let mut d := 0
-  for s in List.reverse (pyRange (pyBitLength c)) do
+  for s in List.reverse (pyRange c.bitLength) do
     let e := d
     d ← c >> s
     a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d + 1) // a)

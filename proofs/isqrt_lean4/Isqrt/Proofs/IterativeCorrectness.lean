@@ -66,21 +66,21 @@ running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
 `isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
 theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition c n) :
-    ∃ y : MProd ℤ ℤ, (pyRange (pyBitLength c)).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
+    ∃ y : MProd ℤ ℤ, (pyRange c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
   -- Bridge the `pyRange` list to `(List.range L).reverse` with ℕ indices.
-  have hlist : (pyRange (pyBitLength c)).reverse
-      = (List.range (pyBitLength c).toNat).reverse.map Int.ofNat := by
-    rw [show pyRange (pyBitLength c) = (List.range (pyBitLength c).toNat).map Int.ofNat from rfl,
+  have hlist : (pyRange c.bitLength).reverse
+      = (List.range c.bitLength.toNat).reverse.map Int.ofNat := by
+    rw [show pyRange c.bitLength = (List.range c.bitLength.toNat).map Int.ofNat from rfl,
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `c >> L = 0`, where `L = c.bit_length()`.
-  have hz : Int.fdiv c (2 ^ (pyBitLength c).toNat) = 0 := fdiv_two_pow_pyBitLength_eq_zero hc
+  have hz : Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := fdiv_two_pow_bitLength_eq_zero hc
   set motive : ℕ → MProd ℤ ℤ → Prop := fun (s : ℕ) (r : MProd ℤ ℤ) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
       ∧ isNearSquareRoot (Int.fdiv n (4 ^ (c - Int.fdiv c (2 ^ s)).toNat)) r.fst with hmotive
   -- Seed at `s = L`: `c >> L = 0`, base case `isNearSquareRoot ⌊n/4^c⌋ 1`.
-  have hseed : motive (pyBitLength c).toNat ⟨1, 0⟩ := by
+  have hseed : motive c.bitLength.toNat ⟨1, 0⟩ := by
     refine ⟨one_pos, hz.symm, ?_⟩
     rw [hz]
     obtain ⟨hlo, hhi⟩ := size_condition_at_depth (d := 0) le_rfl hc hsc
@@ -88,13 +88,13 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     exact ⟨by show (1 - 1) * (1 - 1) < Int.fdiv n (4 ^ (c - 0).toNat); nlinarith [hlo],
            by show Int.fdiv n (4 ^ (c - 0).toNat) < (1 + 1) * (1 + 1); nlinarith [hhi]⟩
   -- Step: one `key_isqrt_lemma` iteration, plus discharging `.ok`-ness of `stepM`.
-  have hstep : ∀ s, s < (pyBitLength c).toNat → ∀ x, motive (s + 1) x →
+  have hstep : ∀ s, s < c.bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM c n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
     set sZ : ℤ := (i : ℤ) with hsZ_def
     have hs_nn : 0 ≤ sZ := by positivity
-    have hs_lt : sZ < pyBitLength c := by have := pyBitLength_nonneg c; omega
+    have hs_lt : sZ < c.bitLength := by have := Int.bitLength_nonneg c; omega
     have hsi : sZ.toNat = i := Int.toNat_natCast i
     have hsi1 : (sZ + 1).toNat = i + 1 := by omega
     set d_new := Int.fdiv c (2 ^ i) with hd_new_def
@@ -178,7 +178,7 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       exact key_isqrt_lemma hM_pos ha_old_pos hM4 h_near
   obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM c n x (Int.ofNat s))
-      (pyBitLength c).toNat ⟨1, 0⟩ hseed hstep
+      c.bitLength.toNat ⟨1, 0⟩ hseed hstep
   -- Result at `s = 0`: `c >> 0 = c`, divisor `4^(c-c) = 1`, so a near-√ of `n`.
   refine ⟨y, hy_eq, hy_pos, ?_⟩
   simpa [Int.fdiv_one, Int.sub_self] using hy_near
@@ -204,16 +204,16 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
-        monadicLoop_near (c := (pyBitLength n - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
+        monadicLoop_near (c := (n.bitLength - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
           (size_condition_initial hpos)
       have hred : isqrtIterative n = .ok (y.fst - if y.fst * y.fst > n then 1 else 0) := by
         conv_lhs => unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
-        rw [show (Except.ok ((pyBitLength n - 1).fdiv 2) : PyExcept ℤ)
-              = pure ((pyBitLength n - 1).fdiv 2) from rfl, pure_bind]
-        have key := forIn_yield_bind_eq_foldlM (stepM ((pyBitLength n - 1).fdiv 2) n)
-          (pyRange (pyBitLength ((pyBitLength n - 1).fdiv 2))).reverse ⟨1, 0⟩
+        rw [show (Except.ok ((n.bitLength - 1).fdiv 2) : PyExcept ℤ)
+              = pure ((n.bitLength - 1).fdiv 2) from rfl, pure_bind]
+        have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
+          (pyRange ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
       have hp : isIntegerSquareRoot n (y.fst - if y.fst * y.fst > n then 1 else 0) := by

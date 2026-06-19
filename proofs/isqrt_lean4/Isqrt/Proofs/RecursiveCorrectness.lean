@@ -2,7 +2,7 @@
 Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
 Strategy: structural induction on the counter `s` for `nsqrt`, carrying
-the **tight** invariant `(pyBitLength c).toNat = s` alongside the size condition
+the **tight** invariant `c.bitLength.toNat = s` alongside the size condition
 `4^c ≤ n < 4^(c+1)` (from `Isqrt.Proofs.SizeConditions`). The invariant must be tight,
 not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
 `k = (c-1) // 2 = -1` and the body's `a << k` would raise `ValueError`.
@@ -33,21 +33,21 @@ private theorem toNat_two_mul_add_two {j : ℤ} (hj : 0 ≤ j) :
 Structural induction on `s`: the base `s = 0` forces `c = 0` (so the function
 returns `1`, a near-√ of the `1 ≤ n < 4` that the size condition pins down), and
 the step `s + 1` discharges every monadic operation to `.ok` — the recursive call
-via the induction hypothesis (whose bit-length premise is `toNat_pyBitLength_fdiv_two`),
+via the induction hypothesis (whose bit-length premise is `toNat_bitLength_fdiv_two`),
 the shifts/divisions via their nonneg side conditions — then closes with the core
 `key_isqrt_lemma` algebra of `Isqrt.Proofs.KeyLemma` (the same per-step lemma the iterative
 proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem nsqrt_correctness :
     ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
-      (pyBitLength c).toNat = s → hasSizeCondition c n →
+      c.bitLength.toNat = s → hasSizeCondition c n →
       ∃ a, nsqrt s c n = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
     intro c n hc hn hbl hsc
-    -- `(pyBitLength c).toNat = 0` with `0 ≤ c` forces `c = 0`.
-    have hbl_nn := pyBitLength_nonneg c
-    have hc0 : c = 0 := pyBitLength_eq_zero_iff.mp (by omega)
+    -- `c.bitLength.toNat = 0` with `0 ≤ c` forces `c = 0`.
+    have hbl_nn := Int.bitLength_nonneg c
+    have hc0 : c = 0 := Int.bitLength_eq_zero_iff.mp (by omega)
     subst hc0
     obtain ⟨h_lo, h_hi⟩ := hsc
     simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
@@ -56,10 +56,10 @@ private theorem nsqrt_correctness :
                             by show n < (1 + 1) * (1 + 1); omega⟩
   | succ s ih =>
     intro c n hc hn hbl hsc
-    -- `(pyBitLength c).toNat = s + 1 > 0` forces `0 < c`.
+    -- `c.bitLength.toNat = s + 1 > 0` forces `0 < c`.
     have hc_pos : 0 < c := by
       rcases eq_or_lt_of_le hc with h | h
-      · rw [← h, show pyBitLength (0 : ℤ) = 0 from pyBitLength_eq_zero_iff.mpr rfl] at hbl
+      · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
         simp at hbl
       · exact h
     -- The recursive arguments, in `Int.fdiv` form (matching the `Except` ops).
@@ -78,8 +78,8 @@ private theorem nsqrt_correctness :
       have : (0 : ℤ) < 4 ^ d.toNat := by positivity
       linarith
     -- The tight bit-length invariant descends: `(c // 2).bit_length() = c.bit_length() - 1`.
-    have hbl_step : (pyBitLength d).toNat = s := by
-      have h := toNat_pyBitLength_fdiv_two hc_pos
+    have hbl_step : d.bitLength.toNat = s := by
+      have h := toNat_bitLength_fdiv_two hc_pos
       rw [← hd_def] at h
       omega
     -- Induction hypothesis on the recursive subproblem.
@@ -138,9 +138,9 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
       · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
     · -- 0 < n: the recursion runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
-      set c : ℤ := Int.fdiv (pyBitLength n - 1) 2 with hc_def
+      set c : ℤ := Int.fdiv (n.bitLength - 1) 2 with hc_def
       obtain ⟨a, ha_eq, _a_pos, a_near⟩ :=
-        nsqrt_correctness (pyBitLength c).toNat
+        nsqrt_correctness c.bitLength.toNat
           (c := c) (n := n) (isqrt_c_nonneg hn0) hpos rfl (size_condition_initial hpos)
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         conv_lhs => unfold isqrtRecursive

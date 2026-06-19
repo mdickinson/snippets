@@ -1,10 +1,10 @@
 /-
 Sanity checks for the iterative integer square root `isqrtIterative` and the
 Python operations it uses: the `PyExcept`-returning `pyFloordiv` / `pyLshift` /
-`pyRshift` / `pyRange`, plus the plain `pyBitLength`. The `PyExcept` results run
+`pyRshift` / `pyRange`, plus the plain `Int.bitLength`. The `PyExcept` results run
 through the `assert*` helpers of `Isqrt.Tests.Assertions`, which unwrap a
 `PyExcept Int` — a bare `#guard` cannot, since `PyException` has no
-`DecidableEq`; `pyBitLength` returns a plain `Int`, so it is checked with `#guard`
+`DecidableEq`; `Int.bitLength` returns a plain `Int`, so it is checked with `#guard`
 directly. A failing `#guard` causes a build error.
 -/
 
@@ -45,13 +45,13 @@ import Isqrt.Tests.Assertions
 #guard pyRange 5 == [0, 1, 2, 3, 4]
 #guard pyRange (-5) == []
 
-/-! ## pyBitLength -/
+/-! ## Int.bitLength -/
 
-#guard pyBitLength 0 == 0
-#guard pyBitLength 1 == 1
-#guard pyBitLength 255 == 8
-#guard pyBitLength 256 == 9
-#guard pyBitLength (-256) == 9               -- bit_length of abs
+#guard Int.bitLength 0 == 0
+#guard Int.bitLength 1 == 1
+#guard Int.bitLength 255 == 8
+#guard Int.bitLength 256 == 9
+#guard Int.bitLength (-256) == 9             -- bit_length of abs
 
 /-! ## isqrtIterative -/
 

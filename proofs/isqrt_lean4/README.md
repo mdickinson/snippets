@@ -118,7 +118,7 @@ Isqrt/
   Proofs.lean                   -- component root: theorems and supporting lemmas
   Proofs/
     FDivLemmas.lean             -- Int.fdiv ordering lemmas and Int↔Nat bridge
-    PythonPrimitivesLemmas.lean -- .ok value-extraction + pyBitLength power-of-two/floor-division facts
+    PythonPrimitivesLemmas.lean -- .ok value-extraction + Int.bitLength power-of-two/floor-division facts
     SizeConditions.lean         -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
     KeyLemma.lean               -- key algebraic lemma; isNearSquareRoot predicate
     RecursiveCorrectness.lean   -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
@@ -362,11 +362,12 @@ by zero — with `Except`:
 Python's `int.bit_length()` returns the number of bits needed to
 represent `abs(n)`, with `(0).bit_length() == 0`. Unlike `//`, `<<`, and
 `>>`, this method can't raise on any integer input, so it needs no
-`Except` wrapper — it's just a function. It's defined as `pyBitLength` in
+`Except` wrapper — it's just a function. It's defined as `Int.bitLength` in
 `Isqrt/Definitions/PythonPrimitives.lean`, alongside the operator mirrors it joins;
 the lemmas about it live in `Isqrt/Proofs/PythonPrimitivesLemmas.lean`.
 
-On the Lean side it's named `pyBitLength : Int → Int`, defined as
+On the Lean side it's named `Int.bitLength : Int → Int` — invoked as
+`n.bitLength`, mirroring Python's `n.bit_length()` — and defined as
 `natBitLength n.natAbs` (where `natBitLength : Nat → Nat` is built on top of
 core Lean's `Nat.log2`). The intermediate trip through `Nat` is one of the
 bridging costs anticipated in "Why `Int` and not `Nat`" above: the
@@ -510,7 +511,7 @@ Lean itself. Two concerns live there:
 - The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrt` (in
   `Isqrt/Definitions/IsqrtRecursive.lean`), `isqrtIterative` (in
   `Isqrt/Definitions/IsqrtIterative.lean`), and the `pyFloordiv` / `pyRshift` /
-  `pyLshift` operations together with `pyBitLength` (all in
+  `pyLshift` operations together with `Int.bitLength` (all in
   `Isqrt/Definitions/PythonPrimitives.lean`). These are the only places where a
   translation error could plausibly creep in: if a Lean function isn't
   actually computing the same thing as the Python function it claims to
@@ -536,7 +537,7 @@ individual proof steps.
 
 **Sanity check.** Beyond the proofs, the repository contains
 `#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrtRecursive`,
-`isqrtIterative`, `pyFloordiv`, `pyRshift`, `pyLshift`, and `pyBitLength`
+`isqrtIterative`, `pyFloordiv`, `pyRshift`, `pyLshift`, and `Int.bitLength`
 on concrete inputs and verify the outputs against expected values. These
 tests are load-bearing in a way the proofs aren't: a proof can only ever
 talk about the Lean definitions, so if a Lean definition silently
