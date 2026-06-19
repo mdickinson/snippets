@@ -113,7 +113,7 @@ Isqrt/
     Exceptions.lean             -- PyException and the PyExcept alias
     PythonPrimitives.lean       -- //, >>, <<, range, bit_length mirrors
     IsqrtIterative.lean         -- iterative isqrtIterative definition (Lean for … in loop)
-    IsqrtRecursive.lean         -- recursive nsqrt and isqrtRecursive definitions
+    IsqrtRecursive.lean         -- recursive nsqrtRecursive and isqrtRecursive definitions
     Specification.lean          -- returns/raises, isIntegerSquareRoot postcondition, isCorrectIsqrt contract
   Proofs.lean                   -- component root: theorems and supporting lemmas
   Proofs/
@@ -161,21 +161,22 @@ Here is the recursive integer square root algorithm, in Python, that
 the Lean development mirrors:
 
 ```python
-def isqrt_aux(c: int, n: int) -> int:
+def nsqrt(n: int, c: int) -> int:
     if c == 0:
         return 1
     else:
         k = (c - 1) // 2
-        a = isqrt_aux(c // 2, n >> (2 * k + 2))
-        return (a << k) + (n >> (k + 2)) // a
+        a = nsqrt(n >> 2 * k + 2, c // 2)
+        return (a << k) + (n >> k + 2) // a
 
 def isqrt(n: int) -> int:
+    if n < 0:
+        raise ValueError("isqrt() argument must be nonnegative")
     if n == 0:
         return 0
-    else:
-        c = (n.bit_length() - 1) // 2
-        a = isqrt_aux(c, n)
-        return a - 1 if n < a * a else a
+    c = (n.bit_length() - 1) // 2
+    a = nsqrt(n, c)
+    return a - 1 if n < a * a else a
 ```
 
 This recursive form is the algorithm's original derivation, by the author of
@@ -242,7 +243,7 @@ done the same here, but chose `Int` for two reasons:
 
 `Int` isn't free either: in places where the underlying mathematical
 object is genuinely a natural number (the bit length of `n`, and the
-structural counter used for the recursion), we have to bridge between
+counter used for the recursion), we have to bridge between
 `Int` and `Nat` via `.toNat`. We pay some awkwardness either way — the
 question is *where*, and we chose `Int`.
 
@@ -382,7 +383,7 @@ returns `Int` to keep the public interface uniformly integer-valued and
 to match Python's signature (Python's `int.bit_length()` returns `int`,
 not some separate "nonneg int" type).
 
-### The structural counter `s`
+### The counter `s`
 
 The translation concerns so far have all been at the level of individual
 Python operations. Two more appear at the level of the recursive function
@@ -395,7 +396,7 @@ recursive definition to be justified by a measure that provably decreases
 on each call.
 
 The second is specific to going monadic, and it's the interesting one.
-The natural translation of `isqrt_aux` recurses on `c // 2` with `c == 0`
+The natural translation of `nsqrt` recurses on `c // 2` with `c == 0`
 as the base case. But under Option 2 that division is a monadic
 `let cHalf ← pyFloordiv c 2`, and the value `cHalf` bound by `←` is
 *opaque* to Lean's termination checker: it has no way to see that `cHalf`
@@ -407,37 +408,37 @@ real obstacle.)
 
 The fix is to recurse on something the checker *can* see, without giving
 up the monadic division. We add an explicit counter `s : Nat`, seed it at
-`c.bit_length()`, and recurse **structurally** on `s`:
+`c.bit_length()`, and recurse on `s`:
 
 ```
-def nsqrt (s : Nat) (c n : Int) : PyExcept Int :=
-  match s with
-  | 0 => pure 1
-  | s + 1 => do
-    let k ← pyFloordiv (c - 1) 2
-    let cHalf ← pyFloordiv c 2
-    let nShift ← pyRshift n (2 * k + 2)
-    let a ← nsqrt s cHalf nShift
-    let lsh ← pyLshift a k
-    let rsh ← pyRshift n (k + 2)
-    let q ← pyFloordiv rsh a
-    pure (lsh + q)
+def nsqrtRecursive (n c : Int) (s : Nat) : PyExcept Int := do
+  if s = 0 then
+    return 1
+  else
+    let k ← (c - 1) // 2
+    let a ← nsqrtRecursive (← n >> 2 * k + 2) (← c // 2) (s - 1)
+    return (← a << k) + (← (← n >> k + 2) // a)
 ```
 
-Structural recursion on `s` is accepted automatically — `s` literally
-loses a constructor on each call — so there is no `termination_by` and no
-`decreasing_by`. And because the recursion variable is now `s`, the
-division `c // 2` stays a genuine `pyFloordiv c 2`: every operation that
-can raise in Python is still an honest monadic `←` bind. (Notice this also
-illustrates the `do`-block claim from "Floor division": each of the six
-raising operations is a single `←` bind — as is the recursive call — and
-the body otherwise reads almost like the Python.)
+Lean accepts this as **well-founded** recursion: the counter strictly
+decreases, `s - 1 < s` — valid because the `else` branch guarantees
+`s ≠ 0` — and Lean discharges that obligation automatically, so there is
+still no `termination_by` and no `decreasing_by`. The explicit `else`
+earns its keep: with a bare early `return 1` and fall-through, do-notation
+lifts the recursive call out of the `if`, hiding the `s ≠ 0` guard from
+the termination checker; keeping the body in the `else` is what lets it
+through. And because the recursion variable is `s`, the division `c // 2`
+stays a genuine `pyFloordiv c 2` (written here with the local infix `//`,
+as are `<<` and `>>` for `pyLshift` and `pyRshift`): every operation that
+can raise in Python is still an honest monadic `←` bind — as is the
+recursive call — illustrating the `do`-block claim from "Floor division",
+and the body otherwise reads almost like the Python.
 
 `s` has no counterpart in the Python source; it's pure Lean scaffolding.
 What makes it faithful is that it tracks `c.bit_length()` exactly. For
 `c > 0` we have `(c // 2).bit_length() = c.bit_length() - 1`, so seeding
 `s = c.bit_length()` makes the counter fall by exactly one per recursive
-step and reach `0` at precisely the moment `c` does — so `match s`
+step and reach `0` at precisely the moment `c` does — so `if s = 0`
 reproduces the `if c == 0` base case faithfully. The invariant has to be
 *tight*: seeding `s` too large would let the recursion run past `c = 0`,
 where `k = (c - 1) // 2 = -1` and the body's `a << k` would raise a
@@ -514,7 +515,7 @@ the *definitions* component, `Isqrt/Definitions/`, which imports nothing but
 Lean's own core (not even Mathlib) — so scrutinising it means trusting only
 Lean itself. Two concerns live there:
 
-- The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrt` (in
+- The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrtRecursive` (in
   `Isqrt/Definitions/IsqrtRecursive.lean`), `isqrtIterative` (in
   `Isqrt/Definitions/IsqrtIterative.lean`), and the `pyFloordiv` / `pyRshift` /
   `pyLshift` operations together with `Int.bitLength` (all in
