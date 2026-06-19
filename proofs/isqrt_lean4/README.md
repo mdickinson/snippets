@@ -348,10 +348,14 @@ by zero — with `Except`:
 
 - `pyLshift` and `pyRshift` return `PyExcept Int`. On a negative
   shift count they return `.error (.valueError "negative shift count")`;
-  otherwise they match Python's semantics on all inputs, including the
-  cases where the *first* argument is negative. (Python and Lean both
-  define those uniformly: `<<` is multiplication by a power of two, `>>`
-  is floor-division by a power of two.)
+  otherwise they are Lean's native `<<<` and `>>>` on `Int`, matching
+  Python's semantics on all inputs — including a negative *first*
+  argument, since `>>` is an arithmetic (floor) shift in both languages.
+  We use the native operators rather than multiplying / floor-dividing by
+  `2 ^ k`: shifting is linear in the operand's bit length, where multiply
+  and divide are not. The `pyLshift_eq_ok` / `pyRshift_eq_ok` lemmas pin
+  `<<<` / `>>>` to `· * 2 ^ k` / `Int.fdiv · (2 ^ k)` — the arithmetic form
+  the correctness proofs reason about.
 - As with `//`, each call site binds the result with `←` inside the `do`
   block, so Python's `n >> (2 * k + 2)` becomes
   `let nShift ← pyRshift n (2 * k + 2)` and the surrounding code never

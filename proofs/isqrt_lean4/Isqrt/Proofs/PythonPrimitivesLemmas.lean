@@ -28,19 +28,27 @@ theorem pyFloordiv_eq_ok {a b : Int} (hb : b ≠ 0) :
   · omega
   · rfl
 
-/-- For a nonneg shift count, `pyLshift` takes its `.ok` branch. -/
+/-- For a nonneg shift count, `pyLshift` takes its `.ok` branch. The native
+`<<<` is `· * 2 ^ ·` by core's `Int.shiftLeft_eq`. -/
 theorem pyLshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
     pyLshift n k = .ok (n * 2 ^ k.toNat) := by
   unfold pyLshift; split
   · omega
-  · rfl
+  · show (Except.ok (n <<< k.toNat) : PyExcept Int) = .ok (n * 2 ^ k.toNat)
+    rw [Int.shiftLeft_eq]
 
-/-- For a nonneg shift count, `pyRshift` takes its `.ok` branch. -/
+/-- For a nonneg shift count, `pyRshift` takes its `.ok` branch. The native
+`>>>` is the arithmetic (floor) shift `Int.fdiv · (2 ^ ·)`: core's
+`Int.shiftRight_eq_div_pow` gives `· / 2 ^ ·`, which is `Int.fdiv` for the
+positive divisor `2 ^ k.toNat` (`Int.fdiv_eq_ediv_of_nonneg`). -/
 theorem pyRshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
     pyRshift n k = .ok (Int.fdiv n (2 ^ k.toNat)) := by
   unfold pyRshift; split
   · omega
-  · rfl
+  · show (Except.ok (n >>> k.toNat) : PyExcept Int) = .ok (Int.fdiv n (2 ^ k.toNat))
+    have h2 : (0 : Int) ≤ 2 ^ k.toNat := by positivity
+    rw [Int.shiftRight_eq_div_pow, Int.fdiv_eq_ediv_of_nonneg n h2]
+    norm_cast
 
 /-- `Except.ok a >>= f = f a` (definitional). The companion to the `_eq_ok`
 lemmas above: once one of them rewrites an operation to `.ok v`, this steps the

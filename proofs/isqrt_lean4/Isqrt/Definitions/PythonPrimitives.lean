@@ -17,14 +17,14 @@ def pyLshift (n k : Int) : PyExcept Int :=
   if k < 0 then
     throw <| .valueError "negative shift count"
   else
-    return n * (2 ^ k.toNat)
+    return n <<< k.toNat
 
 /-- Equivalent of Python's n >> k, raising valueError if k is negative. -/
 def pyRshift (n k : Int) : PyExcept Int :=
   if k < 0 then
     throw <| .valueError "negative shift count"
   else
-    return Int.fdiv n (2 ^ k.toNat)
+    return n >>> k.toNat
 
 /-- Integers from 0 (inclusive) to n (exclusive); empty list if n is negative. -/
 def pyRange (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
