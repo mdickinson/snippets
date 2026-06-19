@@ -1,7 +1,9 @@
 # Correctness proof for CPython's `math.integer.isqrt`
 
-This repository provides a formal proof of correctness, in Lean, of the algorithm
-underlying the CPython implementation of Python's `math.integer.isqrt` function.
+This repository provides a formal machine-verifiable proof of correctness of the
+algorithm underlying the CPython implementation of Python's `math.integer.isqrt`
+function. It starts with a version of the algorithm written in Python, translates that
+into Lean, and then proves correctness of the translated version.
 
 ## Overview
 
@@ -9,8 +11,9 @@ Python's `math.integer.isqrt` standard library function (`math.isqrt` prior to P
 3.15) computes the integer square root of a nonnegative integer `n`: the unique
 integer `a` satisfying `a * a <= n < (a + 1) * (a + 1)`.
 
-The function is implemented in C, but the source code describes an equivalent Python
-implementation. Here's that implementation. (Sources: [original
+The function is implemented in C, but the CPython source code describes an equivalent Python
+implementation, which the C implementation follows closely. Here's that implementation.
+(Sources: [original
 commit](https://github.com/python/cpython/blob/73934b9da07daefb203e7d26089e7486a1ce4fdf/Modules/mathmodule.c#L1515-L1535)
 for Python 3.8; [current home in
 math.integer](https://github.com/python/cpython/blob/v3.15.0b1/Modules/mathintegermodule.c#L191-L211).)
@@ -39,15 +42,39 @@ def isqrt(n):
     return a - (a*a > n)
 ```
 
-Despite its simplicity, the algorithm is unpublished and novel, and in places quite
-delicate, so skepticism about its correctness is warranted. This repository provides a
-direct, faithful translation of the above algorithm into the Lean programming language,
-along with a formal machine-checkable proof of correctness of that translation.
+Despite its simplicity, the algorithm is unpublished and novel and in places quite
+delicate, so some skepticism about its correctness is justified. This repository
+provides a direct, faithful line-by-line translation of the above algorithm into the
+Lean programming language, along with a formal machine-checkable proof of correctness of
+that translation.
 
 While the iterative version above is what's implemented in CPython, the algorithm as
-originally derived was recursive, and is clearer when expressed that way. This
-repository therefore also contains a definition and proof of correctness for the
-recursive variant of the algorithm.
+originally derived was recursive, and is conceptually clearer when presented that way.
+This repository also contains a definition and proof of correctness for the recursive
+spelling of the algorithm.
+
+## Project structure
+
+The Lean code is organised into three subdirectories of `Isqrt`:
+
+- `Isqrt/Definitions` contains the iterative and recursive implementations of
+  the integer square root algorithm in Lean, along with supporting definitions
+  of Python primitives and mirrors of the relevant Python exceptions. It also
+  contains _statements_ (but not proofs) of what constitutes correctness for
+  an `isqrt` implementation.
+- `Isqrt/Proofs` contains proofs of the correctness statements in
+  `Isqrt/Definitions/Specification`.
+- `Isqrt/Tests` contains direct tests of the two `isqrt` implementations and supporting
+  definitions using Lean's `#guard` command, passing in inputs and checking that the
+  outputs are as expected.
+
+The modules under `Isqrt/Proofs` are the only ones that depend on Mathlib, primarily for
+the `linarith`, `ring` and `positivity` proof tactics. The definitions are Mathlib-free.
+
+There are two root files: `Isqrt.lean` and `IsqrtTests.lean`. The
+former imports the definitions and proofs; the latter imports the definitions and tests.
+Both roots are marked as `@[default_target]` in `lakefile.lean`, so `lake build`
+exercises the `#guard` checks.
 
 ## Validating the proof
 
@@ -67,72 +94,77 @@ This should make `elan` and `lake` available on your `PATH`.
 
 ### Building the project
 
-From this directory:
+The key commands are all executed via Lean's build tool, `lake`. The first time you run `lake` it will automatically download the correct Lean toolchain version (as specified
+in `lean-toolchain`). From this directory:
 
 ```
-lake exe cache get   # download prebuilt Mathlib (avoids compiling from source)
+lake exe cache get   # download prebuilt Mathlib (avoids slow compilation from source)
 lake build           # build the project
 lake build --wfail   # build, failing on warnings too (matches CI)
 lake lint            # check for style issues
 ```
 
-The first `lake` command you run will automatically download the correct
-Lean toolchain version (specified in `lean-toolchain`).
+The success of `lake build` (exit code 0, no displayed error messages) implies that
+Lean was able to mechanically check every step of the proofs, and that the proofs are
+correct. The stronger `lake build --wfail` turns warnings into errors. Notably, `lake
+build` will still pass (with warnings) if there are incomplete proofs, marked by a
+`sorry` placeholder in Lean. `lake build --wfail` will fail in the presence of `sorry`s.
 
-Downloading the Mathlib cache (`lake exe cache get`) fetches ~1-2 GB of
-prebuilt `.olean` files. Without this step, `lake build` would compile
-all of Mathlib from source, which takes several hours.
+## What do I need to trust?
 
+The main goal of this project is to convince a reader that the Python code shown in the
+overview section is correct. The success of the `lake build` step says that all the
+proofs that Lean checked are valid. There are some dots to join between those two
+things. A reader who wants to be convinced of the correctness of the Python code
+needs to have confidence in:
 
-## Project structure
+- The faithfulness of the Python-to-Lean translation. If the Lean functions are
+  executing a _different_ algorithm from the Python code shown earlier, then the
+  correctness of the Lean code doesn't say much about the correctness of the Python
+  code. In particular, this includes validating:
+  - The `isqrtIterative` implementation in
+    [Isqrt/Definitions/IsqrtIterative.lean](Isqrt/Definitions/IsqrtIterative.lean).
+  - The definitions of the Python primitives: the Lean versions of Python's `>>`, `<<`
+    and `//` operators, and the Lean versions of Python's `int.bit_length` and `range`.
+    These definitions are all in
+    [Isqrt/Definitions/PythonPrimitives.lean](Isqrt/Definitions/PythonPrimitives.lean).
+  - The exception-related definitions in
+    [Isqrt/Definitions/Exceptions.lean](Isqrt/Definitions/Exceptions.lean).
+- The statements of correctness in
+  [Isqrt/Definitions/Specification.lean](Isqrt/Definitions/Specification.lean),
+  in particular the `isCorrectIsqrt` predicate.
+- That the `lake build` validation run includes validating the _proof_ of the correctness
+  statement. That proof lives right at the bottom of
+  [Isqrt/Proofs/IterativeCorrectness.lean](Isqrt/Proofs/IterativeCorrectness.lean).
+  The statement is simply: `theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := ...`
+- The Lean toolchain itself, including the compiler and standard library. It's
+  conceivable (but highly unlikely) that Lean itself has bugs that mean that it reports
+  validity of a proof that is actually invalid.
 
-The library is organised into three components, each a subdirectory of `Isqrt/`:
+Things that *don't* need to be trusted:
 
-- **`Definitions/`** — the trust surface: Lean mirrors of the Python operations,
-  the two `isqrt` translations, and the integer-square-root specification
-  predicate. This is the part a reader must check against Python (see "What do I
-  need to trust?" below).
-- **`Proofs/`** — the correctness theorems and every supporting lemma. A reader
-  who trusts Lean's checker can skip all of it beyond the *statements* of the two
-  top-level theorems.
-- **`Tests/`** — the `#guard` sanity checks.
+- The contents of the proofs. No matter how gnarly the proofs look, if Lean says that
+  they're valid, then they're valid.
+- `Mathlib`. While the proofs use Mathlib, the definitions and statements of correctness
+  do not. An error in `Mathlib` cannot cause Lean to accept an invalid proof as valid.
 
-The dependency direction is one-way: `Proofs/` and `Tests/` both build on
-`Definitions/`, neither depends on the other, and `Definitions/` depends on
-nothing else in the project. (Lean doesn't enforce this across a single package;
-it's a convention the directory split keeps visible in review.)
+In terms of the file layout, it's enough to read through and validate everything under
+`Isqrt/Definitions`, along with the one-line statement (but not the proof) of
+`isCorrectIsqrt_isqrtIterative`. That's less than 250 lines of code total (including
+comments, docstrings and blank lines). And in fact, some of those can be ignored:
+the `isCorrectIsqrt_isqrtIterative` statement does not depend on the contents
+of `Isqrt/Definitions/IsqrtRecursive.lean`, or on the definition of `isNearSquareRoot`
+in `Isqrt/Definitions/Specification.lean`.
 
-```
-lakefile.lean                   -- project configuration and dependencies
-lean-toolchain                  -- Lean version pin
-Isqrt.lean                      -- library root (imports Definitions + Proofs)
-IsqrtTests.lean                 -- tests root (imports the #guard files)
-Isqrt/
-  Definitions.lean              -- component root: the trust surface
-  Definitions/
-    Exceptions.lean             -- PyException and the PyExcept alias
-    PythonPrimitives.lean       -- //, >>, <<, range, bit_length mirrors
-    IsqrtIterative.lean         -- iterative isqrtIterative definition (Lean for … in loop)
-    IsqrtRecursive.lean         -- recursive nsqrtRecursive and isqrtRecursive definitions
-    Specification.lean          -- returns/raises, isIntegerSquareRoot postcondition, isCorrectIsqrt contract
-  Proofs.lean                   -- component root: theorems and supporting lemmas
-  Proofs/
-    FDivLemmas.lean             -- Int.fdiv ordering lemmas and Int↔Nat bridge
-    PythonPrimitivesLemmas.lean -- .ok value-extraction + Int.bitLength power-of-two/floor-division facts
-    SizeConditions.lean         -- size-condition invariants + isqrt_c_nonneg recursion-depth seed
-    KeyLemma.lean               -- key algebraic lemma; isNearSquareRoot predicate
-    RecursiveCorrectness.lean   -- recursive correctness proof (isCorrectIsqrt_isqrtRecursive)
-    IterativeCorrectness.lean   -- iterative correctness proof (isCorrectIsqrt_isqrtIterative)
-  Tests/
-    Assertions.lean             -- assert* helpers shared by both test files
-    Iterative.lean              -- #guard checks for the Python ops and isqrtIterative
-    Recursive.lean              -- #guard checks for the recursive isqrtRecursive
-```
+For the correctness of the recursive version, similar comments apply: look at
+`Isqrt/Definitions` and the single-line statement (but not the proof) of
+`isCorrectIsqrt_isqrtRecursive` in `Isqrt/Proofs/RecursiveCorrectness.lean`.
 
-Both roots are `@[default_target]` in `lakefile.lean`, so `lake build` exercises
-the `#guard` checks. The implementation library does not import the tests.
+There are also empirical tests under `Isqrt/Tests`, for particular chosen
+input values. While these aren't formal proofs, they provide easy-to-read
+empirical evidence that the two `isqrt` implementations do the right thing.
 
-## Python-to-Lean translation
+## Notes on the Python-to-Lean translation
 
 The goal of this proof is to give us confidence in the
 integer square root algorithm behind CPython's `math.integer.isqrt`. We don't
@@ -503,51 +535,3 @@ nonnegative input:
 The proof-carrying Option 3 would have established these as three separate
 facts, discharged at scattered call sites. Under Option 2 they are
 corollaries of one theorem about one return value.
-
-### What do I need to trust?
-
-If you're reading this repository hoping to come away with confidence
-that Python's `math.integer.isqrt` is correct, here's where to put your attention
-— and where you can let your guard down.
-
-**Read carefully.** Everything that demands real scrutiny is concentrated in
-the *definitions* component, `Isqrt/Definitions/`, which imports nothing but
-Lean's own core (not even Mathlib) — so scrutinising it means trusting only
-Lean itself. Two concerns live there:
-
-- The Lean *definitions* that mirror Python: `isqrtRecursive` and `nsqrtRecursive` (in
-  `Isqrt/Definitions/IsqrtRecursive.lean`), `isqrtIterative` (in
-  `Isqrt/Definitions/IsqrtIterative.lean`), and the `pyFloordiv` / `pyRshift` /
-  `pyLshift` operations together with `Int.bitLength` (all in
-  `Isqrt/Definitions/PythonPrimitives.lean`). These are the only places where a
-  translation error could plausibly creep in: if a Lean function isn't
-  actually computing the same thing as the Python function it claims to
-  mirror, the proof is proving something about a different algorithm.
-- The *specification* itself: the contract `isCorrectIsqrt` (in
-  `Isqrt/Definitions/Specification.lean`) that both top-level theorems prove. This
-  is where we say what "correct" means, spelled out in "The `.ok` result is a
-  certificate" above: for nonnegative `n` the function *returns* a value `a`
-  satisfying `isIntegerSquareRoot n a`, and for negative `n` it *raises* exactly
-  Python's `ValueError`. The predicate `isIntegerSquareRoot n a` (in the same
-  module) unfolds to `a * a ≤ n ∧ n < (a + 1) * (a + 1)`, i.e. `a` is the floor
-  of √n. If the specification (or the predicate) is too weak, the proof being
-  valid doesn't buy us what we wanted. In `Isqrt/Proofs/` it then suffices to
-  glance that `isCorrectIsqrt_isqrtRecursive` and `isCorrectIsqrt_isqrtIterative`
-  prove `isCorrectIsqrt` of the two translations.
-
-**Trust without rereading.** The proofs of theorems and lemmas don't
-require human verification. Lean's job is to check them, and if `lake
-build` succeeds, then — modulo trusting Lean itself, and the Mathlib
-library it depends on — every proof in the repository has been verified.
-A reader looking for confidence in the result doesn't need to follow
-individual proof steps.
-
-**Sanity check.** Beyond the proofs, the repository contains
-`#guard`-based tests (in `Isqrt/Tests/`) that exercise `isqrtRecursive`,
-`isqrtIterative`, `pyFloordiv`, `pyRshift`, `pyLshift`, and `Int.bitLength`
-on concrete inputs and verify the outputs against expected values. These
-tests are load-bearing in a way the proofs aren't: a proof can only ever
-talk about the Lean definitions, so if a Lean definition silently
-disagrees with its Python counterpart, the proof won't catch it. Running
-the Python and Lean operations on the same inputs and comparing outputs is
-exactly the check that fills that gap.
