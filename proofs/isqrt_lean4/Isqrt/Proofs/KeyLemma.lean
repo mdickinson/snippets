@@ -42,9 +42,9 @@ theorem isNearSquareRoot.toIntegerSquareRoot {a n : ℤ} (h : isNearSquareRoot n
   obtain ⟨h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a
   · simp only [h_lt, ↓reduceIte]
-    exact ⟨by nlinarith [h_lo], by nlinarith [h_lt]⟩
+    exact ⟨h_lo.le, by nlinarith [h_lt]⟩
   · simp only [h_lt, ↓reduceIte]
-    exact ⟨not_lt.mp h_lt, by nlinarith [h_hi]⟩
+    exact ⟨not_lt.mp h_lt, h_hi⟩
 
 /-! ## Algebraic helpers
 
@@ -120,7 +120,7 @@ theorem key_isqrt_lemma {n M a : ℤ}
   -- ===== Upper bound: n < (M*a + q + 1)² =====
   have upper : n < (M * a + q + 1)^2 := by
     -- Floor div upper: n < (q + 1) * (4*M*a)
-    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_fdiv_add_one_mul hMa_pos
+    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_fdiv_add_one_mul_self n hMa_pos
     -- (q + 1) * (4*M*a) ≤ (M*a + q + 1)², since the difference is (M*a - q - 1)² ≥ 0
     nlinarith [hq_ub, sq_nonneg (M * a - q - 1)]
   -- ===== Lower bound: (M*a + q - 1)² < n =====

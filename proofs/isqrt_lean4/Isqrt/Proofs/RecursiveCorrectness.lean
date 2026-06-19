@@ -70,7 +70,6 @@ private theorem nsqrtRecursive_correctness :
     have d_nn : 0 ≤ d := Int.fdiv_nonneg hc (by norm_num)
     have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
     have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
-    have m_nn : 0 ≤ m := Int.fdiv_nonneg hn.le (by positivity)
     -- Size condition is preserved by the step.
     have hsc_step : hasSizeCondition d m := size_condition_step hc_pos hsc
     have m_pos : 0 < m := by
@@ -105,7 +104,6 @@ private theorem nsqrtRecursive_correctness :
       have h := M_bound_from_size hc_pos hsc
       rwa [← hk_def, ← hM_def] at h
     have a_near' : isNearSquareRoot (Int.fdiv n (4 * M ^ 2)) a := hm_eq ▸ a_near
-    have h_key := key_isqrt_lemma M_pos a_pos hM4 a_near'
     have val_eq :
         a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
           = M * a + Int.fdiv n (4 * M * a) :=
@@ -115,7 +113,7 @@ private theorem nsqrtRecursive_correctness :
       exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))
         (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) a_pos.le)
     · -- near-√ via the key lemma
-      rw [val_eq]; exact h_key
+      rw [val_eq]; exact key_isqrt_lemma M_pos a_pos hM4 a_near'
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 

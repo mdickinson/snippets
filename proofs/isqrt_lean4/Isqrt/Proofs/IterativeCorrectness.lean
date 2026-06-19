@@ -92,14 +92,14 @@ theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       ∃ y, stepM c n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
-    set sZ : ℤ := (i : ℤ) with hsZ_def
+    set sZ : ℤ := (i : ℤ)
     have hs_nn : 0 ≤ sZ := by positivity
     have hs_lt : sZ < c.bitLength := by have := Int.bitLength_nonneg c; omega
     have hsi : sZ.toNat = i := Int.toNat_natCast i
     have hsi1 : (sZ + 1).toNat = i + 1 := by omega
     set d_new := Int.fdiv c (2 ^ i) with hd_new_def
     set d_old := Int.fdiv c (2 ^ (i + 1)) with hd_old_def
-    set a_old := x.fst with ha_old_def
+    set a_old := x.fst
     obtain ⟨ha_old_pos, hx_snd, hx_near⟩ := hx
     set N_new := Int.fdiv n (4 ^ (c - d_new).toNat) with hN_new_def
     -- align depths with the `Int.fdiv c (2^·)` shape the shift lemmas use

@@ -12,7 +12,7 @@ the `do`-block once the side conditions (nonzero divisor, nonneg shift) are disc
 The public `Int.bitLength` inlines its bit-length computation; this file re-declares it
 as the ℕ-level `natBitLength` — kept honest by `Int.bitLength_natCast` — and connects it,
 via `Nat.log2`, to power-of-two bounds, the per-step halving of a right shift, and the
-two loop-body shift-amount nonnegativity facts.
+loop-body left-shift nonnegativity fact.
 -/
 
 import Mathlib.Tactic.Positivity
@@ -211,8 +211,7 @@ theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : ℤ}
 `c < 2 ^ c.bit_length()`). This is the loop's seed value of `d`. -/
 theorem fdiv_two_pow_bitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
     Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := by
-  rw [Int.fdiv_eq_ediv_of_nonneg c (by positivity)]
-  apply Int.ediv_eq_zero_of_lt hc
+  apply Int.fdiv_eq_zero_of_lt hc
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
   rw [Int.toNat_bitLength_natCast]
   exact_mod_cast lt_two_pow_natBitLength cn
@@ -230,12 +229,12 @@ theorem toNat_bitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
   -- `Int.toNat_bitLength_natCast`, which leaves the `cn / 2` cast untouched).
   rw [h_half, Int.toNat_bitLength_natCast, Int.toNat_bitLength_natCast, natBitLength_div_two hcn]
 
-/-! ## Loop-body shift-amount nonnegativity
+/-! ## Loop-body left-shift nonnegativity
 
-Both the iterative and recursive isqrt recompute, at loop position `s`, the shifts
-`d' = ⌊c/2^s⌋` (new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then form
-the left-shift amount `d' - d - 1` and the right-shift amount `2c - d' - d + 1`.
-These two lemmas show both are nonneg, in pure `Int.fdiv` form. -/
+The iterative isqrt recomputes, at loop position `s`, the shifts `d' = ⌊c/2^s⌋`
+(new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then forms the
+left-shift amount `d' - d - 1`. This lemma shows it is nonneg, in pure `Int.fdiv`
+form. -/
 
 /-- The left-shift amount `⌊c/2^s⌋ - d - 1` is nonneg, where `d = ⌊c/2^(s+1)⌋`,
 for `0 ≤ s < c.bit_length()`. The body's hardest precondition: it needs
@@ -253,13 +252,3 @@ theorem fdiv_two_pow_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s
   have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
     Int.fdiv_nonneg (by omega) (by norm_num)
   rw [hhalve]; omega
-
-/-- The right-shift amount `2c - ⌊c/2^s⌋ - d + 1` is nonneg, where
-`d = ⌊c/2^(s+1)⌋`. Both floor-halvings are `≤ c` (for `0 ≤ c`), so the amount is
-`≥ 1`. -/
-theorem fdiv_two_pow_rshift_nonneg {c s d : ℤ} (hc : 0 ≤ c)
-    (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
-    0 ≤ 2 * c - Int.fdiv c (2 ^ s.toNat) - d + 1 := by
-  have h1 : Int.fdiv c (2 ^ s.toNat) ≤ c := Int.fdiv_le_self_of_nonneg hc (by positivity)
-  have h2 : Int.fdiv c (2 ^ (s + 1).toNat) ≤ c := Int.fdiv_le_self_of_nonneg hc (by positivity)
-  rw [hd]; omega

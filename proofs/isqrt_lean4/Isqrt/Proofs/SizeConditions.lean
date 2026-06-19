@@ -18,14 +18,6 @@ import Mathlib.Tactic.Ring
 import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
 
-/-! ## Helper arithmetic identity -/
-
-/-- For `0 < c`, the "small half" `(c-1)/2`, the "big half" `c/2`, and
-the central bit sum to `c`. -/
-theorem big_half_little_half {c : ℕ} (hc : 0 < c) :
-    (c - 1) / 2 + c / 2 + 1 = c := by
-  omega
-
 /-! ## ℕ-level size conditions -/
 
 /-- Initial size condition: for `0 < n`, the choice
@@ -78,7 +70,7 @@ with `0 < c`, the recursive arguments `c' = c/2` and `m = n / 2^(2k+2)`
 
 This is `size_condition_at_depth_nat` specialised to depth `d = c/2`: the
 step's divisor `2^(2k+2)` equals the depth-`c/2` divisor `4^(c − c/2)`,
-since `2k+2 = 2((c-1)/2) + 2 = 2(c − c/2)` by `big_half_little_half`. -/
+since `2k+2 = 2((c-1)/2) + 2 = 2(c − c/2)`, an identity `omega` discharges. -/
 theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
     (h_lo : 4 ^ c ≤ n) (h_hi : n < 4 ^ (c + 1)) :
     4 ^ (c / 2) ≤ n / 2 ^ (2 * ((c - 1) / 2) + 2) ∧
@@ -86,7 +78,7 @@ theorem size_condition_step_nat {c n : ℕ} (hc : 0 < c)
   -- Bridge the base-2 step divisor to the base-4 depth divisor at `d = c/2`.
   have h_div : 2 ^ (2 * ((c - 1) / 2) + 2) = 4 ^ (c - c / 2) := by
     rw [show (4 : ℕ) = 2^2 from rfl, ← pow_mul]
-    -- 2((c-1)/2) + 2 = 2(c − c/2), i.e. `big_half_little_half`, which omega knows.
+    -- 2((c-1)/2) + 2 = 2(c − c/2), which omega knows.
     congr 1; omega
   rw [h_div]
   exact size_condition_at_depth_nat (Nat.div_le_self c 2) h_lo h_hi
@@ -166,11 +158,8 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
     simp
   -- ⌊(cn - 1) / 2⌋.toNat = (cn - 1) / 2
-  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 := by
-    rw [show ((↑cn : ℤ) - 1) = ((cn - 1 : ℕ) : ℤ) from by omega,
-        show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
-        Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-    simp
+  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 :=
+    Int.toNat_fdiv_pred_two hcn_pos
   -- The shifted value equals the ℤ-cast of the ℕ-level shifted value.
   have h_shift :
       Int.fdiv (↑nn : ℤ) (2 ^ (2 * Int.fdiv (↑cn - 1 : ℤ) 2 + 2).toNat)
@@ -209,11 +198,8 @@ theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn_pos : 0 < cn := by exact_mod_cast hc
   have hcN : (↑cn : ℤ).toNat = cn := Int.toNat_natCast cn
-  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 := by
-    rw [show ((↑cn : ℤ) - 1) = ((cn - 1 : ℕ) : ℤ) from by omega,
-        show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
-        Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-    simp
+  have h_c12 : (Int.fdiv (↑cn - 1 : ℤ) 2).toNat = (cn - 1) / 2 :=
+    Int.toNat_fdiv_pred_two hcn_pos
   rw [h_c12]
   have h_lo_nat : 4 ^ cn ≤ nn := by
     have := h_lo; rw [hcN] at this; exact_mod_cast this
