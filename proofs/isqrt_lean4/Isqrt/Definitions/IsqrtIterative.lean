@@ -15,9 +15,9 @@ code we'll translate:
         for s in reversed(range(c.bit_length())):
             e = d
             d = c >> s
-            a = (a << d - e - 1) + (n >> 2*c - e - d + 1) // a
+            a = (a << d - e - 1) + (n >> 2 * c - e - d + 1) // a
 
-        return a - (a*a > n)
+        return a - (a * a > n)
 -/
 
 import Isqrt.Definitions.Exceptions
@@ -42,9 +42,9 @@ def isqrtIterative (n : Int) : PyExcept Int := do
   let c ← (pyBitLength n - 1) // 2
   let mut a := 1
   let mut d := 0
-  for s in (pyRange (pyBitLength c)).reverse do
+  for s in List.reverse (pyRange (pyBitLength c)) do
     let e := d
     d ← c >> s
-    a := (← a << (d - e - 1)) + (← (← (n >> (2 * c - e - d + 1))) // a)
+    a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d + 1) // a)
 
   return a - (if a * a > n then 1 else 0)
