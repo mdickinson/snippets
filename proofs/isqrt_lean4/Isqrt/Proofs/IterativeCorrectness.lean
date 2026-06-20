@@ -223,3 +223,16 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtIterative; rw [if_pos hn]; rfl
     exact herr
+
+/-- `⌊√n⌋` for a natural number `n`, read off from `isqrtIterative`.
+
+This is a total `Int`-valued function: the `.error` branch of the underlying `PyExcept`
+result is unreachable, because `isCorrectIsqrt_isqrtIterative` proves `isqrtIterative`
+returns `.ok` on every nonnegative input. The proof is what discharges the branch, so this
+definition — and hence the `isqrt` executable that calls it — depends on the correctness
+theorem above. -/
+def isqrtIterativeNat (n : Nat) : Int :=
+  (isqrtIterative n).toOption.get <| by
+    obtain ⟨a, ha, _⟩ := isCorrectIsqrt_isqrtIterative.1 n (Int.natCast_nonneg n)
+    have ha' : isqrtIterative n = .ok a := ha
+    rw [ha']; rfl
