@@ -14,11 +14,18 @@ recursive subproblem's value. The top-level result `isCorrectIsqrt_isqrtRecursiv
 establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsqrt_isqrtIterative`.
 -/
 
-import Isqrt.Definitions.IsqrtRecursive
-import Isqrt.Definitions.Specification
+module
+
+meta import Mathlib.Tactic.Linarith
+meta import Mathlib.Tactic.Positivity
+meta import Mathlib.Tactic.Ring
+public import Isqrt.Definitions.IsqrtRecursive
+public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
+
+public section
 
 /-- The recursive auxiliary is a positive near square root for any size-conformant
 `(c, n)`, **and never raises**, provided the counter is seeded tightly at
@@ -149,3 +156,5 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
         = .error (.valueError "isqrt() argument must be nonnegative") := by
       unfold isqrtRecursive; rw [if_pos hn]; rfl
     exact herr
+
+end

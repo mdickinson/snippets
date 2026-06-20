@@ -7,7 +7,11 @@ nonneg. We state them for `Int.fdiv` so that proofs downstream can
 use them directly after unfolding `pyFloordiv` / `pyRshift`.
 -/
 
-import Mathlib.Tactic.Linarith
+module
+
+meta import Mathlib.Tactic.Linarith
+
+public section
 
 /-! ## Basic ordering lemmas for `Int.fdiv` -/
 
@@ -58,3 +62,5 @@ theorem Int.toNat_fdiv_pred_two {c : ℕ} (hc : 0 < c) :
       show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
       Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
   simp
+
+end

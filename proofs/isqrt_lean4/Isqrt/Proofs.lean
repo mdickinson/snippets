@@ -8,9 +8,11 @@ translations; the contract itself lives in `Isqrt.Definitions.Specification`. Th
 depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 -/
 
-import Isqrt.Proofs.FDivLemmas
-import Isqrt.Proofs.PythonPrimitivesLemmas
-import Isqrt.Proofs.SizeConditions
-import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.RecursiveCorrectness
-import Isqrt.Proofs.IterativeCorrectness
+module
+
+public import Isqrt.Proofs.FDivLemmas
+public import Isqrt.Proofs.PythonPrimitivesLemmas
+public import Isqrt.Proofs.SizeConditions
+public import Isqrt.Proofs.KeyLemma
+public import Isqrt.Proofs.RecursiveCorrectness
+public import Isqrt.Proofs.IterativeCorrectness

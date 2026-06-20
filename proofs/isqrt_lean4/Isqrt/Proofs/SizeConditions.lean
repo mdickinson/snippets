@@ -14,9 +14,15 @@ infrastructure; the ℤ-level corollaries at the end, stated in terms of
 owns `isqrt_c_nonneg`, the nonnegativity of the initial recursion depth.
 -/
 
-import Mathlib.Tactic.Ring
-import Isqrt.Proofs.PythonPrimitivesLemmas
+module
+
+meta import Mathlib.Tactic.Ring
+meta import Mathlib.Tactic.Positivity
+meta import Mathlib.Tactic.Linarith
+public import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
+
+public section
 
 /-! ## ℕ-level size conditions -/
 
@@ -103,7 +109,7 @@ the ℕ-level ones, with the bridging done once here. -/
 
 /-- The size condition: `4^c ≤ n < 4^(c+1)` (using `c.toNat` so that the
 exponent is a natural number). Intended for `0 ≤ c`. -/
-def hasSizeCondition (c n : ℤ) : Prop :=
+@[expose] def hasSizeCondition (c n : ℤ) : Prop :=
   (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c.toNat + 1)
 
 /-- The size condition forces `0 ≤ n`. -/
@@ -229,3 +235,5 @@ theorem size_condition_at_depth {c n d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c
   refine ⟨?_, ?_⟩
   · exact_mod_cast step_lo
   · exact_mod_cast step_hi
+
+end

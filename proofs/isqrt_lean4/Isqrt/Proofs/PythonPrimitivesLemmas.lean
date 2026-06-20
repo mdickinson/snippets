@@ -15,9 +15,13 @@ via `Nat.log2`, to power-of-two bounds, the per-step halving of a right shift, a
 loop-body left-shift nonnegativity fact.
 -/
 
-import Mathlib.Tactic.Positivity
-import Isqrt.Definitions.PythonPrimitives
+module
+
+meta import Mathlib.Tactic.Positivity
+public import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.FDivLemmas
+
+public section
 
 /-! ## Value extraction: the `Except`-returning operations -/
 
@@ -253,3 +257,5 @@ theorem fdiv_two_pow_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s
   have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
     Int.fdiv_nonneg (by omega) (by norm_num)
   rw [hhalve]; omega
+
+end

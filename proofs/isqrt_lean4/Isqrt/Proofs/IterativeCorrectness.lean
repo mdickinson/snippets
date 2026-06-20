@@ -1,8 +1,14 @@
-import Isqrt.Definitions.IsqrtIterative
-import Isqrt.Definitions.Specification
+module
+
+meta import Mathlib.Tactic.Linarith
+meta import Mathlib.Tactic.Positivity
+public import Isqrt.Definitions.IsqrtIterative
+public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonPrimitivesLemmas
+
+public section
 
 /-- One iteration of the monadic loop, as a standalone `Except`-returning step on the
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
@@ -236,3 +242,5 @@ def isqrtIterativeNat (n : Nat) : Int :=
     obtain ⟨a, ha, _⟩ := isCorrectIsqrt_isqrtIterative.1 n (Int.natCast_nonneg n)
     have ha' : isqrtIterative n = .ok a := ha
     rw [ha']; rfl
+
+end

@@ -60,8 +60,12 @@ nonnegativity of `s` is enforced by using type `Nat` instead of `Int` for `s`, a
 can then deduce automatically that the recursion terminates.
 -/
 
-import Isqrt.Definitions.Exceptions
-import Isqrt.Definitions.PythonPrimitives
+module
+
+public import Isqrt.Definitions.Exceptions
+public import Isqrt.Definitions.PythonPrimitives
+
+@[expose] public section
 
 /-
 Infix aliases for the Python operations, with precedence chosen to match that of Python.
@@ -92,3 +96,5 @@ def isqrtRecursive (n : Int) : PyExcept Int := do
   let a ← nsqrtRecursive n c c.bitLength.toNat
 
   return if n < a * a then a - 1 else a
+
+end

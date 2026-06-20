@@ -1,2 +1,4 @@
-import Isqrt.Definitions
-import Isqrt.Proofs
+module
+
+public import Isqrt.Definitions
+public import Isqrt.Proofs

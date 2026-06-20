@@ -3,6 +3,10 @@ The shared test vector for the integer square root, used by both
 `Isqrt.Tests.IsqrtIterative` and `Isqrt.Tests.IsqrtRecursive`.
 -/
 
+module
+
+@[expose] public section
+
 /-- Pairs (isqrt input, expected output). -/
 def isqrtCases : List (Int × Int) :=
   [ (0, 0), (1, 1),
@@ -13,3 +17,5 @@ def isqrtCases : List (Int × Int) :=
     (25, 5), (26, 5),                -- 25 = 5², just above
     (999999, 999), (1000000, 1000), (1000001, 1000),
     (10 ^ 1000, 10 ^ 500) ]
+
+end

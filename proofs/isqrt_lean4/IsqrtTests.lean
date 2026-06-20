@@ -1,1 +1,3 @@
-import Isqrt.Tests
+module
+
+public import Isqrt.Tests

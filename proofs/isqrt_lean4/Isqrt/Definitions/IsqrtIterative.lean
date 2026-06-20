@@ -23,8 +23,12 @@ should be self-evident.
         return a - 1 if n < a * a else a
 -/
 
-import Isqrt.Definitions.Exceptions
-import Isqrt.Definitions.PythonPrimitives
+module
+
+public import Isqrt.Definitions.Exceptions
+public import Isqrt.Definitions.PythonPrimitives
+
+@[expose] public section
 
 /-
 Infix aliases for the Python operations, with precedence chosen to match that of Python.
@@ -51,3 +55,5 @@ def isqrtIterative (n : Int) : PyExcept Int := do
     a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d + 1) // a)
 
   return if n < a * a then a - 1 else a
+
+end

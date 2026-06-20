@@ -8,7 +8,11 @@ test file, so the iterative and recursive test files can share them without one
 importing the other.
 -/
 
-import Isqrt.Definitions.PythonPrimitives
+module
+
+public import Isqrt.Definitions.PythonPrimitives
+
+@[expose] public section
 
 /-- True when the computation returned `.ok expected`. -/
 def assertReturns (actual : PyExcept Int) (expected : Int) : Bool :=
@@ -27,3 +31,5 @@ def assertRaisesValueError (msg : String) (actual : PyExcept Int) : Bool :=
   match actual with
   | .error (.valueError m) => m == msg
   | _ => false
+
+end

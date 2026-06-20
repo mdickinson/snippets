@@ -14,10 +14,15 @@ if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
 near square root of `n`.
 -/
 
-import Isqrt.Definitions.Specification
+module
+
+meta import Mathlib.Tactic.Ring
+meta import Mathlib.Tactic.Positivity
+meta import Mathlib.Tactic.Linarith
+public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.FDivLemmas
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Positivity
+
+public section
 
 /-! ## From near square root to integer square root -/
 
@@ -171,3 +176,5 @@ theorem key_isqrt_body_eq {ν a M : ℤ} {k : ℤ} (hk : 0 ≤ k) (ha : 0 < a)
     rw [hkt, pow_add]; ring
   rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν (by positivity : (0 : ℤ) ≤ 4 * 2 ^ k.toNat) ha.le]
   ring
+
+end

@@ -3,8 +3,10 @@ Direct actual-equals-expected-style tests for the Python primitives used by the 
 implementations.
 -/
 
-import Isqrt.Definitions.PythonPrimitives
-import Isqrt.Tests.Assertions
+module
+
+meta import Isqrt.Definitions.PythonPrimitives
+meta import Isqrt.Tests.Assertions
 
 /-! ## pyFloordiv -/
 

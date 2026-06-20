@@ -1,6 +1,8 @@
-import Isqrt.Tests.PythonPrimitives
-import Isqrt.Tests.IsqrtIterative
-import Isqrt.Tests.IsqrtRecursive
+module
+
+public import Isqrt.Tests.PythonPrimitives
+public import Isqrt.Tests.IsqrtIterative
+public import Isqrt.Tests.IsqrtRecursive
 
 /-!
 Aggregator module for the `#guard`-based sanity checks: the Python primitives and

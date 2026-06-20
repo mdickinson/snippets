@@ -2,7 +2,11 @@
 Definition of correctness for a function claiming to be an integer square root.
 -/
 
-import Isqrt.Definitions.Exceptions
+module
+
+public import Isqrt.Definitions.Exceptions
+
+@[expose] public section
 
 /-- Statement that a possibly-exception-raising computation returns a value. -/
 def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
@@ -25,3 +29,5 @@ def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
   (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
   ∧
   (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
+
+end
