@@ -1,10 +1,10 @@
 module
 
-public import Isqrt.Definitions.Exceptions
-public import Isqrt.Definitions.PythonPrimitives
-public import Isqrt.Definitions.IsqrtIterative
-public import Isqrt.Definitions.IsqrtRecursive
-public import Isqrt.Definitions.Specification
+import Isqrt.Definitions.Exceptions
+import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Definitions.IsqrtIterative
+import Isqrt.Definitions.IsqrtRecursive
+import Isqrt.Definitions.Specification
 
 /-!
 Aggregator module for the definitions of Lean versions of `isqrt`, the correctness

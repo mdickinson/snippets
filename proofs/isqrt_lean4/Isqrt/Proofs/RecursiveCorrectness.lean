@@ -21,6 +21,7 @@ meta import Mathlib.Tactic.Positivity
 meta import Mathlib.Tactic.Ring
 public import Isqrt.Definitions.IsqrtRecursive
 public import Isqrt.Definitions.Specification
+import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas

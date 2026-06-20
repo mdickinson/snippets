@@ -19,7 +19,8 @@ module
 meta import Mathlib.Tactic.Ring
 meta import Mathlib.Tactic.Positivity
 meta import Mathlib.Tactic.Linarith
-public import Isqrt.Proofs.PythonPrimitivesLemmas
+public import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
 
 public section

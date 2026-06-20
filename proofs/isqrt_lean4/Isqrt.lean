@@ -1,4 +1,4 @@
 module
 
-public import Isqrt.Definitions
-public import Isqrt.Proofs
+import Isqrt.Definitions
+import Isqrt.Proofs

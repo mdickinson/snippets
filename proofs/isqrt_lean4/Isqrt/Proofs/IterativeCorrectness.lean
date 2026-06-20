@@ -4,6 +4,7 @@ meta import Mathlib.Tactic.Linarith
 meta import Mathlib.Tactic.Positivity
 public import Isqrt.Definitions.IsqrtIterative
 public import Isqrt.Definitions.Specification
+import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonPrimitivesLemmas
