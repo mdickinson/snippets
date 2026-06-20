@@ -27,13 +27,13 @@ import Isqrt.Definitions.Exceptions
 import Isqrt.Definitions.PythonPrimitives
 
 /-
-A bit of local syntactic sugar: infix aliases for the Python operations.
+Infix aliases for the Python operations, with precedence chosen to match that of Python.
 We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
 -/
 
 local infixl:70 "//" => pyFloordiv
-local infixl:60 "<<" => pyLshift
-local infixl:60 (priority := high) ">>" => pyRshift
+local infixl:62 "<<" => pyLshift
+local infixl:62 (priority := high) ">>" => pyRshift
 
 /-- Return the integer part of the square root of the input. -/
 def isqrtIterative (n : Int) : PyExcept Int := do

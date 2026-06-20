@@ -1,7 +1,6 @@
 /-
-This module introduces a `PyException` type representing the Python exceptions that
-we need to model (just `ValueError` and `ZeroDivisionError`), and the corresponding
-`PyExcept` monad.
+This module defines a `PyException` type representing the Python exceptions that we need
+to model (`ValueError` and `ZeroDivisionError`), and the corresponding `PyExcept` monad.
 -/
 
 /-- The Python exceptions that `math.isqrt` and the operations it uses can raise. -/
@@ -16,7 +15,7 @@ instance : ToString PyException where
     | .valueError msg => s!"ValueError: {msg}"
 
 /--
-`PyExcept α` represents the result of a computation that either returns a value of type
-`α` or raises a Python exception.
+The `PyExcept` monad: for any type `α`, the type `PyExcept α` represents the result of a
+computation that either returns a value of type `α` or raises a Python exception.
 -/
 abbrev PyExcept := Except PyException
