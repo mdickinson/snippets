@@ -123,6 +123,12 @@ $ lake exe isqrt 1729
 
 The single argument must be a nonnegative integer.
 
+The executable is backed by the correctness proof — it is that proof which guarantees
+the computation never raises — yet neither the proof nor Mathlib forms part of the
+compiled program. Lean's module system lets us mark these as compile-time-only
+dependencies (`meta import`), so they are erased from the runtime binary, leaving an
+`isqrt` executable well under a megabyte that contains no Mathlib code.
+
 ## What do I need to trust?
 
 The main goal of this project is to convince a reader that the Python code shown in the
