@@ -42,11 +42,10 @@ def isqrt(n):
 ```
 
 Despite its simplicity, the algorithm is unpublished and novel, and in places quite
-delicate, so some skepticism about its correctness is justified. This repository
-provides evidence of the correctness of the algorithm in the form of a faithful
-line-by-line translation of the above algorithm into the [Lean programming
-language][lean], along with a formal machine-checkable proof of correctness of that
-translation.
+delicate, so it's not unreasonable to question its correctness. This repository provides
+evidence of the correctness of the algorithm in the form of a faithful line-by-line
+translation of the above algorithm into the [Lean programming language][lean], along
+with a formal machine-checkable proof of correctness of that translation.
 
 While the iterative presentation above is what's implemented in CPython, the algorithm
 as originally derived was recursive, and is conceptually clearer when presented that
@@ -342,15 +341,19 @@ encountered with the definition of `c`: `c >> s` has type `PyExcept Int`, and we
 `d` to have type `Int`. As before, the `←` form effectively unwraps that `PyExcept Int`
 into an `Int`, propagating any exception through the rest of the computation.
 
-The final line of the `for` loop, `a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d +
-1) // a)`, also introduces something new. As with `d`, we're updating the mutable state
-originally introduced in the `let mut a := 1` line; this time the reassignment uses a
-regular `:=` rather than the monadic `←`. But in the expression for the value being
-assigned we use the prefix operator `←` (the _nested action_ form) to do local
-unwrappings of `PyExcept Int` values into `Int`s. So for example `a << d - e - 1` has
-type `PyExcept Int`, but `← a << d - e - 1` has type `Int`, with the Lean desugaring,
-elaboration and underlying monadic machinery again taking care of propagating exceptions
-raised behind the scenes.
+The final line of the `for` loop,
+`a := (← a << d - e - 1) + (← (← n >> 2 * c - e - d + 1) // a)`,
+also introduces something new. As with `d`, we're updating the mutable state originally
+introduced in the `let mut a := 1` line; this time the reassignment uses a regular `:=`
+rather than the monadic `←`. But in the expression for the value being assigned we use
+the prefix operator `←` (the _nested action_ form) to do local unwrappings of `PyExcept
+Int` values into `Int`s. So for example `a << d - e - 1` has type `PyExcept Int`, but `←
+a << d - e - 1` has type `Int`, with the Lean desugaring, elaboration and underlying
+monadic machinery again taking care of propagating exceptions raised behind the scenes.
+
+Note that the apparent asymmetry between the reassignments of `d` and `a` is merely
+superficial: we could just as well have spelled the former assignment as
+`d := (← c >> s)`.
 
 For more background on these features of Lean, see the paper [*'do'
 Unchained*][do-unchained], by Ullrich and de Moura. They're also described in the
