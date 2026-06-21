@@ -90,12 +90,7 @@ private theorem nsqrtRecursive_correctness {c n : ℤ} (hsc : hasSizeCondition c
            nsqrtRecursive_succ hM_def hc a_near.pos ha_eq,
            key_isqrt_lemma hM a_near⟩
 termination_by c.toNat
-decreasing_by
-  -- the recursive call is on `⌊c/2⌋`, with `0 ≤ ⌊c/2⌋ < c` for `c > 0`.
-  have : Int.fdiv c 2 < c := by
-    rw [Int.fdiv_eq_ediv_of_nonneg c (by omega), Int.ediv_lt_iff_lt_mul (by omega)]; omega
-  have : 0 ≤ Int.fdiv c 2 := Int.fdiv_nonneg hc.le (by omega)
-  omega
+decreasing_by exact Int.toNat_fdiv_two_lt hc
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 

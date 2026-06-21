@@ -56,6 +56,16 @@ local infixl:70 "//" => pyFloordiv
 local infixl:62 "<<" => pyLshift
 local infixl:62 (priority := high) ">>" => pyRshift
 
+/-- Floor-halving strictly decreases the `ℕ`-measure `·.toNat`: `⌊c/2⌋.toNat < c.toNat`
+for `0 < c` (since `0 ≤ ⌊c/2⌋ < c`). This is what makes `nsqrtRecursive`'s recursion on
+`c.toNat` well-founded; its `decreasing_by` — and the matching one in the correctness
+proof — discharge with it. -/
+theorem Int.toNat_fdiv_two_lt {c : Int} (hc : 0 < c) : (Int.fdiv c 2).toNat < c.toNat := by
+  have : Int.fdiv c 2 < c := by
+    rw [Int.fdiv_eq_ediv_of_nonneg c (by omega), Int.ediv_lt_iff_lt_mul (by omega)]; omega
+  have : 0 ≤ Int.fdiv c 2 := Int.fdiv_nonneg (by omega) (by omega)
+  omega
+
 /-- Return a near square root of a positive integer n. -/
 def nsqrtRecursive (n c : Int) : PyExcept Int := do
   if c <= 0 then
@@ -68,12 +78,7 @@ def nsqrtRecursive (n c : Int) : PyExcept Int := do
     let a ← nsqrtRecursive (← n >> 2 * k + 2) (Int.fdiv c 2)
     return (← a << k) + (← (← n >> k + 2) // a)
 termination_by c.toNat
-decreasing_by
-  -- `0 ≤ c // 2 < c` for `c > 0`, so the `ℕ`-measure `c.toNat` strictly decreases.
-  have : Int.fdiv c 2 < c := by
-    rw [Int.fdiv_eq_ediv_of_nonneg c (by omega), Int.ediv_lt_iff_lt_mul (by omega)]; omega
-  have : 0 ≤ Int.fdiv c 2 := Int.fdiv_nonneg (by omega) (by omega)
-  omega
+decreasing_by exact Int.toNat_fdiv_two_lt (by omega)
 
 /-- Return the integer part of the square root of the input. -/
 def isqrtRecursive (n : Int) : PyExcept Int := do
