@@ -79,15 +79,15 @@ private theorem nsqrtRecursive_correctness {c n : ℤ} (hsc : hasSizeCondition c
     subst hc0
     exact ⟨1, nsqrtRecursive_base n hc, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
   · -- step: `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
-    replace hc : 0 < c := not_le.mp hc
+    have hc_pos : 0 < c := not_le.mp hc
     set k : ℤ := Int.fdiv (c - 1) 2
     set M : ℤ := 2 ^ k.toNat with hM_def
-    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc hsc
+    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc_pos hsc
     -- The recursion solves the reduced problem `⌊n / 4M²⌋`, returning a near √ `a`; the step
     -- returns `Ma + ⌊n / 4Ma⌋`, which the key lemma certifies as a near √ of `n`.
-    obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (size_condition_step hM_def hc hsc)
+    obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (size_condition_step hM_def hc_pos hsc)
     exact ⟨M * a + Int.fdiv n (4 * M * a),
-           nsqrtRecursive_succ hM_def hc a_near.pos ha_eq,
+           nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq,
            key_isqrt_lemma hM a_near⟩
 termination_by c.toNat
 decreasing_by exact Int.toNat_fdiv_two_lt hc
