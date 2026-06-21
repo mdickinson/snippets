@@ -62,6 +62,18 @@ private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
     rfl
   rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : ℤ) ^ k.toNat = 2 ^ k.toNat)]
 
+/-- Counter descent for the recursive step: a counter seeded tightly at `s + 1` forces `0 < c`,
+and the halved counter `⌊c/2⌋` is then tight for `s` (`(c // 2).bit_length() = c.bit_length() - 1`,
+`toNat_bitLength_fdiv_two`). Supplies the two facts the step hands to the recursive call. -/
+private theorem counter_step {c : ℤ} {s : ℕ} (hc : 0 ≤ c) (hbl : c.bitLength.toNat = s + 1) :
+    0 < c ∧ (Int.fdiv c 2).bitLength.toNat = s := by
+  have hc_pos : 0 < c := by
+    rcases eq_or_lt_of_le hc with h | h
+    · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
+      simp at hbl
+    · exact h
+  exact ⟨hc_pos, by have h := toNat_bitLength_fdiv_two hc_pos; omega⟩
+
 /-- The recursive auxiliary returns a near square root of `n` and **never raises**, given the
 size condition and the counter seeded tightly at `s = c.bit_length()`.
 
@@ -83,14 +95,8 @@ private theorem nsqrtRecursive_correctness :
     exact ⟨1, nsqrtRecursive_zero n 0, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
   | succ s ih =>
     intro c n hbl hsc
-    -- (mechanics) the tight counter forces `0 < c` and descends to `⌊c/2⌋` for the subcall.
-    have hc_pos : 0 < c := by
-      rcases eq_or_lt_of_le hsc.c_nonneg with h | h
-      · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
-        simp at hbl
-      · exact h
-    have hbl_step : (Int.fdiv c 2).bitLength.toNat = s := by
-      have h := toNat_bitLength_fdiv_two hc_pos; omega
+    -- (mechanics) descend the counter: `0 < c`, and `⌊c/2⌋` is tight for the subcall.
+    obtain ⟨hc_pos, hbl_step⟩ := counter_step hsc.c_nonneg hbl
     -- `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
     set k : ℤ := Int.fdiv (c - 1) 2
     set M : ℤ := 2 ^ k.toNat with hM_def
