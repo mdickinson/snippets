@@ -91,7 +91,7 @@ private theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     refine ⟨one_pos, hz.symm, ?_⟩
     rw [hz]
     obtain ⟨hlo, hhi⟩ := size_condition_at_depth (d := 0) le_rfl hc hsc
-    simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at hlo hhi
+    simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at hlo hhi
     exact ⟨by show (1 - 1) * (1 - 1) < Int.fdiv n (4 ^ (c - 0).toNat); nlinarith [hlo],
            by show Int.fdiv n (4 ^ (c - 0).toNat) < (1 + 1) * (1 + 1); nlinarith [hhi]⟩
   -- Step: one `key_isqrt_lemma` iteration, plus discharging `.ok`-ness of `stepM`.

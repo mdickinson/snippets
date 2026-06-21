@@ -40,24 +40,26 @@ the shifts/divisions via their nonneg side conditions — then closes with the c
 `key_isqrt_lemma` algebra of `Isqrt.Proofs.KeyLemma` (the same per-step lemma the iterative
 proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem nsqrtRecursive_correctness :
-    ∀ (s : ℕ) {c n : ℤ}, 0 ≤ c → 0 < n →
+    ∀ (s : ℕ) {c n : ℤ},
       c.bitLength.toNat = s → hasSizeCondition c n →
       ∃ a, nsqrtRecursive n c s = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
-    intro c n hc hn hbl hsc
-    -- `c.bitLength.toNat = 0` with `0 ≤ c` forces `c = 0`.
+    intro c n hbl hsc
+    -- `c.bitLength.toNat = 0` with `0 ≤ c.bitLength` forces `c = 0`.
     have hbl_nn := Int.bitLength_nonneg c
     have hc0 : c = 0 := Int.bitLength_eq_zero_iff.mp (by omega)
     subst hc0
     obtain ⟨h_lo, h_hi⟩ := hsc
-    simp only [Int.toNat_zero, pow_zero, zero_add, pow_one] at h_lo h_hi
+    simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at h_lo h_hi
     -- `nsqrtRecursive n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
     exact ⟨1, by unfold nsqrtRecursive; rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
                             by show n < (1 + 1) * (1 + 1); omega⟩
   | succ s ih =>
-    intro c n hc hn hbl hsc
+    intro c n hbl hsc
+    have hc : 0 ≤ c := hsc.c_nonneg
+    have hn : 0 < n := hsc.pos
     -- `c.bitLength.toNat = s + 1 > 0` forces `0 < c`.
     have hc_pos : 0 < c := by
       rcases eq_or_lt_of_le hc with h | h
@@ -69,22 +71,17 @@ private theorem nsqrtRecursive_correctness :
     set d : ℤ := Int.fdiv c 2 with hd_def
     set m : ℤ := Int.fdiv n (2 ^ (2 * k + 2).toNat) with hm_def
     have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
-    have d_nn : 0 ≤ d := Int.fdiv_nonneg hc (by norm_num)
     have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
     have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
     -- Size condition is preserved by the step.
     have hsc_step : hasSizeCondition d m := size_condition_step hc_pos hsc
-    have m_pos : 0 < m := by
-      obtain ⟨hlo, _⟩ := hsc_step
-      have : (0 : ℤ) < 4 ^ d.toNat := by positivity
-      linarith
     -- The tight bit-length invariant descends: `(c // 2).bit_length() = c.bit_length() - 1`.
     have hbl_step : d.bitLength.toNat = s := by
       have h := toNat_bitLength_fdiv_two hc_pos
       rw [← hd_def] at h
       omega
     -- Induction hypothesis on the recursive subproblem.
-    obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih d_nn m_pos hbl_step hsc_step
+    obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih hbl_step hsc_step
     -- Reduce the `do`-block: every operation takes its `.ok` branch.
     have hred : nsqrtRecursive n c (s + 1)
         = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
@@ -141,7 +138,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
       set c : ℤ := Int.fdiv (n.bitLength - 1) 2 with hc_def
       obtain ⟨a, ha_eq, _a_pos, a_near⟩ :=
         nsqrtRecursive_correctness c.bitLength.toNat
-          (c := c) (n := n) (isqrt_c_nonneg hn0) hpos rfl (size_condition_initial hpos)
+          (c := c) (n := n) rfl (size_condition_initial hpos)
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         conv_lhs => unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,

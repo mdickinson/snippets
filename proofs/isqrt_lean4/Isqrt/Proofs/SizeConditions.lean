@@ -109,14 +109,40 @@ private theorem M_bound_from_size_nat {c n : ℕ} (hc : 0 < c) (h_lo : 4 ^ c ≤
 through the `nsqrtRecursive` recursion. The ℤ-level lemmas are corollaries of
 the ℕ-level ones, with the bridging done once here. -/
 
-/-- The size condition: `4^c ≤ n < 4^(c+1)` (using `c.toNat` so that the
-exponent is a natural number). Intended for `0 ≤ c`. -/
+/-- The size condition: `4^c ≤ n < 4^(c+1)` (using `toNat` so the exponents are naturals).
+The upper bound is written `4^(c+1).toNat`, not `4^(c.toNat + 1)`, so that `0 ≤ c` is a
+*consequence* (`hasSizeCondition.c_nonneg`): for `c < 0` both exponents collapse to `0` and
+the bounds `1 ≤ n < 1` are unsatisfiable. For `0 ≤ c` the two forms agree. -/
 @[expose] def hasSizeCondition (c n : ℤ) : Prop :=
-  (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c.toNat + 1)
+  (4 : ℤ) ^ c.toNat ≤ n ∧ n < (4 : ℤ) ^ (c + 1).toNat
+
+/-- The size condition forces `0 < n` (since `1 ≤ 4^c.toNat ≤ n`). -/
+theorem hasSizeCondition.pos {c n : ℤ} (h : hasSizeCondition c n) : 0 < n := by
+  have : (0 : ℤ) < 4 ^ c.toNat := by positivity
+  linarith [h.1]
 
 /-- The size condition forces `0 ≤ n`. -/
 private theorem hasSizeCondition.nonneg {c n : ℤ} (h : hasSizeCondition c n) : 0 ≤ n :=
-  le_trans (by positivity) h.1
+  h.pos.le
+
+/-- The size condition forces `0 ≤ c`: the bounds give `4^c.toNat < 4^(c+1).toNat`, but for
+`c < 0` both exponents are `0`, leaving `4^0 < 4^0`. -/
+theorem hasSizeCondition.c_nonneg {c n : ℤ} (h : hasSizeCondition c n) : 0 ≤ c := by
+  obtain ⟨h_lo, h_hi⟩ := h
+  have hlt : (4 : ℤ) ^ c.toNat < (4 : ℤ) ^ (c + 1).toNat := lt_of_le_of_lt h_lo h_hi
+  by_contra hc
+  have e1 : c.toNat = 0 := by omega
+  have e2 : (c + 1).toNat = 0 := by omega
+  rw [e1, e2] at hlt
+  exact absurd hlt (lt_irrefl _)
+
+/-- Construct a size condition from the `c.toNat + 1` form of the upper bound, given `0 ≤ c`
+(for which `4^(c+1).toNat = 4^(c.toNat + 1)`). Lets the construction sites below work in the
+simpler `c.toNat` form. -/
+private theorem hasSizeCondition_of_toNat {c n : ℤ} (hc : 0 ≤ c)
+    (h_lo : (4 : ℤ) ^ c.toNat ≤ n) (h_hi : n < (4 : ℤ) ^ (c.toNat + 1)) :
+    hasSizeCondition c n :=
+  ⟨h_lo, by rwa [show (c + 1).toNat = c.toNat + 1 from by omega]⟩
 
 /-- For `ℕ`-cast arguments the size condition is exactly its `ℕ`-level form. The single
 ℤ↔ℕ bridge the three ℤ-level corollaries below funnel through, sparing each its own
@@ -124,7 +150,8 @@ private theorem hasSizeCondition.nonneg {c n : ℤ} (h : hasSizeCondition c n) :
 private theorem hasSizeCondition_natCast_iff {c n : ℕ} :
     hasSizeCondition (↑c) (↑n) ↔ 4 ^ c ≤ n ∧ n < 4 ^ (c + 1) := by
   unfold hasSizeCondition
-  rw [Int.toNat_natCast]
+  rw [Int.toNat_natCast,
+      show ((c : ℤ) + 1) = ((c + 1 : ℕ) : ℤ) by push_cast; ring, Int.toNat_natCast]
   norm_cast
 
 /-- The recursion depth `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n` — the
@@ -150,12 +177,10 @@ theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
         show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl,
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
     rfl
-  unfold hasSizeCondition
-  rw [h_toNat]
   obtain ⟨h_lo, h_hi⟩ := size_condition_initial_nat hm_pos
-  refine ⟨?_, ?_⟩
-  · exact_mod_cast h_lo
-  · exact_mod_cast h_hi
+  refine hasSizeCondition_of_toNat (isqrt_c_nonneg (by exact_mod_cast hm_pos.ne')) ?_ ?_
+  · rw [h_toNat]; exact_mod_cast h_lo
+  · rw [h_toNat]; exact_mod_cast h_hi
 
 /-- Size condition preserved by the recursive step: `c ↦ ⌊c/2⌋`,
 `n ↦ ⌊n / 2^(2k+2)⌋` where `k = ⌊(c - 1)/2⌋`. -/
@@ -191,11 +216,9 @@ theorem size_condition_step {c n : ℤ} (hc : 0 < c)
         Int.fdiv_natCast_natCast]
   obtain ⟨step_lo, step_hi⟩ := size_condition_step_nat hcn_pos h_lo_nat h_hi_nat
   -- Assemble the ℤ-level conclusion.
-  unfold hasSizeCondition
-  rw [h_c2, h_shift]
-  refine ⟨?_, ?_⟩
-  · exact_mod_cast step_lo
-  · exact_mod_cast step_hi
+  refine hasSizeCondition_of_toNat (Int.fdiv_nonneg (by positivity) (by norm_num)) ?_ ?_
+  · rw [h_c2, h_shift]; exact_mod_cast step_lo
+  · rw [h_c2, h_shift]; exact_mod_cast step_hi
 
 /-- `4 * M^4 ≤ n` from the size condition, where `M = 2^⌊(c-1)/2⌋.toNat`. -/
 theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
@@ -240,10 +263,8 @@ theorem size_condition_at_depth {c n d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c
   obtain ⟨h_lo_nat, h_hi_nat⟩ := hasSizeCondition_natCast_iff.mp h
   obtain ⟨step_lo, step_hi⟩ := size_condition_at_depth_nat hdc h_lo_nat h_hi_nat
   -- Assemble the ℤ-level conclusion.
-  unfold hasSizeCondition
-  rw [hdN, h_cd, h_bridge]
-  refine ⟨?_, ?_⟩
-  · exact_mod_cast step_lo
-  · exact_mod_cast step_hi
+  refine hasSizeCondition_of_toNat (by positivity) ?_ ?_
+  · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_lo
+  · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_hi
 
 end
