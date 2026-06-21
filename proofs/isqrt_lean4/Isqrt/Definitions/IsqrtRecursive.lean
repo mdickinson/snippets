@@ -54,13 +54,6 @@ local infixl:70 "//" => pyFloordiv
 local infixl:62 "<<" => pyLshift
 local infixl:62 (priority := high) ">>" => pyRshift
 
-/-- Statement that our chosen measure decreases. -/
-theorem Int.toNat_fdiv_two_lt {c : Int} (hc : ¬c <= 0) : (c.fdiv 2).toNat < c.toNat := by
-  rw [Int.fdiv_eq_ediv_of_nonneg c (by decide)]
-  apply (Int.toNat_lt_toNat (Int.lt_of_not_ge hc)).mpr ((Int.ediv_lt_of_lt_mul (by decide) _))
-  rw [Int.mul_comm, Int.two_mul]
-  exact Int.lt_add_of_le_of_pos (c.le_refl) (Int.lt_of_not_ge hc)
-
 /-- Return a near square root of a positive integer n. -/
 def nsqrtRecursive (n c : Int) : PyExcept Int := do
   if c <= 0 then
@@ -70,7 +63,7 @@ def nsqrtRecursive (n c : Int) : PyExcept Int := do
     let a ← nsqrtRecursive (← n >> 2 * k + 2) (c.fdiv 2)
     return (← a << k) + (← (← n >> k + 2) // a)
 termination_by c.toNat
-decreasing_by exact Int.toNat_fdiv_two_lt (by assumption)
+decreasing_by grind only
 
 /-- Return the integer part of the square root of the input. -/
 def isqrtRecursive (n : Int) : PyExcept Int := do

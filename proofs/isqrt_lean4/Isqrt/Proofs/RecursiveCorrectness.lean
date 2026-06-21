@@ -90,7 +90,7 @@ private theorem nsqrtRecursive_correctness {c n : ℤ} (hsc : hasSizeCondition c
            nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq,
            key_isqrt_lemma hM a_near⟩
 termination_by c.toNat
-decreasing_by exact Int.toNat_fdiv_two_lt hc
+decreasing_by grind only
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
