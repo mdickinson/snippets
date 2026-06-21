@@ -28,6 +28,10 @@ import Isqrt.Proofs.PythonPrimitivesLemmas
 
 public section
 
+/-- The recursion bottoms out at counter `s = 0`, returning `1` regardless of `c` and `n`. -/
+private theorem nsqrtRecursive_zero (n c : ℤ) : nsqrtRecursive n c 0 = .ok 1 := by
+  unfold nsqrtRecursive; rfl
+
 /-- The recursive auxiliary is a positive near square root for any size-conformant
 `(c, n)`, **and never raises**, provided the counter is seeded tightly at
 `s = c.bit_length()`.
@@ -48,14 +52,9 @@ private theorem nsqrtRecursive_correctness :
   | zero =>
     intro c n hbl hsc
     -- `c.bitLength.toNat = 0` with `0 ≤ c.bitLength` forces `c = 0`.
-    have hbl_nn := Int.bitLength_nonneg c
-    have hc0 : c = 0 := Int.bitLength_eq_zero_iff.mp (by omega)
+    have hc0 : c = 0 := Int.bitLength_eq_zero_iff.mp (by have := Int.bitLength_nonneg c; omega)
     subst hc0
-    obtain ⟨h_lo, h_hi⟩ := hsc
-    simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at h_lo h_hi
-    -- `nsqrtRecursive n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
-    exact ⟨1, by unfold nsqrtRecursive; rfl, by show (1 - 1) * (1 - 1) < n; omega,
-                            by show n < (1 + 1) * (1 + 1); omega⟩
+    exact ⟨1, nsqrtRecursive_zero n 0, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
   | succ s ih =>
     intro c n hbl hsc
     have hc : 0 ≤ c := hsc.c_nonneg

@@ -238,6 +238,15 @@ theorem isSuitableScaler_of_hasSizeCondition {c n : ℤ} (hc : 0 < c)
     isSuitableScaler n (2 ^ (Int.fdiv (c - 1) 2).toNat) :=
   ⟨by positivity, M_bound_from_size hc h⟩
 
+/-- Base case of the recursion: at `c = 0` the size condition `1 ≤ n < 4` makes `1` a near
+square root of `n`. The counterpart to the step-case bridge
+`isSuitableScaler_of_hasSizeCondition`. -/
+theorem isNearSquareRoot_one_of_hasSizeCondition {n : ℤ} (h : hasSizeCondition 0 n) :
+    isNearSquareRoot n 1 := by
+  obtain ⟨h_lo, h_hi⟩ := h
+  simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at h_lo h_hi
+  exact ⟨by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
+
 /-- Size condition at any depth `0 ≤ d ≤ c`: derived directly from
 `hasSizeCondition c n`, the value `n` takes at depth `d`,
 `⌊n / 4^(c-d)⌋ = n >> 2(c-d)`, again satisfies the size condition (now for `d`).
