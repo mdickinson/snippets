@@ -20,6 +20,7 @@ meta import Mathlib.Tactic.Ring
 meta import Mathlib.Tactic.Positivity
 meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.PythonPrimitives
+public import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
 
@@ -205,6 +206,14 @@ theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
   obtain ⟨h_lo_nat, _⟩ := hasSizeCondition_natCast_iff.mp h
   rw [Int.toNat_fdiv_pred_two hcn_pos]
   exact_mod_cast M_bound_from_size_nat hcn_pos h_lo_nat
+
+/-- A suitable scaler from the size condition: for `0 < c` with `4^c ≤ n < 4^(c+1)`,
+`2^⌊(c-1)/2⌋` is a suitable scaler for `n` — positivity is immediate, and the `4M⁴ ≤ n`
+bound is `M_bound_from_size`. This is the form the key lemma consumes. -/
+theorem isSuitableScaler_of_hasSizeCondition {c n : ℤ} (hc : 0 < c)
+    (h : hasSizeCondition c n) :
+    isSuitableScaler n (2 ^ (Int.fdiv (c - 1) 2).toNat) :=
+  ⟨by positivity, M_bound_from_size hc h⟩
 
 /-- Size condition at any depth `0 ≤ d ≤ c`: derived directly from
 `hasSizeCondition c n`, the value `n` takes at depth `d`,

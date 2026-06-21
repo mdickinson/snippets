@@ -98,12 +98,11 @@ private theorem nsqrtRecursive_correctness :
       rfl
     -- Algebra: the returned value is the `key_isqrt_lemma` output for `M = 2^k.toNat`.
     set M := (2 : ℤ) ^ k.toNat with hM_def
-    have M_pos : 0 < M := by positivity
     have hm_eq : m = Int.fdiv n (4 * M ^ 2) := by
       rw [hm_def, show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega, hM_def]
       congr 1; ring
-    have hM4 : 4 * M ^ 4 ≤ n := by
-      have h := M_bound_from_size hc_pos hsc
+    have hM_scaler : isSuitableScaler n M := by
+      have h := isSuitableScaler_of_hasSizeCondition hc_pos hsc
       rwa [← hk_def, ← hM_def] at h
     have a_near' : isNearSquareRoot (Int.fdiv n (4 * M ^ 2)) a := hm_eq ▸ a_near
     have val_eq :
@@ -115,7 +114,7 @@ private theorem nsqrtRecursive_correctness :
       exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))
         (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) a_pos.le)
     · -- near-√ via the key lemma
-      rw [val_eq]; exact key_isqrt_lemma M_pos hM4 a_near'
+      rw [val_eq]; exact key_isqrt_lemma hM_scaler a_near'
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 

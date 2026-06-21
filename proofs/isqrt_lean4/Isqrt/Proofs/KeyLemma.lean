@@ -100,14 +100,21 @@ private theorem n_lower {n M a : ℤ} (hM : 0 < M)
   rw [← Int.le_fdiv_iff_mul_le hdenom]
   linarith
 
+/-! ## Suitable scalers -/
+
+/-- `M` is a *suitable scaler* for `n`: it is positive and `4M⁴ ≤ n`. That bound is the
+sense in which `M` is "small enough" — equivalently `M² ≤ ⌊n / 4M²⌋`. -/
+@[expose] def isSuitableScaler (n M : ℤ) : Prop := 0 < M ∧ 4 * M^4 ≤ n
+
 /-! ## The key lemma -/
 
-/-- If `a` is a near square root of `⌊n / 4M²⌋` and `4M⁴ ≤ n`, then
+/-- If `M` is a suitable scaler for `n` and `a` is a near square root of `⌊n / 4M²⌋`, then
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 theorem key_isqrt_lemma {n M a : ℤ}
-    (hM : 0 < M) (hM4 : 4 * M^4 ≤ n)
+    (hM_scaler : isSuitableScaler n M)
     (h_near : isNearSquareRoot (n.fdiv (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n.fdiv (4 * M * a)) := by
+  obtain ⟨hM, hM4⟩ := hM_scaler
   have ha : 0 < a := h_near.pos
   obtain ⟨ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
