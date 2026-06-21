@@ -138,34 +138,6 @@ theorem lt_natBitLength_iff {n k : ℕ} : k < natBitLength n ↔ 2 ^ k ≤ n := 
   simp only [not_lt, not_le]
   exact natBitLength_le_iff
 
-/-- Halving drops exactly one bit: `natBitLength (n / 2) = natBitLength n - 1`
-for `0 < n`. This is the structural-counter linchpin — each recursive `c ↦ c // 2`
-step decreases `c.bit_length()` by one, so a counter seeded at `c.bit_length()`
-reaches `0` exactly when `c` does. -/
-theorem natBitLength_div_two {n : ℕ} (hn : 0 < n) :
-    natBitLength (n / 2) = natBitLength n - 1 := by
-  have hb : 0 < natBitLength n := natBitLength_pos_iff.mpr hn
-  -- peel one factor of two off a positive power
-  have two_pow_pred : ∀ m, 1 ≤ m → (2 : ℕ) ^ m = 2 * 2 ^ (m - 1) :=
-    fun m hm => by rw [← pow_succ']; congr 1; omega
-  apply le_antisymm
-  · -- `natBitLength (n/2) ≤ natBitLength n - 1`  ⟺  `n/2 < 2^(natBitLength n - 1)`
-    rw [natBitLength_le_iff]
-    have hub := lt_two_pow_natBitLength n
-    have hsplit := two_pow_pred (natBitLength n) hb
-    omega
-  · -- `natBitLength n - 1 ≤ natBitLength (n/2)`
-    by_cases h1 : 2 ≤ natBitLength n
-    · -- `natBitLength n ≥ 2`: from `2^(natBitLength n - 1) ≤ n` deduce `2^(b-2) ≤ n/2`.
-      have hlow := two_pow_pred_natBitLength_le hn
-      have hsplit := two_pow_pred (natBitLength n - 1) (by omega)
-      rw [hsplit] at hlow
-      have hhalf : 2 ^ (natBitLength n - 1 - 1) ≤ n / 2 := by omega
-      have := (lt_natBitLength_iff (n := n / 2) (k := natBitLength n - 1 - 1)).mpr hhalf
-      omega
-    · -- `natBitLength n = 1`: the bound is `0 ≤ _`.
-      omega
-
 /-! ## Int.bitLength: ℤ-level properties -/
 
 theorem Int.bitLength_nonneg (n : ℤ) : 0 ≤ n.bitLength := by
@@ -220,19 +192,6 @@ theorem fdiv_two_pow_bitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
   rw [Int.toNat_bitLength_natCast]
   exact_mod_cast lt_two_pow_natBitLength cn
-
-/-- Each recursive `c ↦ c // 2` step drops exactly one from `c.bit_length()`
-(for `0 < c`). The ℤ counterpart of `natBitLength_div_two`, in the `.toNat`
-form the structural-counter induction consumes. -/
-theorem toNat_bitLength_fdiv_two {c : ℤ} (hc : 0 < c) :
-    (Int.fdiv c 2).bitLength.toNat = c.bitLength.toNat - 1 := by
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
-  have hcn : 0 < cn := by exact_mod_cast hc
-  have h_half : Int.fdiv (↑cn : ℤ) 2 = ((cn / 2 : ℕ) : ℤ) := by
-    rw [show ((2 : ℤ)) = ((2 : ℕ) : ℤ) from rfl, Int.fdiv_natCast_natCast]
-  -- Both bit-lengths reduce to `natBitLength` on the underlying ℕ (via the targeted
-  -- `Int.toNat_bitLength_natCast`, which leaves the `cn / 2` cast untouched).
-  rw [h_half, Int.toNat_bitLength_natCast, Int.toNat_bitLength_natCast, natBitLength_div_two hcn]
 
 /-! ## Loop-body left-shift nonnegativity
 

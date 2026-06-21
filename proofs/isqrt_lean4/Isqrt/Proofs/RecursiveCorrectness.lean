@@ -1,17 +1,15 @@
 /-
 Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
-Strategy: structural induction on the counter `s` for `nsqrtRecursive`, carrying
-the **tight** invariant `c.bitLength.toNat = s` alongside the size condition
-`4^c ≤ n < 4^(c+1)` (from `Isqrt.Proofs.SizeConditions`). The invariant must be tight,
-not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
-`k = (c-1) // 2 = -1` and the body's `a << k` would raise `ValueError`.
+Strategy: well-founded recursion on the measure `c.toNat` for `nsqrtRecursive`, carrying the
+size condition `4^c ≤ n < 4^(c+1)` (from `Isqrt.Proofs.SizeConditions`). The base case `c ≤ 0`
+forces `c = 0` (the size condition gives `0 ≤ c`); the step recurses on `⌊c/2⌋ < c`.
 
 The proof keeps the mechanics out of the mathematics. Helper lemmas reduce each recursion
-step to its returned value (`nsqrtRecursive_zero`, `nsqrtRecursive_succ`) and descend the
-counter (`counter_step`) — discharging the `.ok`-ness of every `//`, `>>`, `<<` and the
-Python-shift↔`4M²` translation — so that `nsqrtRecursive_correctness` itself reads as the
-underlying argument: `M = 2^⌊(c-1)/2⌋` is a suitable scaler, and `key_isqrt_lemma`
+step to its returned value (`nsqrtRecursive_base`, `nsqrtRecursive_succ`) — discharging the
+`.ok`-ness of every `//`, `>>`, `<<` and the Python-shift↔`4M²` translation — so that
+`nsqrtRecursive_correctness` itself reads as the underlying argument: `M = 2^⌊(c-1)/2⌋` is a
+suitable scaler, and `key_isqrt_lemma`
 (`Isqrt.Proofs.KeyLemma`) lifts the subproblem's near square root to one for `n`. The
 top-level `isCorrectIsqrt_isqrtRecursive` establishes the `isCorrectIsqrt` contract, mirroring
 the iterative `isCorrectIsqrt_isqrtIterative`.
@@ -31,32 +29,21 @@ import Isqrt.Proofs.PythonPrimitivesLemmas
 
 public section
 
-/-- The recursion bottoms out at counter `s = 0`, returning `1` regardless of `c` and `n`. -/
-private theorem nsqrtRecursive_zero (n c : ℤ) : nsqrtRecursive n c 0 = .ok 1 := by
-  unfold nsqrtRecursive; rfl
+/-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
+private theorem nsqrtRecursive_base (n : ℤ) {c : ℤ} (hc : c ≤ 0) :
+    nsqrtRecursive n c = .ok 1 := by
+  unfold nsqrtRecursive; rw [if_pos hc]; rfl
 
-/-- Counter descent for the recursive step: a counter seeded tightly at `s + 1` forces `0 < c`,
-and the halved counter `⌊c/2⌋` is then tight for `s` (`(c // 2).bit_length() = c.bit_length() - 1`,
-`toNat_bitLength_fdiv_two`). Supplies the two facts the step hands to the recursive call. -/
-private theorem counter_step {c : ℤ} {s : ℕ} (hc : 0 ≤ c) (hbl : c.bitLength.toNat = s + 1) :
-    0 < c ∧ (Int.fdiv c 2).bitLength.toNat = s := by
-  have hc_pos : 0 < c := by
-    rcases eq_or_lt_of_le hc with h | h
-    · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
-      simp at hbl
-    · exact h
-  exact ⟨hc_pos, by have h := toNat_bitLength_fdiv_two hc_pos; omega⟩
-
-/-- One unfolding of the recursion at counter `s + 1`, in the key lemma's `M`-form: for the
-step's scaler `M = 2^⌊(c-1)/2⌋` (`0 < c`), a successful subcall on the reduced problem
-`⌊n / 4M²⌋` returning `0 < a` makes every Python operation take its `.ok` branch, and the step
-returns the combined value `Ma + ⌊n / 4Ma⌋`. The Python shift/floor-divide encoding (`2^(2k+2)`,
+/-- One unfolding of the recursion at `0 < c`, in the key lemma's `M`-form: for the step's
+scaler `M = 2^⌊(c-1)/2⌋` (`0 < c`), a successful subcall on the reduced problem `⌊n / 4M²⌋`
+returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns
+the combined value `Ma + ⌊n / 4Ma⌋`. The Python shift/floor-divide encoding (`2^(2k+2)`,
 `2^(k+2)`) and the `key_isqrt_body_eq` body rewrite are discharged here, so the caller works
 only with `M`, `4M²`, `4Ma`. -/
-private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
+private theorem nsqrtRecursive_succ {n c a M : ℤ}
     (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat) (hc : 0 < c) (ha : 0 < a)
-    (h_sub : nsqrtRecursive (Int.fdiv n (4 * M ^ 2)) (Int.fdiv c 2) s = .ok a) :
-    nsqrtRecursive n c (s + 1) = .ok (M * a + Int.fdiv n (4 * M * a)) := by
+    (h_sub : nsqrtRecursive (Int.fdiv n (4 * M ^ 2)) (Int.fdiv c 2) = .ok a) :
+    nsqrtRecursive n c = .ok (M * a + Int.fdiv n (4 * M * a)) := by
   subst hM
   set k : ℤ := Int.fdiv (c - 1) 2 with hk_def
   have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
@@ -65,10 +52,10 @@ private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
   -- The subcall's `4M²` denominator is the Python shift `2^(2k+2)`.
   rw [four_mul_two_pow_sq k_nn] at h_sub
   -- Thread the `.ok` branches to the shift-form body, then rewrite it to `Ma + ⌊n / 4Ma⌋`.
-  have hred : nsqrtRecursive n c (s + 1)
+  have hred : nsqrtRecursive n c
       = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
     unfold nsqrtRecursive
-    simp only [Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel,
+    simp only [if_neg (not_le.mpr hc),
       pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hk_def, Except.ok_bind,
       pyRshift_eq_ok h2k2_nn, h_sub,
       pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn, pyFloordiv_eq_ok (ne_of_gt ha)]
@@ -76,38 +63,39 @@ private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
   rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : ℤ) ^ k.toNat = 2 ^ k.toNat)]
 
 /-- The recursive auxiliary returns a near square root of `n` and **never raises**, given the
-size condition and the counter seeded tightly at `s = c.bit_length()`.
+size condition on `(c, n)`.
 
-Structural induction on `s`. Each case supplies the goal's two facts — the value the function
-returns, and that it is a near square root of `n`: the base via `nsqrtRecursive_zero` and
-`isNearSquareRoot_one_of_hasSizeCondition`, the step via `nsqrtRecursive_succ` and
-`key_isqrt_lemma` (applied to the scaler `M = 2^⌊(c-1)/2⌋`). -/
-private theorem nsqrtRecursive_correctness :
-    ∀ (s : ℕ) {c n : ℤ},
-      c.bitLength.toNat = s → hasSizeCondition c n →
-      ∃ a, nsqrtRecursive n c s = .ok a ∧ isNearSquareRoot n a := by
-  intro s
-  induction s with
-  | zero =>
-    intro c n hbl hsc
-    -- `c.bitLength.toNat = 0` with `0 ≤ c.bitLength` forces `c = 0`.
-    have hc0 : c = 0 := Int.bitLength_eq_zero_iff.mp (by have := Int.bitLength_nonneg c; omega)
+Well-founded recursion on the measure `c.toNat`. Each case supplies the goal's two facts —
+the value the function returns, and that it is a near square root of `n`. The base case `c ≤ 0`
+forces `c = 0` (the size condition gives `0 ≤ c`), where `1` is a near square root
+(`nsqrtRecursive_base`, `isNearSquareRoot_one_of_hasSizeCondition`); the step descends to the
+reduced problem `⌊n / 4M²⌋` at `⌊c/2⌋` via the scaler `M = 2^⌊(c-1)/2⌋`, and `key_isqrt_lemma`
+lifts its near square root back to one for `n` (`nsqrtRecursive_succ`). -/
+private theorem nsqrtRecursive_correctness {c n : ℤ} (hsc : hasSizeCondition c n) :
+    ∃ a, nsqrtRecursive n c = .ok a ∧ isNearSquareRoot n a := by
+  by_cases hc : c ≤ 0
+  · -- base: `c ≤ 0` with `0 ≤ c` forces `c = 0`.
+    have hc0 : c = 0 := le_antisymm hc hsc.c_nonneg
     subst hc0
-    exact ⟨1, nsqrtRecursive_zero n 0, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
-  | succ s ih =>
-    intro c n hbl hsc
-    -- (mechanics) descend the counter: `0 < c`, and `⌊c/2⌋` is tight for the subcall.
-    obtain ⟨hc_pos, hbl_step⟩ := counter_step hsc.c_nonneg hbl
-    -- `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
+    exact ⟨1, nsqrtRecursive_base n hc, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
+  · -- step: `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
+    replace hc : 0 < c := not_le.mp hc
     set k : ℤ := Int.fdiv (c - 1) 2
     set M : ℤ := 2 ^ k.toNat with hM_def
-    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc_pos hsc
+    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc hsc
     -- The recursion solves the reduced problem `⌊n / 4M²⌋`, returning a near √ `a`; the step
     -- returns `Ma + ⌊n / 4Ma⌋`, which the key lemma certifies as a near √ of `n`.
-    obtain ⟨a, ha_eq, a_near⟩ := ih hbl_step (size_condition_step hM_def hc_pos hsc)
+    obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (size_condition_step hM_def hc hsc)
     exact ⟨M * a + Int.fdiv n (4 * M * a),
-           nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq,
+           nsqrtRecursive_succ hM_def hc a_near.pos ha_eq,
            key_isqrt_lemma hM a_near⟩
+termination_by c.toNat
+decreasing_by
+  -- the recursive call is on `⌊c/2⌋`, with `0 ≤ ⌊c/2⌋ < c` for `c > 0`.
+  have : Int.fdiv c 2 < c := by
+    rw [Int.fdiv_eq_ediv_of_nonneg c (by omega), Int.ediv_lt_iff_lt_mul (by omega)]; omega
+  have : 0 ≤ Int.fdiv c 2 := Int.fdiv_nonneg hc.le (by omega)
+  omega
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
@@ -133,8 +121,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
       have hn0 : n ≠ 0 := ne_of_gt hpos
       set c : ℤ := Int.fdiv (n.bitLength - 1) 2 with hc_def
       obtain ⟨a, ha_eq, a_near⟩ :=
-        nsqrtRecursive_correctness c.bitLength.toNat
-          (c := c) (n := n) rfl (size_condition_initial hpos)
+        nsqrtRecursive_correctness (c := c) (size_condition_initial hpos)
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         conv_lhs => unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
