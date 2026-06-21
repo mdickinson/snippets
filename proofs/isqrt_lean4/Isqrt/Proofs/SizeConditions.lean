@@ -188,12 +188,9 @@ the recursion divides by, written in the form `key_isqrt_lemma` consumes. -/
 theorem size_condition_step {c n M : ℤ} (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat)
     (hc : 0 < c) (h : hasSizeCondition c n) :
     hasSizeCondition (Int.fdiv c 2) (Int.fdiv n (4 * M ^ 2)) := by
-  have h_denom : (4 : ℤ) * M ^ 2 = 2 ^ (2 * Int.fdiv (c - 1) 2 + 2).toNat := by
-    have hk_nn : (0 : ℤ) ≤ Int.fdiv (c - 1) 2 := Int.fdiv_nonneg (by linarith) (by norm_num)
-    rw [hM, show (2 * Int.fdiv (c - 1) 2 + 2).toNat
-              = 2 * (Int.fdiv (c - 1) 2).toNat + 2 from by omega]
-    ring
-  rw [h_denom]
+  -- Read the `4M²` denominator as the Python shift `2^(2k+2)`, then descend in shift form.
+  have hk_nn : (0 : ℤ) ≤ Int.fdiv (c - 1) 2 := Int.fdiv_nonneg (by linarith) (by norm_num)
+  rw [hM, four_mul_two_pow_sq hk_nn]
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn_pos : 0 < cn := by exact_mod_cast hc

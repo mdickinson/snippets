@@ -7,11 +7,14 @@ the **tight** invariant `c.bitLength.toNat = s` alongside the size condition
 not merely an upper bound: an overshoot would reach `c = 0` with `s > 0`, where
 `k = (c-1) // 2 = -1` and the body's `a << k` would raise `ValueError`.
 
-Each inductive step discharges the `.ok`-ness of every monadic operation — proving
-no `//`, `>>`, or `<<` ever raises when `s = c.bit_length()` and `c ≥ 0` — and then
-applies the core algebraic step `key_isqrt_lemma` (`Isqrt.Proofs.KeyLemma`) to the
-recursive subproblem's value. The top-level result `isCorrectIsqrt_isqrtRecursive`
-establishes the `isCorrectIsqrt` contract, mirroring the iterative `isCorrectIsqrt_isqrtIterative`.
+The proof keeps the mechanics out of the mathematics. Helper lemmas reduce each recursion
+step to its returned value (`nsqrtRecursive_zero`, `nsqrtRecursive_succ`) and descend the
+counter (`counter_step`) — discharging the `.ok`-ness of every `//`, `>>`, `<<` and the
+Python-shift↔`4M²` translation — so that `nsqrtRecursive_correctness` itself reads as the
+underlying argument: `M = 2^⌊(c-1)/2⌋` is a suitable scaler, and `key_isqrt_lemma`
+(`Isqrt.Proofs.KeyLemma`) lifts the subproblem's near square root to one for `n`. The
+top-level `isCorrectIsqrt_isqrtRecursive` establishes the `isCorrectIsqrt` contract, mirroring
+the iterative `isCorrectIsqrt_isqrtIterative`.
 -/
 
 module
@@ -32,6 +35,18 @@ public section
 private theorem nsqrtRecursive_zero (n c : ℤ) : nsqrtRecursive n c 0 = .ok 1 := by
   unfold nsqrtRecursive; rfl
 
+/-- Counter descent for the recursive step: a counter seeded tightly at `s + 1` forces `0 < c`,
+and the halved counter `⌊c/2⌋` is then tight for `s` (`(c // 2).bit_length() = c.bit_length() - 1`,
+`toNat_bitLength_fdiv_two`). Supplies the two facts the step hands to the recursive call. -/
+private theorem counter_step {c : ℤ} {s : ℕ} (hc : 0 ≤ c) (hbl : c.bitLength.toNat = s + 1) :
+    0 < c ∧ (Int.fdiv c 2).bitLength.toNat = s := by
+  have hc_pos : 0 < c := by
+    rcases eq_or_lt_of_le hc with h | h
+    · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
+      simp at hbl
+    · exact h
+  exact ⟨hc_pos, by have h := toNat_bitLength_fdiv_two hc_pos; omega⟩
+
 /-- One unfolding of the recursion at counter `s + 1`, in the key lemma's `M`-form: for the
 step's scaler `M = 2^⌊(c-1)/2⌋` (`0 < c`), a successful subcall on the reduced problem
 `⌊n / 4M²⌋` returning `0 < a` makes every Python operation take its `.ok` branch, and the step
@@ -47,10 +62,8 @@ private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
   have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
   have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
   have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
-  -- The Python shift `2^(2k+2)` is the key lemma's `4M²`, so the subcall is on `⌊n / 2^(2k+2)⌋`.
-  have h_denom : (4 : ℤ) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
-    rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
-  rw [h_denom] at h_sub
+  -- The subcall's `4M²` denominator is the Python shift `2^(2k+2)`.
+  rw [four_mul_two_pow_sq k_nn] at h_sub
   -- Thread the `.ok` branches to the shift-form body, then rewrite it to `Ma + ⌊n / 4Ma⌋`.
   have hred : nsqrtRecursive n c (s + 1)
       = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
@@ -61,18 +74,6 @@ private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
       pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn, pyFloordiv_eq_ok (ne_of_gt ha)]
     rfl
   rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : ℤ) ^ k.toNat = 2 ^ k.toNat)]
-
-/-- Counter descent for the recursive step: a counter seeded tightly at `s + 1` forces `0 < c`,
-and the halved counter `⌊c/2⌋` is then tight for `s` (`(c // 2).bit_length() = c.bit_length() - 1`,
-`toNat_bitLength_fdiv_two`). Supplies the two facts the step hands to the recursive call. -/
-private theorem counter_step {c : ℤ} {s : ℕ} (hc : 0 ≤ c) (hbl : c.bitLength.toNat = s + 1) :
-    0 < c ∧ (Int.fdiv c 2).bitLength.toNat = s := by
-  have hc_pos : 0 < c := by
-    rcases eq_or_lt_of_le hc with h | h
-    · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
-      simp at hbl
-    · exact h
-  exact ⟨hc_pos, by have h := toNat_bitLength_fdiv_two hc_pos; omega⟩
 
 /-- The recursive auxiliary returns a near square root of `n` and **never raises**, given the
 size condition and the counter seeded tightly at `s = c.bit_length()`.

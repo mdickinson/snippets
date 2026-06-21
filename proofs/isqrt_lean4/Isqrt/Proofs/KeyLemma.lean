@@ -174,6 +174,13 @@ theorem key_isqrt_lemma {n M a : ℤ}
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
 
+/-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
+scaler `M = 2^k` (`0 ≤ k`): `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
+`>> (2k+2)` as division by `4M²`. -/
+theorem four_mul_two_pow_sq {k : ℤ} (hk : 0 ≤ k) :
+    (4 : ℤ) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
+  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
+
 /-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
 For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
 — a left shift of `a` by `k`, plus the divided-down remainder — equals
