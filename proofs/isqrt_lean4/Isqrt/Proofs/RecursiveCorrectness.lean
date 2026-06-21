@@ -42,7 +42,7 @@ proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
 private theorem nsqrtRecursive_correctness :
     ∀ (s : ℕ) {c n : ℤ},
       c.bitLength.toNat = s → hasSizeCondition c n →
-      ∃ a, nsqrtRecursive n c s = .ok a ∧ 0 < a ∧ isNearSquareRoot n a := by
+      ∃ a, nsqrtRecursive n c s = .ok a ∧ isNearSquareRoot n a := by
   intro s
   induction s with
   | zero =>
@@ -54,12 +54,11 @@ private theorem nsqrtRecursive_correctness :
     obtain ⟨h_lo, h_hi⟩ := hsc
     simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at h_lo h_hi
     -- `nsqrtRecursive n 0 0 = .ok 1`, and `1 ≤ n < 4` gives the near-√ property.
-    exact ⟨1, by unfold nsqrtRecursive; rfl, one_pos, by show (1 - 1) * (1 - 1) < n; omega,
+    exact ⟨1, by unfold nsqrtRecursive; rfl, by show (1 - 1) * (1 - 1) < n; omega,
                             by show n < (1 + 1) * (1 + 1); omega⟩
   | succ s ih =>
     intro c n hbl hsc
     have hc : 0 ≤ c := hsc.c_nonneg
-    have hn : 0 < n := hsc.pos
     -- `c.bitLength.toNat = s + 1 > 0` forces `0 < c`.
     have hc_pos : 0 < c := by
       rcases eq_or_lt_of_le hc with h | h
@@ -81,7 +80,8 @@ private theorem nsqrtRecursive_correctness :
       rw [← hd_def] at h
       omega
     -- Induction hypothesis on the recursive subproblem.
-    obtain ⟨a, ha_eq, a_pos, a_near⟩ := ih hbl_step hsc_step
+    obtain ⟨a, ha_eq, a_near⟩ := ih hbl_step hsc_step
+    have a_pos : 0 < a := a_near.pos
     -- Reduce the `do`-block: every operation takes its `.ok` branch.
     have hred : nsqrtRecursive n c (s + 1)
         = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
@@ -106,12 +106,9 @@ private theorem nsqrtRecursive_correctness :
         a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
           = M * a + Int.fdiv n (4 * M * a) :=
       key_isqrt_body_eq k_nn a_pos hM_def
-    refine ⟨_, hred, ?_, ?_⟩
-    · -- positivity of the returned value
-      exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))
-        (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) a_pos.le)
-    · -- near-√ via the key lemma
-      rw [val_eq]; exact key_isqrt_lemma hM_scaler a_near'
+    refine ⟨_, hred, ?_⟩
+    -- near-√ via the key lemma
+    rw [val_eq]; exact key_isqrt_lemma hM_scaler a_near'
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
@@ -136,7 +133,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
     · -- 0 < n: the recursion runs and never raises.
       have hn0 : n ≠ 0 := ne_of_gt hpos
       set c : ℤ := Int.fdiv (n.bitLength - 1) 2 with hc_def
-      obtain ⟨a, ha_eq, _a_pos, a_near⟩ :=
+      obtain ⟨a, ha_eq, a_near⟩ :=
         nsqrtRecursive_correctness c.bitLength.toNat
           (c := c) (n := n) rfl (size_condition_initial hpos)
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
