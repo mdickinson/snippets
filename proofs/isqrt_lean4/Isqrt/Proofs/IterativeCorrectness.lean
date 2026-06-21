@@ -182,7 +182,7 @@ private theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       show isNearSquareRoot N_new (a_old * 2 ^ (d_new - d_old - 1).toNat
           + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old)
       rw [hX]
-      exact key_isqrt_lemma hM_pos ha_old_pos hM4 h_near
+      exact key_isqrt_lemma hM_pos hM4 h_near
   obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM c n x (Int.ofNat s))
       c.bitLength.toNat ⟨1, 0⟩ hseed hstep

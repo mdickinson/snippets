@@ -24,6 +24,14 @@ import Isqrt.Proofs.FDivLemmas
 
 public section
 
+/-! ## Positivity -/
+
+/-- A near square root is positive: `(a-1)² < n < (a+1)²` forces `(a-1)² < (a+1)²`,
+i.e. `4a > 0`. -/
+theorem isNearSquareRoot.pos {n a : ℤ} (h : isNearSquareRoot n a) : 0 < a := by
+  obtain ⟨h_lo, h_hi⟩ := h
+  nlinarith [lt_trans h_lo h_hi]
+
 /-! ## From near square root to integer square root -/
 
 /-- The algorithm's final return adjustment: a near square root `a` is either
@@ -97,9 +105,10 @@ private theorem n_lower {n M a : ℤ} (hM : 0 < M)
 /-- If `a` is a near square root of `⌊n / 4M²⌋` and `4M⁴ ≤ n`, then
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 theorem key_isqrt_lemma {n M a : ℤ}
-    (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
+    (hM : 0 < M) (hM4 : 4 * M^4 ≤ n)
     (h_near : isNearSquareRoot (n.fdiv (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n.fdiv (4 * M * a)) := by
+  have ha : 0 < a := h_near.pos
   obtain ⟨ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [← pow_two] at ha_lo ha_hi

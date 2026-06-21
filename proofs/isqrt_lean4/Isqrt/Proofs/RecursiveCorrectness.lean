@@ -115,7 +115,7 @@ private theorem nsqrtRecursive_correctness :
       exact add_pos_of_pos_of_nonneg (mul_pos a_pos (by positivity))
         (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) a_pos.le)
     · -- near-√ via the key lemma
-      rw [val_eq]; exact key_isqrt_lemma M_pos a_pos hM4 a_near'
+      rw [val_eq]; exact key_isqrt_lemma M_pos hM4 a_near'
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
