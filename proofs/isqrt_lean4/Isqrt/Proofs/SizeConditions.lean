@@ -182,12 +182,18 @@ theorem size_condition_initial {n : ℤ} (hn : 0 < n) :
   · rw [h_toNat]; exact_mod_cast h_lo
   · rw [h_toNat]; exact_mod_cast h_hi
 
-/-- Size condition preserved by the recursive step: `c ↦ ⌊c/2⌋`,
-`n ↦ ⌊n / 2^(2k+2)⌋` where `k = ⌊(c - 1)/2⌋`. -/
-theorem size_condition_step {c n : ℤ} (hc : 0 < c)
-    (h : hasSizeCondition c n) :
-    hasSizeCondition (Int.fdiv c 2)
-      (Int.fdiv n (2 ^ (2 * Int.fdiv (c - 1) 2 + 2).toNat)) := by
+/-- Size condition preserved by the recursive step: `c ↦ ⌊c/2⌋`, `n ↦ ⌊n / 4M²⌋` where the
+step's scaler is `M = 2^⌊(c-1)/2⌋`. The `4M²` denominator is the Python shift `2^(2⌊(c-1)/2⌋+2)`
+the recursion divides by, written in the form `key_isqrt_lemma` consumes. -/
+theorem size_condition_step {c n M : ℤ} (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat)
+    (hc : 0 < c) (h : hasSizeCondition c n) :
+    hasSizeCondition (Int.fdiv c 2) (Int.fdiv n (4 * M ^ 2)) := by
+  have h_denom : (4 : ℤ) * M ^ 2 = 2 ^ (2 * Int.fdiv (c - 1) 2 + 2).toNat := by
+    have hk_nn : (0 : ℤ) ≤ Int.fdiv (c - 1) 2 := Int.fdiv_nonneg (by linarith) (by norm_num)
+    rw [hM, show (2 * Int.fdiv (c - 1) 2 + 2).toNat
+              = 2 * (Int.fdiv (c - 1) 2).toNat + 2 from by omega]
+    ring
+  rw [h_denom]
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc.le
   have hcn_pos : 0 < cn := by exact_mod_cast hc
@@ -230,13 +236,14 @@ theorem M_bound_from_size {c n : ℤ} (hc : 0 < c) (h : hasSizeCondition c n) :
   rw [Int.toNat_fdiv_pred_two hcn_pos]
   exact_mod_cast M_bound_from_size_nat hcn_pos h_lo_nat
 
-/-- A suitable scaler from the size condition: for `0 < c` with `4^c ≤ n < 4^(c+1)`,
-`2^⌊(c-1)/2⌋` is a suitable scaler for `n` — positivity is immediate, and the `4M⁴ ≤ n`
-bound is `M_bound_from_size`. This is the form the key lemma consumes. -/
-theorem isSuitableScaler_of_hasSizeCondition {c n : ℤ} (hc : 0 < c)
-    (h : hasSizeCondition c n) :
-    isSuitableScaler n (2 ^ (Int.fdiv (c - 1) 2).toNat) :=
-  ⟨by positivity, M_bound_from_size hc h⟩
+/-- A suitable scaler from the size condition: for `0 < c` with `4^c ≤ n < 4^(c+1)`, the step's
+scaler `M = 2^⌊(c-1)/2⌋` is suitable for `n` — positivity is immediate, and the `4M⁴ ≤ n` bound
+is `M_bound_from_size`. This is the form the key lemma consumes. -/
+theorem isSuitableScaler_of_hasSizeCondition {c n M : ℤ}
+    (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat) (hc : 0 < c) (h : hasSizeCondition c n) :
+    isSuitableScaler n M := by
+  subst hM
+  exact ⟨by positivity, M_bound_from_size hc h⟩
 
 /-- Base case of the recursion: at `c = 0` the size condition `1 ≤ n < 4` makes `1` a near
 square root of `n`. The counterpart to the step-case bridge

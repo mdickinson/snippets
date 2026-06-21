@@ -32,17 +32,43 @@ public section
 private theorem nsqrtRecursive_zero (n c : ℤ) : nsqrtRecursive n c 0 = .ok 1 := by
   unfold nsqrtRecursive; rfl
 
-/-- The recursive auxiliary is a positive near square root for any size-conformant
-`(c, n)`, **and never raises**, provided the counter is seeded tightly at
-`s = c.bit_length()`.
+/-- One unfolding of the recursion at counter `s + 1`, in the key lemma's `M`-form: for the
+step's scaler `M = 2^⌊(c-1)/2⌋` (`0 < c`), a successful subcall on the reduced problem
+`⌊n / 4M²⌋` returning `0 < a` makes every Python operation take its `.ok` branch, and the step
+returns the combined value `Ma + ⌊n / 4Ma⌋`. The Python shift/floor-divide encoding (`2^(2k+2)`,
+`2^(k+2)`) and the `key_isqrt_body_eq` body rewrite are discharged here, so the caller works
+only with `M`, `4M²`, `4Ma`. -/
+private theorem nsqrtRecursive_succ {n c a M : ℤ} {s : ℕ}
+    (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat) (hc : 0 < c) (ha : 0 < a)
+    (h_sub : nsqrtRecursive (Int.fdiv n (4 * M ^ 2)) (Int.fdiv c 2) s = .ok a) :
+    nsqrtRecursive n c (s + 1) = .ok (M * a + Int.fdiv n (4 * M * a)) := by
+  subst hM
+  set k : ℤ := Int.fdiv (c - 1) 2 with hk_def
+  have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
+  have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
+  have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
+  -- The Python shift `2^(2k+2)` is the key lemma's `4M²`, so the subcall is on `⌊n / 2^(2k+2)⌋`.
+  have h_denom : (4 : ℤ) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
+    rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
+  rw [h_denom] at h_sub
+  -- Thread the `.ok` branches to the shift-form body, then rewrite it to `Ma + ⌊n / 4Ma⌋`.
+  have hred : nsqrtRecursive n c (s + 1)
+      = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
+    unfold nsqrtRecursive
+    simp only [Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel,
+      pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num), ← hk_def, Except.ok_bind,
+      pyRshift_eq_ok h2k2_nn, h_sub,
+      pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn, pyFloordiv_eq_ok (ne_of_gt ha)]
+    rfl
+  rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : ℤ) ^ k.toNat = 2 ^ k.toNat)]
 
-Structural induction on `s`: the base `s = 0` forces `c = 0` (so the function
-returns `1`, a near-√ of the `1 ≤ n < 4` that the size condition pins down), and
-the step `s + 1` discharges every monadic operation to `.ok` — the recursive call
-via the induction hypothesis (whose bit-length premise is `toNat_bitLength_fdiv_two`),
-the shifts/divisions via their nonneg side conditions — then closes with the core
-`key_isqrt_lemma` algebra of `Isqrt.Proofs.KeyLemma` (the same per-step lemma the iterative
-proof `Isqrt.Proofs.IterativeCorrectness` applies). -/
+/-- The recursive auxiliary returns a near square root of `n` and **never raises**, given the
+size condition and the counter seeded tightly at `s = c.bit_length()`.
+
+Structural induction on `s`. Each case supplies the goal's two facts — the value the function
+returns, and that it is a near square root of `n`: the base via `nsqrtRecursive_zero` and
+`isNearSquareRoot_one_of_hasSizeCondition`, the step via `nsqrtRecursive_succ` and
+`key_isqrt_lemma` (applied to the scaler `M = 2^⌊(c-1)/2⌋`). -/
 private theorem nsqrtRecursive_correctness :
     ∀ (s : ℕ) {c n : ℤ},
       c.bitLength.toNat = s → hasSizeCondition c n →
@@ -57,57 +83,24 @@ private theorem nsqrtRecursive_correctness :
     exact ⟨1, nsqrtRecursive_zero n 0, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
   | succ s ih =>
     intro c n hbl hsc
-    have hc : 0 ≤ c := hsc.c_nonneg
-    -- `c.bitLength.toNat = s + 1 > 0` forces `0 < c`.
+    -- (mechanics) the tight counter forces `0 < c` and descends to `⌊c/2⌋` for the subcall.
     have hc_pos : 0 < c := by
-      rcases eq_or_lt_of_le hc with h | h
+      rcases eq_or_lt_of_le hsc.c_nonneg with h | h
       · rw [← h, show (0 : ℤ).bitLength = 0 from Int.bitLength_eq_zero_iff.mpr rfl] at hbl
         simp at hbl
       · exact h
-    -- The recursive arguments, in `Int.fdiv` form (matching the `Except` ops).
-    set k : ℤ := Int.fdiv (c - 1) 2 with hk_def
-    set d : ℤ := Int.fdiv c 2 with hd_def
-    set m : ℤ := Int.fdiv n (2 ^ (2 * k + 2).toNat) with hm_def
-    have k_nn : 0 ≤ k := Int.fdiv_nonneg (by linarith) (by norm_num)
-    have h2k2_nn : (0 : ℤ) ≤ 2 * k + 2 := by linarith
-    have hk2_nn : (0 : ℤ) ≤ k + 2 := by linarith
-    -- Size condition is preserved by the step.
-    have hsc_step : hasSizeCondition d m := size_condition_step hc_pos hsc
-    -- The tight bit-length invariant descends: `(c // 2).bit_length() = c.bit_length() - 1`.
-    have hbl_step : d.bitLength.toNat = s := by
-      have h := toNat_bitLength_fdiv_two hc_pos
-      rw [← hd_def] at h
-      omega
-    -- Induction hypothesis on the recursive subproblem.
-    obtain ⟨a, ha_eq, a_near⟩ := ih hbl_step hsc_step
-    have a_pos : 0 < a := a_near.pos
-    -- Reduce the `do`-block: every operation takes its `.ok` branch.
-    have hred : nsqrtRecursive n c (s + 1)
-        = .ok (a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a) := by
-      unfold nsqrtRecursive
-      simp only [Nat.add_one_ne_zero, ↓reduceIte, Nat.add_sub_cancel,
-        pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num),
-        ← hk_def, ← hd_def, Except.ok_bind,
-        pyRshift_eq_ok h2k2_nn, ← hm_def, ha_eq,
-        pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn,
-        pyFloordiv_eq_ok (ne_of_gt a_pos)]
-      rfl
-    -- Algebra: the returned value is the `key_isqrt_lemma` output for `M = 2^k.toNat`.
-    set M := (2 : ℤ) ^ k.toNat with hM_def
-    have hm_eq : m = Int.fdiv n (4 * M ^ 2) := by
-      rw [hm_def, show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega, hM_def]
-      congr 1; ring
-    have hM_scaler : isSuitableScaler n M := by
-      have h := isSuitableScaler_of_hasSizeCondition hc_pos hsc
-      rwa [← hk_def, ← hM_def] at h
-    have a_near' : isNearSquareRoot (Int.fdiv n (4 * M ^ 2)) a := hm_eq ▸ a_near
-    have val_eq :
-        a * 2 ^ k.toNat + Int.fdiv (Int.fdiv n (2 ^ (k + 2).toNat)) a
-          = M * a + Int.fdiv n (4 * M * a) :=
-      key_isqrt_body_eq k_nn a_pos hM_def
-    refine ⟨_, hred, ?_⟩
-    -- near-√ via the key lemma
-    rw [val_eq]; exact key_isqrt_lemma hM_scaler a_near'
+    have hbl_step : (Int.fdiv c 2).bitLength.toNat = s := by
+      have h := toNat_bitLength_fdiv_two hc_pos; omega
+    -- `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
+    set k : ℤ := Int.fdiv (c - 1) 2
+    set M : ℤ := 2 ^ k.toNat with hM_def
+    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc_pos hsc
+    -- The recursion solves the reduced problem `⌊n / 4M²⌋`, returning a near √ `a`; the step
+    -- returns `Ma + ⌊n / 4Ma⌋`, which the key lemma certifies as a near √ of `n`.
+    obtain ⟨a, ha_eq, a_near⟩ := ih hbl_step (size_condition_step hM_def hc_pos hsc)
+    exact ⟨M * a + Int.fdiv n (4 * M * a),
+           nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq,
+           key_isqrt_lemma hM a_near⟩
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
