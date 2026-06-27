@@ -17,6 +17,7 @@ import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.SizedProblem
 
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
 theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :
@@ -52,35 +53,30 @@ theorem nsqrtRecursive_succ {n c a M : Int}
     rfl
   rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : Int) ^ k.toNat = 2 ^ k.toNat)]
 
-/-- The recursive auxiliary returns a near square root of `n` and **never raises**, given the
-size condition on `(c, n)`.
+/-- The recursive auxiliary returns a near square root of `p.n` and **never raises**, for any
+`SizedProblem p`.
 
-Each case supplies the goal's two facts — the value the function returns, and that it is a
-near square root of `n`. The base case `c ≤ 0` forces `c = 0` (the size condition gives
-`0 ≤ c`), where `1` is a near square root (`nsqrtRecursive_base`,
-`isNearSquareRoot_one_of_hasSizeCondition`); the step descends to the reduced problem
-`⌊n / 4M²⌋` at `⌊c/2⌋` via the scaler `M = 2^⌊(c-1)/2⌋`, and `key_isqrt_lemma` lifts its near
-square root back to one for `n` (`nsqrtRecursive_succ`). -/
-theorem nsqrtRecursive_correctness {n c : Int} (hsc : hasSizeCondition n c) :
-    ∃ a, nsqrtRecursive n c = .ok a ∧ isNearSquareRoot n a := by
-  by_cases hc : c ≤ 0
-  · -- base: `c ≤ 0` with `0 ≤ c` forces `c = 0`.
-    have hc0 : c = 0 := Int.le_antisymm hc hsc.c_nonneg
-    subst hc0
-    exact ⟨1, nsqrtRecursive_base n hc, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
-  · -- step: the scaler `M = 2^⌊(c-1)/2⌋` reduces `n` to its child subproblem `⌊n / 4M²⌋`.
-    have hc_pos : 0 < c := Int.not_le.mp hc
-    let M : Int := 2 ^ ((c - 1).fdiv 2).toNat
-    have hM_def : M = 2 ^ ((c - 1).fdiv 2).toNat := rfl
-    -- The recursion solves the child, returning a near √ `a`; the shared Newton step at depth
-    -- `d = c` (where `subproblem n c c = n`) lifts it to a near √ of `n`, the returned value.
-    obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (size_condition_step hM_def hc_pos hsc)
-    have step := isNearSquareRoot_subproblem_step hM_def hsc hc_pos (Int.le_refl c)
-      (a := a) (by rw [← subproblem_reduce hM_def hc_pos (Int.le_refl c), subproblem_self]; exact a_near)
-    rw [subproblem_self] at step
-    exact ⟨M * a + n.fdiv (4 * M * a), nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq, step⟩
-termination_by c.toNat
-decreasing_by grind only
+The argument is one `SizedProblem` — the value, its recursion level, and the size invariant
+bundled — so the recursion threads a single descending problem. Each case supplies the goal's two
+facts, the value the function returns and that it is a near square root. The base case `p.c ≤ 0`
+forces `p.c = 0` (the invariant gives `0 ≤ p.c`), where `1` is a near square root
+(`nsqrtRecursive_base`, `isNearSquareRoot_one_of_hasSizeCondition`); the step solves the descended
+problem `p.descend` and lifts its near square root back with `p.newtonLift`
+(`isNearSquareRoot_newtonLift`, `nsqrtRecursive_succ`). -/
+theorem nsqrtRecursive_correctness (p : SizedProblem) :
+    ∃ a, nsqrtRecursive p.n p.c = .ok a ∧ isNearSquareRoot p.n a := by
+  by_cases hc : p.c ≤ 0
+  · -- base: `p.c ≤ 0` with `0 ≤ p.c` forces `p.c = 0`, where `1` is a near square root.
+    have hc0 : p.c = 0 := Int.le_antisymm hc p.hsc.c_nonneg
+    exact ⟨1, nsqrtRecursive_base p.n hc,
+      isNearSquareRoot_one_of_hasSizeCondition (hc0 ▸ p.hsc)⟩
+  · -- step: solve the descended problem, lift its near square root back.
+    have hc_pos : 0 < p.c := Int.not_le.mp hc
+    obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
+    exact ⟨p.newtonLift a, nsqrtRecursive_succ rfl hc_pos a_near.pos ha_eq,
+      isNearSquareRoot_newtonLift hc_pos a_near⟩
+termination_by p.c.toNat
+decreasing_by simp only [SizedProblem.descend]; grind only
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
@@ -107,14 +103,17 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       let c := (n.bitLength - 1).fdiv 2
       have hc_def : c = (n.bitLength - 1).fdiv 2 := rfl
       obtain ⟨a, ha_eq, a_near⟩ :=
-        nsqrtRecursive_correctness (c := c) (size_condition_initial hpos)
+        nsqrtRecursive_correctness ⟨n, c, size_condition_initial hpos⟩
+      -- Re-state at clean `n` / `c` types so the `⟨n, c, _⟩` projections don't block `rw`.
+      have hsqrt : nsqrtRecursive n c = .ok a := ha_eq
+      have hnear : isNearSquareRoot n a := a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show 2 ≠ 0 by decide), ← hc_def]
-        rw [Except.ok_bind, ha_eq]
+        rw [Except.ok_bind, hsqrt]
         rfl
-      exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
+      exact ⟨_, hred, hnear.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtRecursive n) (.valueError "isqrt() argument must be nonnegative")
