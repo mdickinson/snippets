@@ -67,6 +67,17 @@ theorem square_squeeze {a b c d : Int}
       = a^2 + d^2 + 2*b*c - (b^2 + c^2 + 2*a*d) := by grind only
   exact Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg hd1 hd2)
 
+/-- For integers, `x² < y²` with `0 ≤ y` gives `x < y`. -/
+theorem lt_of_sq_lt_sq {x y : Int} (hy : 0 ≤ y) (h : x ^ 2 < y ^ 2) : x < y := by
+  obtain hlt | hle := Int.lt_or_le x y
+  · exact hlt
+  · -- `y ≤ x` with `0 ≤ y` forces `y² ≤ x²`, contradicting `h`.
+    have hx : 0 ≤ x := Int.le_trans hy hle
+    have factor : (x - y) * (x + y) = x ^ 2 - y ^ 2 := by grind only
+    have hsq : y ^ 2 ≤ x ^ 2 :=
+      Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg (by omega) (by omega))
+    exact absurd h (Int.not_lt.mpr hsq)
+
 /-! ## Sub-lemmas about the setup -/
 
 /-- `M ≤ a`, given `4M⁴ ≤ n` and `n/(4M²) < (a+1)²`. -/
@@ -76,11 +87,12 @@ theorem M_le_a {n M a : Int}
     M ≤ a := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have h1 : M^2 ≤ n.fdiv (4 * M^2) := by
-    rw [Int.le_fdiv_iff_mul_le hdenom]
-    nlinarith [hM4]
-  have h2 : M^2 < (a + 1)^2 := lt_of_le_of_lt h1 ha_hi
-  -- M² < (a+1)² with both positive ⟹ M < a+1 ⟹ M ≤ a
-  nlinarith [h2, hM, ha, sq_nonneg (a + 1 - M), sq_nonneg (a + 1 + M)]
+    rw [Int.le_fdiv_iff_mul_le hdenom, show M^2 * (4 * M^2) = 4 * M^4 from by grind only]
+    exact hM4
+  have h2 : M^2 < (a + 1)^2 := Int.lt_of_le_of_lt h1 ha_hi
+  -- `M² < (a+1)²` with `a+1 ≥ 0` gives `M < a+1`, hence `M ≤ a`.
+  have : M < a + 1 := lt_of_sq_lt_sq (by omega) h2
+  omega
 
 /-- `n < 4M²(a+1)²`, restating `ha_hi`. -/
 theorem n_upper {n M a : Int} (hM : 0 < M)
@@ -88,7 +100,7 @@ theorem n_upper {n M a : Int} (hM : 0 < M)
     n < 4 * M^2 * (a + 1)^2 := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have := (Int.fdiv_lt_iff_lt_mul hdenom).mp ha_hi
-  linarith
+  grind only
 
 /-- `((a-1)² + 1) · 4M² ≤ n`, restating `ha_lo`. -/
 theorem n_lower {n M a : Int} (hM : 0 < M)
@@ -96,7 +108,7 @@ theorem n_lower {n M a : Int} (hM : 0 < M)
     ((a - 1)^2 + 1) * (4 * M^2) ≤ n := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   rw [← Int.le_fdiv_iff_mul_le hdenom]
-  linarith
+  grind only
 
 /-! ## Suitable scalers -/
 
@@ -116,15 +128,16 @@ public theorem key_isqrt_lemma {n M a : Int}
   have ha : 0 < a := h_near.pos
   obtain ⟨ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
-  rw [← pow_two] at ha_lo ha_hi
-  set q := n.fdiv (4 * M * a)
+  rw [show (a - 1) * (a - 1) = (a - 1) ^ 2 from by grind only] at ha_lo
+  rw [show (a + 1) * (a + 1) = (a + 1) ^ 2 from by grind only] at ha_hi
+  let q := n.fdiv (4 * M * a)
   have hMa_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
-  have hMa_one : 1 ≤ M * a := by linarith [mul_pos hM ha]
+  have hMa_one : 1 ≤ M * a := by have := Int.mul_pos hM ha; grind only
   have hM_le_a : M ≤ a := M_le_a hM ha hM4 ha_hi
   have h4M4_nonneg : 0 ≤ 4 * M^4 :=
     Int.mul_nonneg (by decide) (Int.pow_nonneg (Int.le_of_lt hM))
   have hn_nonneg : 0 ≤ n := Int.le_trans h4M4_nonneg hM4
-  have hq_nonneg : 0 ≤ q := Int.fdiv_nonneg hn_nonneg (le_of_lt hMa_pos)
+  have hq_nonneg : 0 ≤ q := Int.fdiv_nonneg hn_nonneg (Int.le_of_lt hMa_pos)
   -- ===== Upper bound: n < (M*a + q + 1)² =====
   have upper : n < (M * a + q + 1)^2 := by
     -- Floor div upper: n < (q + 1) * (4*M*a)
