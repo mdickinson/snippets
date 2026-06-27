@@ -15,7 +15,6 @@ given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near squar
 
 module
 
-meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.FDivLemmas
 
@@ -77,6 +76,11 @@ theorem lt_of_sq_lt_sq {x y : Int} (hy : 0 ≤ y) (h : x ^ 2 < y ^ 2) : x < y :=
     have hsq : y ^ 2 ≤ x ^ 2 :=
       Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg (by omega) (by omega))
     exact absurd h (Int.not_lt.mpr hsq)
+
+/-- The AM–GM inequality for two integers: `4xy ≤ (x+y)²` (equivalently `0 ≤ (x−y)²`). -/
+theorem four_mul_le_add_sq (x y : Int) : 4 * x * y ≤ (x + y) ^ 2 := by
+  have factor : (x - y) ^ 2 = (x + y) ^ 2 - 4 * x * y := by grind only
+  exact Int.sub_nonneg.mp (factor ▸ Int.sq_nonneg (x - y))
 
 /-! ## Sub-lemmas about the setup -/
 
@@ -140,26 +144,41 @@ public theorem key_isqrt_lemma {n M a : Int}
   have hq_nonneg : 0 ≤ q := Int.fdiv_nonneg hn_nonneg (Int.le_of_lt hMa_pos)
   -- ===== Upper bound: n < (M*a + q + 1)² =====
   have upper : n < (M * a + q + 1)^2 := by
-    -- Floor div upper: n < (q + 1) * (4*M*a)
+    -- floor-div upper: n < (q+1)·4Ma
     have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_fdiv_add_one_mul_self n hMa_pos
-    -- (q + 1) * (4*M*a) ≤ (M*a + q + 1)², since the difference is (M*a - q - 1)² ≥ 0
-    nlinarith [hq_ub, sq_nonneg (M * a - q - 1)]
+    -- (q+1)·4Ma ≤ (Ma+q+1)² by AM–GM (4xy ≤ (x+y)²)
+    have hle : (q + 1) * (4 * M * a) ≤ (M * a + q + 1)^2 := by
+      have := four_mul_le_add_sq (M * a) (q + 1)
+      grind only
+    exact Int.lt_of_lt_of_le hq_ub hle
   -- ===== Lower bound: (M*a + q - 1)² < n =====
   have lower : (M * a + q - 1)^2 < n := by
     -- Chain: 4M² ≤ 4Ma ≤ 4M²a² + 4Maq ≤ 4M²a² + n
-    have key1 : 4 * M^2 ≤ 4 * M * a := by nlinarith [hM_le_a, hM]
+    have key1 : 4 * M^2 ≤ 4 * M * a := by
+      -- 4Ma - 4M² = 4M(a - M) ≥ 0
+      have factor : (4 * M) * (a - M) = 4 * M * a - 4 * M^2 := by grind only
+      exact Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg (by omega) (by omega))
     have key2 : 4 * M * a ≤ 4 * M^2 * a^2 + 4 * M * a * q := by
-      nlinarith [hMa_one, hq_nonneg, hM, ha]
+      -- difference = 4Ma(Ma + q - 1) ≥ 0
+      have factor : (4 * M * a) * (M * a + q - 1)
+          = (4 * M^2 * a^2 + 4 * M * a * q) - 4 * M * a := by grind only
+      exact Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg (Int.le_of_lt hMa_pos) (by omega))
     have key3 : 4 * M^2 * a^2 + 4 * M * a * q ≤ 4 * M^2 * a^2 + n := by
-      have hqm := Int.fdiv_mul_le_self (x := n) hMa_pos
-      nlinarith [hqm]
+      -- 4Maq ≤ n (floor div); add 4M²a² to both sides
+      have hqm : 4 * M * a * q ≤ n := by
+        rw [Int.mul_comm (4 * M * a) q]
+        exact Int.fdiv_mul_le_self hMa_pos
+      exact Int.add_le_add_left hqm (4 * M^2 * a^2)
     have hsq := square_squeeze key1 key2 key3
     -- d_large: n < 4M²a² + 4M² + 8M²a  (rearranged from n_upper)
     have d_large : n < 4 * M^2 * a^2 + 4 * M^2 + 8 * M^2 * a := by
-      nlinarith [n_upper hM ha_hi]
-    -- d_small: 4M²a² + 4M² < n + 8M²a  (rearranged from n_lower)
+      have := n_upper hM ha_hi
+      grind only
+    -- d_small: 4M²a² + 4M² < n + 8M²a  (rearranged from n_lower; needs 0 < M²)
     have d_small : 4 * M^2 * a^2 + 4 * M^2 < n + 8 * M^2 * a := by
-      nlinarith [n_lower hM ha_lo]
+      have := n_lower hM ha_lo
+      have hM2 : 0 < M^2 := Int.pow_pos hM
+      grind only
     have hclose := close_to d_large d_small
     -- The two inequalities provide nonneg "gaps". Their sum equals
     -- `n*(4Ma)² - (M*a + q - 1)²*(4Ma)²` as a polynomial identity (by `grind`),
@@ -168,10 +187,10 @@ public theorem key_isqrt_lemma {n M a : Int}
         ((4 * M^2)^2 + (4 * M^2 * a^2 + n)^2
             + 2 * (4 * M * a) * (4 * M^2 * a^2 + 4 * M * a * q))
           - ((4 * M * a)^2 + (4 * M^2 * a^2 + 4 * M * a * q)^2
-            + 2 * (4 * M^2) * (4 * M^2 * a^2 + n)) := by linarith [hsq]
+            + 2 * (4 * M^2) * (4 * M^2 * a^2 + n)) := Int.sub_nonneg.mpr hsq
     have h_close_gap : 0 <
         ((8 * M^2 * a)^2 + 2 * n * (4 * M^2 * a^2 + 4 * M^2))
-          - (n^2 + (4 * M^2 * a^2 + 4 * M^2)^2) := by linarith [hclose]
+          - (n^2 + (4 * M^2 * a^2 + 4 * M^2)^2) := Int.sub_pos.mpr hclose
     have h_identity :
         n * (4 * M * a)^2 - (M * a + q - 1)^2 * (4 * M * a)^2 =
           (((4 * M^2)^2 + (4 * M^2 * a^2 + n)^2
@@ -180,9 +199,9 @@ public theorem key_isqrt_lemma {n M a : Int}
               + 2 * (4 * M^2) * (4 * M^2 * a^2 + n)))
           + (((8 * M^2 * a)^2 + 2 * n * (4 * M^2 * a^2 + 4 * M^2))
             - (n^2 + (4 * M^2 * a^2 + 4 * M^2)^2)) := by grind only
-    have h_squared : (M * a + q - 1)^2 * (4 * M * a)^2 < n * (4 * M * a)^2 := by
-      linarith [h_sq_gap, h_close_gap, h_identity]
-    -- Cancel (4*M*a)²
-    exact lt_of_mul_lt_mul_right h_squared (sq_nonneg _)
+    have h_squared : (M * a + q - 1)^2 * (4 * M * a)^2 < n * (4 * M * a)^2 :=
+      Int.sub_pos.mp (h_identity.symm ▸ Int.add_pos_of_nonneg_of_pos h_sq_gap h_close_gap)
+    -- Cancel (4Ma)²
+    exact Int.lt_of_mul_lt_mul_right h_squared (Int.sq_nonneg _)
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
-  exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
+  exact ⟨by grind only, by grind only⟩
