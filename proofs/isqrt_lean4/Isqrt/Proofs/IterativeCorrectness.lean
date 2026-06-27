@@ -1,7 +1,5 @@
 module
 
-meta import Mathlib.Tactic.Linarith
-meta import Mathlib.Tactic.Positivity
 public import Isqrt.Definitions.IsqrtIterative
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
@@ -64,7 +62,7 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
       Int.fdiv c (2 ^ s.toNat)⟩ := by
   simp only [stepM, pyRshift_eq_ok hs_nn, Except.ok_bind,
     pyLshift_eq_ok hK, pyRshift_eq_ok hJ,
-    pyFloordiv_eq_ok (ne_of_gt ha_pos)]
+    pyFloordiv_eq_ok (Int.ne_of_gt ha_pos)]
   rfl
 
 /-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
@@ -83,33 +81,40 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
   rw [hlist, List.foldlM_map]
   -- `c >> L = 0`, where `L = c.bit_length()`.
   have hz : Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := fdiv_two_pow_bitLength_eq_zero hc
-  set motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
+  let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
-      ∧ isNearSquareRoot (subproblem n c (Int.fdiv c (2 ^ s))) r.fst with hmotive
+      ∧ isNearSquareRoot (subproblem n c (Int.fdiv c (2 ^ s))) r.fst
+  have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
+    0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
+      ∧ isNearSquareRoot (subproblem n c (Int.fdiv c (2 ^ s))) r.fst := rfl
   -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `⌊n/4^c⌋ ∈ [1, 4)` has near-√ `1`.
   have hseed : motive c.bitLength.toNat ⟨1, 0⟩ := by
-    refine ⟨one_pos, hz.symm, ?_⟩
+    refine ⟨Int.one_pos, hz.symm, ?_⟩
     rw [hz]
-    exact isNearSquareRoot_one_of_hasSizeCondition (size_condition_at_depth (d := 0) le_rfl hc hsc)
+    exact isNearSquareRoot_one_of_hasSizeCondition
+      (size_condition_at_depth (d := 0) (Int.le_refl 0) hc hsc)
   -- Step: one shared Newton refinement (`isNearSquareRoot_subproblem_step`), once the
   -- `.ok`-ness of `stepM` and the Python-shift → `subproblem` encoding are discharged.
   have hstep : ∀ s, s < c.bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM c n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
-    set sZ : Int := (i : Int)
-    have hs_nn : 0 ≤ sZ := by positivity
+    let sZ : Int := (i : Int)
+    have hs_nn : 0 ≤ sZ := Int.natCast_nonneg i
     have hs_lt : sZ < c.bitLength := by have := Int.bitLength_nonneg c; omega
     have hsi : sZ.toNat = i := Int.toNat_natCast i
     have hsi1 : (sZ + 1).toNat = i + 1 := by omega
-    set d_new := Int.fdiv c (2 ^ i) with hd_new_def
-    set d_old := Int.fdiv c (2 ^ (i + 1)) with hd_old_def
-    set a_old := x.fst
+    let d_new := Int.fdiv c (2 ^ i)
+    have hd_new_def : d_new = Int.fdiv c (2 ^ i) := rfl
+    let d_old := Int.fdiv c (2 ^ (i + 1))
+    have hd_old_def : d_old = Int.fdiv c (2 ^ (i + 1)) := rfl
+    let a_old := x.fst
     obtain ⟨ha_old_pos, hx_snd, hx_near⟩ := hx
     -- depth bookkeeping: `d_new = c >> i` climbs from its child `d_old = ⌊d_new/2⌋`
     have hd_new_fdiv : d_new = Int.fdiv c (2 ^ sZ.toNat) := by rw [hsi]
     have hd_old_fdiv : d_old = Int.fdiv c (2 ^ (sZ + 1).toNat) := by rw [hsi1]
-    have hd_old_nonneg : 0 ≤ d_old := by rw [hd_old_def]; exact Int.fdiv_nonneg hc (by positivity)
+    have hd_old_nonneg : 0 ≤ d_old := by
+      rw [hd_old_def]; exact Int.fdiv_nonneg hc (Int.pow_nonneg (by decide))
     have hd_new_le : d_new ≤ c := by rw [hd_new_def]; exact Int.fdiv_le_self _ hc
     have hK : 0 ≤ d_new - d_old - 1 := by
       rw [hd_new_fdiv]; exact fdiv_two_pow_lshift_nonneg hc hs_nn hs_lt hd_old_fdiv
@@ -119,7 +124,8 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
       have hd_old_le : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
       omega
-    set M := (2 : Int) ^ ((d_new - 1).fdiv 2).toNat with hM_def
+    let M := (2 : Int) ^ ((d_new - 1).fdiv 2).toNat
+    have hM_def : M = (2 : Int) ^ ((d_new - 1).fdiv 2).toNat := rfl
     -- the loop body's new `a`, in Python shift form, is the Newton combine on `subproblem n c d_new`
     have hX : a_old * 2 ^ (d_new - d_old - 1).toNat
             + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old
@@ -130,9 +136,10 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
     · rw [hsi, hx_snd]; exact hK
     · rw [hsi, hx_snd]; exact hJ
     · -- positivity of the new `a`
-      exact add_pos_of_pos_of_nonneg
-        (mul_pos ha_old_pos (by positivity))
-        (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) ha_old_pos.le)
+      exact Int.add_pos_of_pos_of_nonneg
+        (Int.mul_pos ha_old_pos (Int.pow_pos (by decide)))
+        (Int.fdiv_nonneg (Int.fdiv_nonneg (Int.le_of_lt hn) (Int.pow_nonneg (by decide)))
+          (Int.le_of_lt ha_old_pos))
     · -- new `d = c >> i`
       rfl
     · -- near-√ at the new depth, via the shared Newton step from the child `d_old = ⌊d_new/2⌋`
@@ -146,7 +153,9 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
       c.bitLength.toNat ⟨1, 0⟩ hseed hstep
   -- Result at `s = 0`: `c >> 0 = c`, and `subproblem n c c = n`, so a near-√ of `n`.
   refine ⟨y, hy_eq, hy_pos, ?_⟩
-  simpa [pow_zero, Int.fdiv_one, subproblem_self] using hy_near
+  have hc0 : Int.fdiv c (2 ^ 0) = c := by rw [show (2 : Int) ^ (0 : Nat) = 1 from rfl, Int.fdiv_one]
+  rw [hc0, subproblem_self] at hy_near
+  exact hy_near
 
 /-- Correctness of the monadic integer square root `isqrtIterative`.
 
@@ -161,20 +170,20 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     intro n hn
     show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot n a
-    rcases eq_or_lt_of_le hn with rfl | hpos
+    rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
       refine ⟨0, ?_, ?_⟩
-      · show isqrtIterative 0 = .ok 0; unfold isqrtIterative; norm_num; rfl
-      · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; norm_num
+      · show isqrtIterative 0 = .ok 0; unfold isqrtIterative; simp only [reduceIte]; rfl
+      · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; decide
     · -- 0 < n: the loop runs and never raises.
-      have hn0 : n ≠ 0 := ne_of_gt hpos
+      have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
         monadicLoop_near (c := (n.bitLength - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
           (size_condition_initial hpos)
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
-        conv_lhs => unfold isqrtIterative
+        unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by norm_num)]
+          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide)]
         rw [Except.ok_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
           (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
