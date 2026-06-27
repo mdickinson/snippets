@@ -15,7 +15,6 @@ given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near squar
 
 module
 
-meta import Mathlib.Tactic.Ring
 meta import Mathlib.Tactic.Positivity
 meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.Specification
@@ -27,7 +26,7 @@ import Isqrt.Proofs.FDivLemmas
 i.e. `4a > 0`. -/
 public theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := by
   obtain ⟨h_lo, h_hi⟩ := h
-  nlinarith [lt_trans h_lo h_hi]
+  grind only
 
 /-! ## From near square root to integer square root -/
 
@@ -39,21 +38,18 @@ public theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquar
   obtain ⟨h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a
   · simp only [h_lt, ↓reduceIte]
-    exact ⟨h_lo.le, by nlinarith [h_lt]⟩
+    exact ⟨Int.le_of_lt h_lo, by grind only⟩
   · simp only [h_lt, ↓reduceIte]
-    exact ⟨not_lt.mp h_lt, h_hi⟩
+    exact ⟨Int.not_lt.mp h_lt, h_hi⟩
 
-/-! ## Algebraic helpers
-
-The Lean 3 versions of these required `sub_elimination` and friends to
-handle Nat subtraction. On Int they reduce to `nlinarith` one-liners. -/
+/-! ## Algebraic helpers -/
 
 /-- If `x` and `y` are within `c` of each other (forcing `c ≥ 1` in ℤ),
 then `x² + y² < c² + 2xy`. Equivalent to `(x-y)² < c²`. -/
 theorem close_to {x y c : Int} (h1 : x < y + c) (h2 : y < x + c) :
     x^2 + y^2 < c^2 + 2*x*y := by
-  have hd1 : 0 ≤ c - 1 - (x - y) := by linarith
-  have hd2 : 0 ≤ c - 1 + (x - y) := by linarith
+  have hd1 : 0 ≤ c - 1 - (x - y) := by omega
+  have hd2 : 0 ≤ c - 1 + (x - y) := by omega
   have hc : 1 ≤ c := by omega
   nlinarith [mul_nonneg hd1 hd2, hc]
 
@@ -62,8 +58,8 @@ Equivalent to `(d-a)² ≥ (c-b)²`. -/
 theorem square_squeeze {a b c d : Int}
     (hab : a ≤ b) (hbc : b ≤ c) (hcd : c ≤ d) :
     b^2 + c^2 + 2*a*d ≤ a^2 + d^2 + 2*b*c := by
-  have hd1 : 0 ≤ (d - a) - (c - b) := by linarith
-  have hd2 : 0 ≤ (d - a) + (c - b) := by linarith
+  have hd1 : 0 ≤ (d - a) - (c - b) := by omega
+  have hd2 : 0 ≤ (d - a) + (c - b) := by omega
   nlinarith [mul_nonneg hd1 hd2]
 
 /-! ## Sub-lemmas about the setup -/
@@ -146,7 +142,7 @@ public theorem key_isqrt_lemma {n M a : Int}
       nlinarith [n_lower hM ha_lo]
     have hclose := close_to d_large d_small
     -- The two inequalities provide nonneg "gaps". Their sum equals
-    -- `n*(4Ma)² - (M*a + q - 1)²*(4Ma)²` as a polynomial identity (by `ring`),
+    -- `n*(4Ma)² - (M*a + q - 1)²*(4Ma)²` as a polynomial identity (by `grind`),
     -- which gives `(M*a + q - 1)²·(4Ma)² < n·(4Ma)²`.
     have h_sq_gap : 0 ≤
         ((4 * M^2)^2 + (4 * M^2 * a^2 + n)^2
@@ -163,7 +159,7 @@ public theorem key_isqrt_lemma {n M a : Int}
             - ((4 * M * a)^2 + (4 * M^2 * a^2 + 4 * M * a * q)^2
               + 2 * (4 * M^2) * (4 * M^2 * a^2 + n)))
           + (((8 * M^2 * a)^2 + 2 * n * (4 * M^2 * a^2 + 4 * M^2))
-            - (n^2 + (4 * M^2 * a^2 + 4 * M^2)^2)) := by ring
+            - (n^2 + (4 * M^2 * a^2 + 4 * M^2)^2)) := by grind only
     have h_squared : (M * a + q - 1)^2 * (4 * M * a)^2 < n * (4 * M * a)^2 := by
       linarith [h_sq_gap, h_close_gap, h_identity]
     -- Cancel (4*M*a)²
