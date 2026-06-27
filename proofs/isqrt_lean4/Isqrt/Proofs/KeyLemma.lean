@@ -44,14 +44,16 @@ public theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquar
 
 /-! ## Algebraic helpers -/
 
-/-- If `x` and `y` are within `c` of each other (forcing `c ≥ 1` in ℤ),
-then `x² + y² < c² + 2xy`. Equivalent to `(x-y)² < c²`. -/
+/-- If `x` and `y` are within `c` of each other, then `x² + y² < c² + 2xy`
+(equivalently, `(x-y)² < c²`). -/
 theorem close_to {x y c : Int} (h1 : x < y + c) (h2 : y < x + c) :
     x^2 + y^2 < c^2 + 2*x*y := by
-  have hd1 : 0 ≤ c - 1 - (x - y) := by omega
-  have hd2 : 0 ≤ c - 1 + (x - y) := by omega
-  have hc : 1 ≤ c := by omega
-  nlinarith [mul_nonneg hd1 hd2, hc]
+  -- `|x - y| < c`: both `c ± (x - y)` are positive.
+  have hp1 : 0 < c - (x - y) := by omega
+  have hp2 : 0 < c + (x - y) := by omega
+  -- Their product is `c² - (x-y)²`, i.e. exactly `(c² + 2xy) - (x² + y²)`.
+  have factor : (c - (x - y)) * (c + (x - y)) = c^2 + 2*x*y - (x^2 + y^2) := by grind only
+  exact Int.sub_pos.mp (factor ▸ Int.mul_pos hp1 hp2)
 
 /-- If `a ≤ b ≤ c ≤ d`, then `b² + c² + 2ad ≤ a² + d² + 2bc`.
 Equivalent to `(d-a)² ≥ (c-b)²`. -/
