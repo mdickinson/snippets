@@ -1,17 +1,16 @@
 /-
-Key algebraic lemma for the isqrt correctness proof.
+The isqrt correctness proof's pure-integer mathematics: near-square-root theory and the
+Newton-step key lemma. It is all general `Int` arithmetic — the bit-level encoding the
+algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.PythonPrimitivesLemmas`.
 
-The **near square root** predicate this works with, `isNearSquareRoot`
-(`(a - 1)² < n < (a + 1)²`; for positive `n`, `a` is `⌊√n⌋` or `⌈√n⌉`), is defined
-in `Isqrt.Definitions.Specification`, beside its companion postcondition
-`isIntegerSquareRoot`. This file supplies the two facts the correctness proofs need
-about it: `isNearSquareRoot.toIntegerSquareRoot`, the final `a-1`/`a` choice that
-turns a near square root into the integer square root, and the algebraic combining
-step below.
+The **near square root** predicate, `isNearSquareRoot` (`(a - 1)² < n < (a + 1)²`; for
+positive `n`, `a` is `⌊√n⌋` or `⌈√n⌉`), is defined in `Isqrt.Definitions.Specification`
+beside its postcondition `isIntegerSquareRoot`. This file supplies what the correctness
+proofs need about it — that a near square root is positive, and the final `a-1`/`a` choice
+that turns one into the integer square root — and proves the key combining step:
 
-This file proves: given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`,
-if `a` is a near square root of `⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a
-near square root of `n`.
+given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near square root of
+`⌊n / 4M²⌋`, then `Ma + ⌊n / 4Ma⌋` is a near square root of `n`.
 -/
 
 module
@@ -173,31 +172,5 @@ theorem key_isqrt_lemma {n M a : Int}
     exact lt_of_mul_lt_mul_right h_squared (sq_nonneg _)
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
-
-/-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
-scaler `M = 2^k` (`0 ≤ k`): `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
-`>> (2k+2)` as division by `4M²`. -/
-theorem four_mul_two_pow_sq {k : Int} (hk : 0 ≤ k) :
-    (4 : Int) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
-  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
-
-/-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
-For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
-— a left shift of `a` by `k`, plus the divided-down remainder — equals
-`Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
-correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
-recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
-(`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
-move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
-theorem key_isqrt_body_eq {ν a M : Int} {k : Int} (hk : 0 ≤ k) (ha : 0 < a)
-    (hM : M = 2 ^ k.toNat) :
-    a * 2 ^ k.toNat + Int.fdiv (Int.fdiv ν (2 ^ (k + 2).toNat)) a
-      = M * a + Int.fdiv ν (4 * M * a) := by
-  subst hM
-  have h_pow : (2 : Int) ^ (k + 2).toNat = 4 * 2 ^ k.toNat := by
-    have hkt : (k + 2).toNat = k.toNat + 2 := by omega
-    rw [hkt, pow_add]; ring
-  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν (by positivity : (0 : Int) ≤ 4 * 2 ^ k.toNat) ha.le]
-  ring
 
 end

@@ -1,7 +1,8 @@
 /-
-Lemmas about the Python-operation mirrors of `Isqrt.Definitions.PythonPrimitives`
-that the correctness proofs consume. Two groups, both stated in pure `Int.fdiv` /
-`2 ^ ·` form (no Python operators), so the proofs build on them directly.
+The bit-level theory the correctness proofs consume, all stated in pure `Int.fdiv` /
+`2 ^ ·` form (no Python operators) so the proofs build on them directly. Three groups.
+(The pure-integer mathematics — near-square-root theory and the Newton-step key lemma —
+lives in `Isqrt.Proofs.KeyLemma`.)
 
 **Value extraction.** On its non-raising branch each of `pyFloordiv`, `pyLshift`,
 `pyRshift` returns `.ok` of the corresponding `Int.fdiv` / power-of-two value. The
@@ -13,11 +14,17 @@ The public `Int.bitLength` inlines its bit-length computation; this file re-decl
 as the Nat-level `natBitLength` — kept honest by `Int.bitLength_natCast` — and connects it,
 via `Nat.log2`, to power-of-two bounds, the per-step halving of a right shift, and the
 loop-body left-shift nonnegativity fact.
+
+**Scaler encoding.** The shift exponents the algorithm divides by are the key lemma's
+`4M²` / `4Ma` denominators for the scaler `M = 2^k`: `four_mul_two_pow_sq` and
+`key_isqrt_body_eq` are the bridges that let both correctness proofs read a shift as
+division by the scaler.
 -/
 
 module
 
 meta import Mathlib.Tactic.Positivity
+meta import Mathlib.Tactic.Ring
 public import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.FDivLemmas
 
@@ -216,5 +223,37 @@ theorem fdiv_two_pow_lshift_nonneg {c s d : Int} (hc : 0 ≤ c) (hs_nn : 0 ≤ s
   have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
     Int.fdiv_nonneg (by omega) (by norm_num)
   rw [hhalve]; omega
+
+/-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
+
+The algorithm reduces its input by right-shifting; these identities rewrite those shift
+exponents into the `4M²` / `4Ma` scaler form that `Isqrt.Proofs.KeyLemma`'s
+`key_isqrt_lemma` consumes, for the scaler `M = 2^k`. -/
+
+/-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
+scaler `M = 2^k` (`0 ≤ k`): `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
+`>> (2k+2)` as division by `4M²`. -/
+theorem four_mul_two_pow_sq {k : Int} (hk : 0 ≤ k) :
+    (4 : Int) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
+  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
+
+/-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
+For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
+— a left shift of `a` by `k`, plus the divided-down remainder — equals
+`Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
+correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
+recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
+(`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
+move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
+theorem key_isqrt_body_eq {ν a M : Int} {k : Int} (hk : 0 ≤ k) (ha : 0 < a)
+    (hM : M = 2 ^ k.toNat) :
+    a * 2 ^ k.toNat + Int.fdiv (Int.fdiv ν (2 ^ (k + 2).toNat)) a
+      = M * a + Int.fdiv ν (4 * M * a) := by
+  subst hM
+  have h_pow : (2 : Int) ^ (k + 2).toNat = 4 * 2 ^ k.toNat := by
+    have hkt : (k + 2).toNat = k.toNat + 2 := by omega
+    rw [hkt, pow_add]; ring
+  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν (by positivity : (0 : Int) ≤ 4 * 2 ^ k.toNat) ha.le]
+  ring
 
 end
