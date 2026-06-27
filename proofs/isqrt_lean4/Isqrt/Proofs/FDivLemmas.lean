@@ -9,8 +9,6 @@ use them directly after unfolding `pyFloordiv` / `pyRshift`.
 
 module
 
-meta import Mathlib.Tactic.Linarith
-
 public section
 
 /-! ## Basic ordering lemmas for `Int.fdiv` -/
@@ -24,13 +22,13 @@ theorem Int.fdiv_mul_le_self {x k : Int} (h : 0 < k) : x.fdiv k * k ≤ x := by
 /-- `y ≤ x.fdiv k ↔ y * k ≤ x` when `0 < k`. -/
 theorem Int.le_fdiv_iff_mul_le {x y k : Int} (hk : 0 < k) :
     y ≤ x.fdiv k ↔ y * k ≤ x := by
-  rw [Int.fdiv_eq_ediv_of_nonneg x hk.le]
+  rw [Int.fdiv_eq_ediv_of_nonneg x (Int.le_of_lt hk)]
   exact Int.le_ediv_iff_mul_le hk
 
 /-- `x.fdiv k < y ↔ x < y * k` when `0 < k`. -/
 theorem Int.fdiv_lt_iff_lt_mul {x y k : Int} (hk : 0 < k) :
     x.fdiv k < y ↔ x < y * k := by
-  rw [Int.fdiv_eq_ediv_of_nonneg x hk.le]
+  rw [Int.fdiv_eq_ediv_of_nonneg x (Int.le_of_lt hk)]
   exact Int.ediv_lt_iff_lt_mul hk
 
 /-! ## Int ↔ Nat bridging -/
