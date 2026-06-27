@@ -61,7 +61,7 @@ near square root of `n`. The base case `c ≤ 0` forces `c = 0` (the size condit
 `isNearSquareRoot_one_of_hasSizeCondition`); the step descends to the reduced problem
 `⌊n / 4M²⌋` at `⌊c/2⌋` via the scaler `M = 2^⌊(c-1)/2⌋`, and `key_isqrt_lemma` lifts its near
 square root back to one for `n` (`nsqrtRecursive_succ`). -/
-theorem nsqrtRecursive_correctness {c n : Int} (hsc : hasSizeCondition c n) :
+theorem nsqrtRecursive_correctness {n c : Int} (hsc : hasSizeCondition n c) :
     ∃ a, nsqrtRecursive n c = .ok a ∧ isNearSquareRoot n a := by
   by_cases hc : c ≤ 0
   · -- base: `c ≤ 0` with `0 ≤ c` forces `c = 0`.

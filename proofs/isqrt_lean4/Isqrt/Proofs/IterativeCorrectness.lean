@@ -71,8 +71,8 @@ private theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
 near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
 running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
 `isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
-private theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
-    (hsc : hasSizeCondition c n) :
+private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
+    (hsc : hasSizeCondition n c) :
     ∃ y : MProd ℤ ℤ, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
   -- Bridge the `range` list to `(List.range L).reverse` with ℕ indices.
@@ -130,7 +130,7 @@ private theorem monadicLoop_near {c n : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     have hk_nn : 0 ≤ k := by omega
     set M := (2 : ℤ) ^ k.toNat with hM_def
     have hM_pos : 0 < M := by rw [hM_def]; positivity
-    have hsc_new : hasSizeCondition d_new N_new := by
+    have hsc_new : hasSizeCondition N_new d_new := by
       rw [hN_new_def]; exact size_condition_at_depth hd_new_nonneg hd_new_le hsc
     have hM4 : 4 * M ^ 4 ≤ N_new := by
       have := M_bound_from_size hd_new_pos hsc_new
