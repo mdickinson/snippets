@@ -310,6 +310,36 @@ theorem subproblem_reduce {n c d M : Int} (hM : M = 2 ^ ((d - 1).fdiv 2).toNat)
   congr 1
   omega
 
+/-- The iterative loop body, decoded, is the Newton combine on the depth-`d` subproblem — the
+iterative analogue of `key_isqrt_body_eq`. With the step's scaler `M = 2^⌊(d-1)/2⌋` and the
+threaded child shift `e = ⌊d/2⌋` (`0 < d ≤ c`, `0 < a`), the body value
+`a·2^(d-e-1) + ⌊⌊n / 2^(2c-e-d+1)⌋ / a⌋` equals `Ma + ⌊subproblem n c d / 4Ma⌋`. The work beyond
+`key_isqrt_body_eq` is undoing the loop's encoding of depth as `c >> s`: the flat `n`-shift
+`2^(2c-e-d+1)` splits into the subproblem's `4^(c-d)` and the key lemma's `2^(⌊(d-1)/2⌋+2)`. -/
+theorem subproblem_body_eq {n c d e M a : Int}
+    (hM : M = 2 ^ ((d - 1).fdiv 2).toNat) (he : e = d.fdiv 2)
+    (hd_pos : 0 < d) (hd_le : d ≤ c) (ha : 0 < a) :
+    a * 2 ^ (d - e - 1).toNat
+        + Int.fdiv (Int.fdiv n (2 ^ (2 * c - e - d + 1).toNat)) a
+      = M * a + (subproblem n c d).fdiv (4 * M * a) := by
+  have hk_eq : (d - 1).fdiv 2 = d - e - 1 := by
+    rw [he, Int.fdiv_eq_ediv_of_nonneg (d - 1) (by norm_num : (0 : Int) ≤ 2),
+        Int.fdiv_eq_ediv_of_nonneg d (by norm_num : (0 : Int) ≤ 2)]
+    omega
+  have hk_nn : (0 : Int) ≤ (d - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
+  -- split the flat `n`-shift into the subproblem's `4^(c-d)` and the key lemma's `2^(k+2)`
+  have hbridge : Int.fdiv n (2 ^ (2 * c - e - d + 1).toNat)
+      = (subproblem n c d).fdiv (2 ^ ((d - 1).fdiv 2 + 2).toNat) := by
+    unfold subproblem
+    rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
+    congr 1
+    rw [show (4 : Int) = 2 ^ 2 by norm_num]
+    simp only [← pow_mul, ← pow_add]
+    congr 1
+    omega
+  rw [show (d - e - 1).toNat = ((d - 1).fdiv 2).toNat from by rw [hk_eq], hbridge]
+  exact key_isqrt_body_eq hk_nn ha hM
+
 /-- The Newton refinement step on subproblems, shared by both correctness proofs: for the
 step's scaler `M = 2^⌊(d-1)/2⌋` (`0 < d ≤ c`), a near square root of the child subproblem
 `subproblem n c ⌊d/2⌋` lifts to a near square root `Ma + ⌊·/4Ma⌋` of `subproblem n c d`. The

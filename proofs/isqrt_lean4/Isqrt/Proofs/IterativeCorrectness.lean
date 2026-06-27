@@ -116,11 +116,6 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
     have hd_new_pos : 0 < d_new := by omega
     have h_halve : d_old = d_new.fdiv 2 := by
       rw [hd_old_fdiv, hd_new_fdiv]; exact fdiv_two_pow_succ c sZ hs_nn
-    have hk_eq : (d_new - 1).fdiv 2 = d_new - d_old - 1 := by
-      rw [h_halve, Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : Int) ≤ 2),
-          Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : Int) ≤ 2)]
-      omega
-    have hk_nn : (0 : Int) ≤ (d_new - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
       have hd_old_le : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
       omega
@@ -128,20 +123,8 @@ private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
     -- the loop body's new `a`, in Python shift form, is the Newton combine on `subproblem n c d_new`
     have hX : a_old * 2 ^ (d_new - d_old - 1).toNat
             + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old
-          = M * a_old + (subproblem n c d_new).fdiv (4 * M * a_old) := by
-      -- rewrite the body's `n`-divisor into the `subproblem n c d_new`-divisor shape
-      -- `key_isqrt_body_eq` expects (factoring out `4 ^ (c - d_new)`)
-      have hbridge : Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)
-          = (subproblem n c d_new).fdiv (2 ^ ((d_new - 1).fdiv 2 + 2).toNat) := by
-        unfold subproblem
-        rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
-        congr 1
-        rw [show (4 : Int) = 2 ^ 2 by norm_num]
-        simp only [← pow_mul, ← pow_add]
-        congr 1
-        omega
-      rw [show (d_new - d_old - 1).toNat = ((d_new - 1).fdiv 2).toNat from by rw [hk_eq], hbridge]
-      exact key_isqrt_body_eq hk_nn ha_old_pos hM_def
+          = M * a_old + (subproblem n c d_new).fdiv (4 * M * a_old) :=
+      subproblem_body_eq hM_def h_halve hd_new_pos hd_new_le ha_old_pos
     -- assemble: `stepM` succeeds, and its new state is a near-√ at depth `d_new`
     refine ⟨_, stepM_eq_ok x sZ hs_nn ha_old_pos ?_ ?_, ?_, ?_, ?_⟩
     · rw [hsi, hx_snd]; exact hK
