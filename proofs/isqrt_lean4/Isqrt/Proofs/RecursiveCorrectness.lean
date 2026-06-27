@@ -68,18 +68,17 @@ theorem nsqrtRecursive_correctness {n c : Int} (hsc : hasSizeCondition n c) :
     have hc0 : c = 0 := Int.le_antisymm hc hsc.c_nonneg
     subst hc0
     exact ⟨1, nsqrtRecursive_base n hc, isNearSquareRoot_one_of_hasSizeCondition hsc⟩
-  · -- step: `k = ⌊(c-1)/2⌋`; the scaler `M = 2^k` is suitable for `n`.
+  · -- step: the scaler `M = 2^⌊(c-1)/2⌋` reduces `n` to its child subproblem `⌊n / 4M²⌋`.
     have hc_pos : 0 < c := Int.not_le.mp hc
-    let k := (c - 1).fdiv 2
-    let M : Int := 2 ^ k.toNat
+    let M : Int := 2 ^ ((c - 1).fdiv 2).toNat
     have hM_def : M = 2 ^ ((c - 1).fdiv 2).toNat := rfl
-    have hM : isSuitableScaler n M := isSuitableScaler_of_hasSizeCondition hM_def hc_pos hsc
-    -- The recursion solves the reduced problem `⌊n / 4M²⌋`, returning a near √ `a`; the step
-    -- returns `Ma + ⌊n / 4Ma⌋`, which the key lemma certifies as a near √ of `n`.
+    -- The recursion solves the child, returning a near √ `a`; the shared Newton step at depth
+    -- `d = c` (where `subproblem n c c = n`) lifts it to a near √ of `n`, the returned value.
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (size_condition_step hM_def hc_pos hsc)
-    exact ⟨M * a + n.fdiv (4 * M * a),
-           nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq,
-           key_isqrt_lemma hM a_near⟩
+    have step := isNearSquareRoot_subproblem_step hM_def hsc hc_pos (Int.le_refl c)
+      (a := a) (by rw [← subproblem_reduce hM_def hc_pos (Int.le_refl c), subproblem_self]; exact a_near)
+    rw [subproblem_self] at step
+    exact ⟨M * a + n.fdiv (4 * M * a), nsqrtRecursive_succ hM_def hc_pos a_near.pos ha_eq, step⟩
 termination_by c.toNat
 decreasing_by grind only
 

@@ -251,14 +251,20 @@ theorem isNearSquareRoot_one_of_hasSizeCondition {n : ℤ} (h : hasSizeCondition
   simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at h_lo h_hi
   exact ⟨by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
 
-/-- Size condition at any depth `0 ≤ d ≤ c`: derived directly from
-`hasSizeCondition n c`, the value `n` takes at depth `d`,
-`⌊n / 4^(c-d)⌋ = n >> 2(c-d)`, again satisfies the size condition (now for `d`).
-This is the `(n,c)`-only fact the iterative isqrt's loop property leans on at
-both its seed and its preservation step. -/
+/-! ## Subproblems -/
+
+/-- The depth-`d` subproblem of `(n, c)`: the value `n >> 2(c - d) = ⌊n / 4^(c-d)⌋` whose
+near square root the algorithm tracks at depth `d`. The chain runs from
+`subproblem n c 0 = ⌊n / 4^c⌋` (the base) up to `subproblem n c c = n` (the whole problem). -/
+@[expose] def subproblem (n c d : ℤ) : ℤ := n.fdiv (4 ^ (c - d).toNat)
+
+/-- The depth-`d` subproblem inherits the size condition: from `hasSizeCondition n c` and
+`0 ≤ d ≤ c`, `subproblem n c d` again satisfies it, now at level `d`. The `(n,c)`-only fact
+the seed and step of both loop invariants lean on. -/
 theorem size_condition_at_depth {n c d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c)
     (h : hasSizeCondition n c) :
-    hasSizeCondition (Int.fdiv n (4 ^ (c - d).toNat)) d := by
+    hasSizeCondition (subproblem n c d) d := by
+  unfold subproblem
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le (le_trans hd_lo hd_hi)
   obtain ⟨dn, rfl⟩ := Int.eq_ofNat_of_zero_le hd_lo
@@ -279,5 +285,44 @@ theorem size_condition_at_depth {n c d : ℤ} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c
   refine hasSizeCondition_of_toNat (by positivity) ?_ ?_
   · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_lo
   · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_hi
+
+/-- At full depth the subproblem is the whole problem: `subproblem n c c = n`. -/
+theorem subproblem_self {n c : ℤ} : subproblem n c c = n := by
+  simp only [subproblem, sub_self, Int.toNat_zero, pow_zero, Int.fdiv_one]
+
+/-- Reducing the depth-`d` subproblem by its scaler `4M²` gives the child subproblem at depth
+`⌊d/2⌋`, for the step's scaler `M = 2^⌊(d-1)/2⌋` (`0 < d ≤ c`). The divisor `4M²` is exactly
+the base-4 gap `4^⌈d/2⌉` between depths `⌊d/2⌋` and `d`. -/
+theorem subproblem_reduce {n c d M : ℤ} (hM : M = 2 ^ ((d - 1).fdiv 2).toNat)
+    (hd_pos : 0 < d) (hd_le : d ≤ c) :
+    (subproblem n c d).fdiv (4 * M ^ 2) = subproblem n c (d.fdiv 2) := by
+  have hk_eq : (d - 1).fdiv 2 = d - d.fdiv 2 - 1 := by
+    rw [Int.fdiv_eq_ediv_of_nonneg (d - 1) (by norm_num : (0 : ℤ) ≤ 2),
+        Int.fdiv_eq_ediv_of_nonneg d (by norm_num : (0 : ℤ) ≤ 2)]
+    omega
+  have hk_nn : (0 : ℤ) ≤ (d - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
+  have hd2_nn : (0 : ℤ) ≤ d.fdiv 2 := Int.fdiv_nonneg hd_pos.le (by norm_num)
+  unfold subproblem
+  rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity), hM, four_mul_two_pow_sq hk_nn]
+  congr 1
+  rw [show (4 : ℤ) = 2 ^ 2 by norm_num]
+  simp only [← pow_mul, ← pow_add]
+  congr 1
+  omega
+
+/-- The Newton refinement step on subproblems, shared by both correctness proofs: for the
+step's scaler `M = 2^⌊(d-1)/2⌋` (`0 < d ≤ c`), a near square root of the child subproblem
+`subproblem n c ⌊d/2⌋` lifts to a near square root `Ma + ⌊·/4Ma⌋` of `subproblem n c d`. The
+recursive proof instantiates `d := c` (where `subproblem n c c = n`); the iterative loop
+applies it at each revealed depth `d = c >> s`. -/
+theorem isNearSquareRoot_subproblem_step {n c d M a : ℤ}
+    (hM : M = 2 ^ ((d - 1).fdiv 2).toNat)
+    (hsc : hasSizeCondition n c) (hd_pos : 0 < d) (hd_le : d ≤ c)
+    (h_near : isNearSquareRoot (subproblem n c (d.fdiv 2)) a) :
+    isNearSquareRoot (subproblem n c d) (M * a + (subproblem n c d).fdiv (4 * M * a)) := by
+  have h_scaler : isSuitableScaler (subproblem n c d) M :=
+    isSuitableScaler_of_hasSizeCondition hM hd_pos (size_condition_at_depth hd_pos.le hd_le hsc)
+  rw [← subproblem_reduce hM hd_pos hd_le] at h_near
+  exact key_isqrt_lemma h_scaler h_near
 
 end

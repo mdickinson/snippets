@@ -69,8 +69,8 @@ private theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
 
 /-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
 near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
-running `a > 0`, the threaded shift `d = c >> s`, and the near-√ property
-`isNearSquareRoot ⌊n / 4^(c - c>>s)⌋ a`. -/
+running `a > 0`, the threaded shift `d = c >> s`, and the near-√ invariant
+`isNearSquareRoot (subproblem n c (c >> s)) a`. -/
 private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition n c) :
     ∃ y : MProd ℤ ℤ, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
@@ -85,16 +85,14 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
   have hz : Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := fdiv_two_pow_bitLength_eq_zero hc
   set motive : ℕ → MProd ℤ ℤ → Prop := fun (s : ℕ) (r : MProd ℤ ℤ) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
-      ∧ isNearSquareRoot (Int.fdiv n (4 ^ (c - Int.fdiv c (2 ^ s)).toNat)) r.fst with hmotive
-  -- Seed at `s = L`: `c >> L = 0`, base case `isNearSquareRoot ⌊n/4^c⌋ 1`.
+      ∧ isNearSquareRoot (subproblem n c (Int.fdiv c (2 ^ s))) r.fst with hmotive
+  -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `⌊n/4^c⌋ ∈ [1, 4)` has near-√ `1`.
   have hseed : motive c.bitLength.toNat ⟨1, 0⟩ := by
     refine ⟨one_pos, hz.symm, ?_⟩
     rw [hz]
-    obtain ⟨hlo, hhi⟩ := size_condition_at_depth (d := 0) le_rfl hc hsc
-    simp only [Int.toNat_zero, Int.toNat_one, zero_add, pow_zero, pow_one] at hlo hhi
-    exact ⟨by show (1 - 1) * (1 - 1) < Int.fdiv n (4 ^ (c - 0).toNat); nlinarith [hlo],
-           by show Int.fdiv n (4 ^ (c - 0).toNat) < (1 + 1) * (1 + 1); nlinarith [hhi]⟩
-  -- Step: one `key_isqrt_lemma` iteration, plus discharging `.ok`-ness of `stepM`.
+    exact isNearSquareRoot_one_of_hasSizeCondition (size_condition_at_depth (d := 0) le_rfl hc hsc)
+  -- Step: one shared Newton refinement (`isNearSquareRoot_subproblem_step`), once the
+  -- `.ok`-ness of `stepM` and the Python-shift → `subproblem` encoding are discharged.
   have hstep : ∀ s, s < c.bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM c n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
@@ -108,66 +106,43 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     set d_old := Int.fdiv c (2 ^ (i + 1)) with hd_old_def
     set a_old := x.fst
     obtain ⟨ha_old_pos, hx_snd, hx_near⟩ := hx
-    set N_new := Int.fdiv n (4 ^ (c - d_new).toNat) with hN_new_def
-    -- align depths with the `Int.fdiv c (2^·)` shape the shift lemmas use
+    -- depth bookkeeping: `d_new = c >> i` climbs from its child `d_old = ⌊d_new/2⌋`
     have hd_new_fdiv : d_new = Int.fdiv c (2 ^ sZ.toNat) := by rw [hsi]
     have hd_old_fdiv : d_old = Int.fdiv c (2 ^ (sZ + 1).toNat) := by rw [hsi1]
     have hd_old_nonneg : 0 ≤ d_old := by rw [hd_old_def]; exact Int.fdiv_nonneg hc (by positivity)
-    have hd_new_nonneg : 0 ≤ d_new := by rw [hd_new_def]; exact Int.fdiv_nonneg hc (by positivity)
-    have hd_new_le : d_new ≤ c := by
-      rw [hd_new_def]; exact Int.fdiv_le_self _ hc
+    have hd_new_le : d_new ≤ c := by rw [hd_new_def]; exact Int.fdiv_le_self _ hc
     have hK : 0 ≤ d_new - d_old - 1 := by
       rw [hd_new_fdiv]; exact fdiv_two_pow_lshift_nonneg hc hs_nn hs_lt hd_old_fdiv
     have hd_new_pos : 0 < d_new := by omega
-    have h_halve : d_old = Int.fdiv d_new 2 := by
+    have h_halve : d_old = d_new.fdiv 2 := by
       rw [hd_old_fdiv, hd_new_fdiv]; exact fdiv_two_pow_succ c sZ hs_nn
-    set k := Int.fdiv (d_new - 1) 2 with hk_def
-    have hk_eq : k = d_new - d_old - 1 := by
-      rw [hk_def, h_halve,
-          Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : ℤ) ≤ 2),
+    have hk_eq : (d_new - 1).fdiv 2 = d_new - d_old - 1 := by
+      rw [h_halve, Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : ℤ) ≤ 2),
           Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : ℤ) ≤ 2)]
       omega
-    have hk_nn : 0 ≤ k := by omega
-    set M := (2 : ℤ) ^ k.toNat with hM_def
-    have hM_pos : 0 < M := by rw [hM_def]; positivity
-    have hsc_new : hasSizeCondition N_new d_new := by
-      rw [hN_new_def]; exact size_condition_at_depth hd_new_nonneg hd_new_le hsc
-    have hM4 : 4 * M ^ 4 ≤ N_new := by
-      have := M_bound_from_size hd_new_pos hsc_new
-      rwa [← hk_def, ← hM_def] at this
+    have hk_nn : (0 : ℤ) ≤ (d_new - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
-      have h1 : d_new ≤ c := hd_new_le
-      have h2 : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
+      have hd_old_le : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
       omega
-    -- the incoming near-√ property at the child depth
-    have h_div_bridge :
-        Int.fdiv N_new (4 * M ^ 2) = Int.fdiv n (4 ^ (c - d_old).toNat) := by
-      rw [hN_new_def, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
-      congr 1
-      rw [show (4 : ℤ) = 2 ^ 2 by norm_num, hM_def]
-      simp only [← pow_mul, ← pow_add]
-      congr 1
-      omega
-    have h_near : isNearSquareRoot (Int.fdiv N_new (4 * M ^ 2)) a_old := by
-      rw [h_div_bridge]; exact hx_near
-    have hX :
-        a_old * 2 ^ (d_new - d_old - 1).toNat
+    set M := (2 : ℤ) ^ ((d_new - 1).fdiv 2).toNat with hM_def
+    -- the loop body's new `a`, in Python shift form, is the Newton combine on `subproblem n c d_new`
+    have hX : a_old * 2 ^ (d_new - d_old - 1).toNat
             + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old
-          = M * a_old + Int.fdiv N_new (4 * M * a_old) := by
-      -- The depth-shift glue: rewrite the body's `n`-divisor into the `N_new`-divisor
-      -- shape `key_isqrt_body_eq` expects (factoring out `4 ^ (c - d_new)`); the rest
-      -- of the algebra is the shared lemma.
+          = M * a_old + (subproblem n c d_new).fdiv (4 * M * a_old) := by
+      -- rewrite the body's `n`-divisor into the `subproblem n c d_new`-divisor shape
+      -- `key_isqrt_body_eq` expects (factoring out `4 ^ (c - d_new)`)
       have hbridge : Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)
-          = Int.fdiv N_new (2 ^ (k + 2).toNat) := by
-        rw [hN_new_def, Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
+          = (subproblem n c d_new).fdiv (2 ^ ((d_new - 1).fdiv 2 + 2).toNat) := by
+        unfold subproblem
+        rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
         congr 1
         rw [show (4 : ℤ) = 2 ^ 2 by norm_num]
         simp only [← pow_mul, ← pow_add]
         congr 1
         omega
-      rw [show (d_new - d_old - 1).toNat = k.toNat from by rw [hk_eq], hbridge]
+      rw [show (d_new - d_old - 1).toNat = ((d_new - 1).fdiv 2).toNat from by rw [hk_eq], hbridge]
       exact key_isqrt_body_eq hk_nn ha_old_pos hM_def
-    -- assemble: `stepM` succeeds, and its new `a` is the `key_isqrt_lemma` output
+    -- assemble: `stepM` succeeds, and its new state is a near-√ at depth `d_new`
     refine ⟨_, stepM_eq_ok x sZ hs_nn ha_old_pos ?_ ?_, ?_, ?_, ?_⟩
     · rw [hsi, hx_snd]; exact hK
     · rw [hsi, hx_snd]; exact hJ
@@ -177,18 +152,18 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
         (Int.fdiv_nonneg (Int.fdiv_nonneg hn.le (by positivity)) ha_old_pos.le)
     · -- new `d = c >> i`
       rfl
-    · -- near-√ at the new depth: the body's new `a` is the `key_isqrt_lemma` output
+    · -- near-√ at the new depth, via the shared Newton step from the child `d_old = ⌊d_new/2⌋`
       rw [hx_snd]
-      show isNearSquareRoot N_new (a_old * 2 ^ (d_new - d_old - 1).toNat
+      show isNearSquareRoot (subproblem n c d_new) (a_old * 2 ^ (d_new - d_old - 1).toNat
           + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old)
       rw [hX]
-      exact key_isqrt_lemma ⟨hM_pos, hM4⟩ h_near
+      exact isNearSquareRoot_subproblem_step hM_def hsc hd_new_pos hd_new_le (h_halve ▸ hx_near)
   obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM c n x (Int.ofNat s))
       c.bitLength.toNat ⟨1, 0⟩ hseed hstep
-  -- Result at `s = 0`: `c >> 0 = c`, divisor `4^(c-c) = 1`, so a near-√ of `n`.
+  -- Result at `s = 0`: `c >> 0 = c`, and `subproblem n c c = n`, so a near-√ of `n`.
   refine ⟨y, hy_eq, hy_pos, ?_⟩
-  simpa [Int.fdiv_one, Int.sub_self] using hy_near
+  simpa [pow_zero, Int.fdiv_one, subproblem_self] using hy_near
 
 /-- Correctness of the monadic integer square root `isqrtIterative`.
 
