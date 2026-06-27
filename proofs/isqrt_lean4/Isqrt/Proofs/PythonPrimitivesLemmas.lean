@@ -10,7 +10,7 @@ the `do`-block once the side conditions (nonzero divisor, nonneg shift) are disc
 
 **Bit length.** The power-of-two and floor-division facts about `int.bit_length()`.
 The public `Int.bitLength` inlines its bit-length computation; this file re-declares it
-as the ℕ-level `natBitLength` — kept honest by `Int.bitLength_natCast` — and connects it,
+as the Nat-level `natBitLength` — kept honest by `Int.bitLength_natCast` — and connects it,
 via `Nat.log2`, to power-of-two bounds, the per-step halving of a right shift, and the
 loop-body left-shift nonnegativity fact.
 -/
@@ -62,13 +62,13 @@ not `pure`). Both correctness proofs use it. -/
 theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
     (Except.ok a >>= f) = f a := rfl
 
-/-! ## natBitLength: the ℕ-level bit length -/
+/-! ## natBitLength: the Nat-level bit length -/
 
 /-- Bit length of a natural number: the number of bits needed to represent `n`,
 with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2` for
 access to core Lean 4's `log2` lemma library.
 
-This is the ℕ-level workhorse the bit-length proofs run on. It is *not* trust
+This is the Nat-level workhorse the bit-length proofs run on. It is *not* trust
 surface: the public `Int.bitLength` (`Isqrt.Definitions.PythonPrimitives`) computes the same
 bit length, and `Int.bitLength_natCast` below verifies — by a one-line `cases` — that
 the two agree, so this re-declaration cannot silently drift from it. -/
@@ -76,50 +76,50 @@ def natBitLength (n : Nat) : Nat := if n = 0 then 0 else Nat.log2 n + 1
 
 /-! ## Int.bitLength: defining-equation lemmas -/
 
-/-- `Int.bitLength` of a `ℕ`-cast drops the `natAbs`: `(↑m : ℤ).bitLength = ↑(natBitLength m)`.
+/-- `Int.bitLength` of a `Nat`-cast drops the `natAbs`: `(↑m : Int).bitLength = ↑(natBitLength m)`.
 This is the bridge tying the trust-surface `Int.bitLength` to the named `natBitLength` above:
 `cases m <;> rfl` checks they agree on each constructor — splitting `m` lets the `n = 0`
 conditional reduce — so the re-declaration cannot silently drift. It's also the
-form the ℤ↔ℕ bridges below (and in `Isqrt.Proofs.SizeConditions`) `rw` with directly;
+form the Int↔Nat bridges below (and in `Isqrt.Proofs.SizeConditions`) `rw` with directly;
 the general `Int.bitLength_def` is the `@[simp]` normal form, so this one isn't `@[simp]`. -/
-theorem Int.bitLength_natCast (m : ℕ) : (↑m : ℤ).bitLength = ↑(natBitLength m) := by
+theorem Int.bitLength_natCast (m : Nat) : (↑m : Int).bitLength = ↑(natBitLength m) := by
   cases m <;> rfl
 
 /-- `Int.bitLength` unfolds to `natBitLength` on the underlying `natAbs`. Generalises
-`Int.bitLength_natCast` from a `ℕ`-cast to any `n : ℤ`: both sides depend on `n` only
+`Int.bitLength_natCast` from a `Nat`-cast to any `n : Int`: both sides depend on `n` only
 through `n.natAbs` (and `Int.bitLength`'s `n = 0` guard agrees with `n.natAbs = 0`). -/
 @[simp]
-theorem Int.bitLength_def (n : ℤ) : n.bitLength = ↑(natBitLength n.natAbs) := by
+theorem Int.bitLength_def (n : Int) : n.bitLength = ↑(natBitLength n.natAbs) := by
   rw [← Int.bitLength_natCast]
   unfold Int.bitLength
   simp [Int.natAbs_abs]
 
-/-- `.toNat` of `Int.bitLength_natCast`: `((↑m : ℤ).bitLength).toNat = natBitLength m`. Not
+/-- `.toNat` of `Int.bitLength_natCast`: `((↑m : Int).bitLength).toNat = natBitLength m`. Not
 `@[simp]` (simp derives it from `Int.bitLength_def` + casts); kept as a named target for
 the *targeted* `rw`s below that must not disturb neighbouring casts. -/
-theorem Int.toNat_bitLength_natCast (m : ℕ) :
-    ((↑m : ℤ).bitLength).toNat = natBitLength m := by
+theorem Int.toNat_bitLength_natCast (m : Nat) :
+    ((↑m : Int).bitLength).toNat = natBitLength m := by
   rw [Int.bitLength_natCast, Int.toNat_natCast]
 
 /-! ## natBitLength: basic properties -/
 
-theorem natBitLength_eq_zero_iff {n : ℕ} : natBitLength n = 0 ↔ n = 0 := by
+theorem natBitLength_eq_zero_iff {n : Nat} : natBitLength n = 0 ↔ n = 0 := by
   by_cases h : n = 0 <;> simp [natBitLength, h]
 
-theorem natBitLength_pos_iff {n : ℕ} : 0 < natBitLength n ↔ 0 < n := by
+theorem natBitLength_pos_iff {n : Nat} : 0 < natBitLength n ↔ 0 < n := by
   rw [Nat.pos_iff_ne_zero, Nat.pos_iff_ne_zero]
   exact not_congr natBitLength_eq_zero_iff
 
 /-! ## natBitLength: power-of-two bounds -/
 
 /-- Upper bound: `n < 2 ^ (natBitLength n)` for all `n`. -/
-theorem lt_two_pow_natBitLength (n : ℕ) : n < 2 ^ natBitLength n := by
+theorem lt_two_pow_natBitLength (n : Nat) : n < 2 ^ natBitLength n := by
   by_cases h : n = 0
   · subst h; simp [natBitLength]
   · simp only [natBitLength, if_neg h]; exact Nat.lt_log2_self
 
 /-- Lower bound: `2 ^ (natBitLength n - 1) ≤ n` when `n > 0`. -/
-theorem two_pow_pred_natBitLength_le {n : ℕ} (hn : 0 < n) :
+theorem two_pow_pred_natBitLength_le {n : Nat} (hn : 0 < n) :
     2 ^ (natBitLength n - 1) ≤ n := by
   simp only [natBitLength, if_neg (by omega : ¬ n = 0), Nat.add_sub_cancel]
   exact Nat.log2_self_le (by omega)
@@ -127,26 +127,26 @@ theorem two_pow_pred_natBitLength_le {n : ℕ} (hn : 0 < n) :
 /-! ## natBitLength: iff characterizations -/
 
 /-- `natBitLength n ≤ k ↔ n < 2^k`. -/
-theorem natBitLength_le_iff {n k : ℕ} : natBitLength n ≤ k ↔ n < 2 ^ k := by
+theorem natBitLength_le_iff {n k : Nat} : natBitLength n ≤ k ↔ n < 2 ^ k := by
   by_cases h : n = 0
   · subst h; exact iff_of_true (Nat.zero_le k) (by positivity)
   · simp only [natBitLength, if_neg h, Nat.add_one_le_iff]; exact Nat.log2_lt h
 
 /-- `k < natBitLength n ↔ 2^k ≤ n`. Dual of `natBitLength_le_iff`. -/
-theorem lt_natBitLength_iff {n k : ℕ} : k < natBitLength n ↔ 2 ^ k ≤ n := by
+theorem lt_natBitLength_iff {n k : Nat} : k < natBitLength n ↔ 2 ^ k ≤ n := by
   rw [← not_iff_not]
   simp only [not_lt, not_le]
   exact natBitLength_le_iff
 
-/-! ## Int.bitLength: ℤ-level properties -/
+/-! ## Int.bitLength: Int-level properties -/
 
-theorem Int.bitLength_nonneg (n : ℤ) : 0 ≤ n.bitLength := by
+theorem Int.bitLength_nonneg (n : Int) : 0 ≤ n.bitLength := by
   rw [Int.bitLength_def]; positivity
 
-theorem Int.bitLength_eq_zero_iff {n : ℤ} : n.bitLength = 0 ↔ n = 0 := by
+theorem Int.bitLength_eq_zero_iff {n : Int} : n.bitLength = 0 ↔ n = 0 := by
   simp [natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
 
-theorem Int.bitLength_pos {n : ℤ} (hn : n ≠ 0) : 0 < n.bitLength := by
+theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
   rcases eq_or_lt_of_le (Int.bitLength_nonneg n) with h | h
   · exact absurd (Int.bitLength_eq_zero_iff.mp h.symm) hn
   · exact h
@@ -160,7 +160,7 @@ recursive isqrt translations. -/
 /-- One more step of floor-halving by a power of two:
 `⌊c / 2^(s+1)⌋ = ⌊⌊c / 2^s⌋ / 2⌋`. The `Int.fdiv` twin of `pyRshift_succ` — the
 recursion's `c ↦ c // 2` step. No sign hypothesis on `c` is needed. -/
-theorem fdiv_two_pow_succ (c s : ℤ) (hs : 0 ≤ s) :
+theorem fdiv_two_pow_succ (c s : Int) (hs : 0 ≤ s) :
     Int.fdiv c (2 ^ (s + 1).toNat) = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
   rw [show (s + 1).toNat = s.toNat + 1 from by omega, pow_succ,
       ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num)]
@@ -168,7 +168,7 @@ theorem fdiv_two_pow_succ (c s : ℤ) (hs : 0 ≤ s) :
 /-- For `0 ≤ s < c.bit_length()`, the floor-halving `⌊c / 2^s⌋` is at least `1`:
 it still retains the leading bit. (Used to show the body's left-shift amount is
 nonneg.) -/
-theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : ℤ}
+theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : Int}
     (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < c.bitLength) :
     1 ≤ Int.fdiv c (2 ^ s.toNat) := by
   rw [Int.le_fdiv_iff_mul_le (by positivity), one_mul]
@@ -178,15 +178,15 @@ theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : ℤ}
   have hcn_pos : 0 < cn := natBitLength_pos_iff.mp hbl_pos
   have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
   have hexp : s.toNat ≤ natBitLength cn - 1 := by omega
-  calc (2 : ℤ) ^ s.toNat
-      ≤ (2 : ℤ) ^ (natBitLength cn - 1) := by
+  calc (2 : Int) ^ s.toNat
+      ≤ (2 : Int) ^ (natBitLength cn - 1) := by
         apply pow_le_pow_right₀ (by norm_num) hexp
-    _ = ((2 ^ (natBitLength cn - 1) : ℕ) : ℤ) := by push_cast; rfl
-    _ ≤ (↑cn : ℤ) := by exact_mod_cast hbound
+    _ = ((2 ^ (natBitLength cn - 1) : Nat) : Int) := by push_cast; rfl
+    _ ≤ (↑cn : Int) := by exact_mod_cast hbound
 
 /-- Floor-halving `c` by `2 ^ c.bit_length()` yields `0` (since
 `c < 2 ^ c.bit_length()`). This is the loop's seed value of `d`. -/
-theorem fdiv_two_pow_bitLength_eq_zero {c : ℤ} (hc : 0 ≤ c) :
+theorem fdiv_two_pow_bitLength_eq_zero {c : Int} (hc : 0 ≤ c) :
     Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := by
   apply Int.fdiv_eq_zero_of_lt hc
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
@@ -204,7 +204,7 @@ form. -/
 for `0 ≤ s < c.bit_length()`. The body's hardest precondition: it needs
 `⌊c/2^s⌋ ≥ 1` (from `s < c.bit_length()`, `one_le_fdiv_two_pow_of_lt_bitLength`)
 and the halving link `d = ⌊⌊c/2^s⌋/2⌋` (`fdiv_two_pow_succ`). -/
-theorem fdiv_two_pow_lshift_nonneg {c s d : ℤ} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
+theorem fdiv_two_pow_lshift_nonneg {c s d : Int} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
     (hs_lt : s < c.bitLength) (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
     0 ≤ Int.fdiv c (2 ^ s.toNat) - d - 1 := by
   have hhalve : d = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by

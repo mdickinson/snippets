@@ -15,7 +15,7 @@ public section
 `MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
 body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes
 `d = c >> s`, and returns the new `⟨a, d⟩`. Each `←` is an operation that could raise. -/
-private def stepM (c n : ℤ) (r : MProd ℤ ℤ) (s : ℤ) : PyExcept (MProd ℤ ℤ) := do
+private def stepM (c n : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd Int Int) := do
   let dNew ← pyRshift c s
   let lsh ← pyLshift r.fst (dNew - r.snd - 1)
   let rsh ← pyRshift n (2 * c - r.snd - dNew + 1)
@@ -36,9 +36,9 @@ threads `.ok`-ness through the whole fold alongside the invariant.
 Reading `motive i x` as "`x` is a valid `.ok` state with `i` iterations still to run",
 the seed lands at `i = L`, the result at `i = 0`, and the conclusion packages both the
 `.ok`-ness of the whole fold and the final invariant. -/
-private theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A → Prop)
-    (g : A → ℕ → PyExcept A) :
-    ∀ (L : ℕ) (init : A), motive L init →
+private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A → Prop)
+    (g : A → Nat → PyExcept A) :
+    ∀ (L : Nat) (init : A), motive L init →
       (∀ s, s < L → ∀ x, motive (s + 1) x → ∃ y, g x s = .ok y ∧ motive s y) →
       ∃ y, (List.range L).reverse.foldlM g init = .ok y ∧ motive 0 y := by
   intro L
@@ -55,7 +55,7 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : ℕ → A →
 
 /-- `stepM`'s `.ok` value, given the loop body's three preconditions discharged: nonneg
 shift count `s`, positive running `a = r.fst`, and the two derived shift-amount bounds. -/
-private theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
+private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
     (hK : 0 ≤ Int.fdiv c (2 ^ s.toNat) - r.snd - 1)
     (hJ : 0 ≤ 2 * c - r.snd - Int.fdiv c (2 ^ s.toNat) + 1) :
@@ -71,11 +71,11 @@ private theorem stepM_eq_ok {c n : ℤ} (r : MProd ℤ ℤ) (s : ℤ)
 near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
 running `a > 0`, the threaded shift `d = c >> s`, and the near-√ invariant
 `isNearSquareRoot (subproblem n c (c >> s)) a`. -/
-private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
+private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
     (hsc : hasSizeCondition n c) :
-    ∃ y : MProd ℤ ℤ, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
+    ∃ y : MProd Int Int, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
-  -- Bridge the `range` list to `(List.range L).reverse` with ℕ indices.
+  -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
   have hlist : (range c.bitLength).reverse
       = (List.range c.bitLength.toNat).reverse.map Int.ofNat := by
     rw [show range c.bitLength = (List.range c.bitLength.toNat).map Int.ofNat from rfl,
@@ -83,7 +83,7 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
   rw [hlist, List.foldlM_map]
   -- `c >> L = 0`, where `L = c.bit_length()`.
   have hz : Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := fdiv_two_pow_bitLength_eq_zero hc
-  set motive : ℕ → MProd ℤ ℤ → Prop := fun (s : ℕ) (r : MProd ℤ ℤ) =>
+  set motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     0 < r.fst ∧ r.snd = Int.fdiv c (2 ^ s)
       ∧ isNearSquareRoot (subproblem n c (Int.fdiv c (2 ^ s))) r.fst with hmotive
   -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `⌊n/4^c⌋ ∈ [1, 4)` has near-√ `1`.
@@ -97,7 +97,7 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
       ∃ y, stepM c n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
-    set sZ : ℤ := (i : ℤ)
+    set sZ : Int := (i : Int)
     have hs_nn : 0 ≤ sZ := by positivity
     have hs_lt : sZ < c.bitLength := by have := Int.bitLength_nonneg c; omega
     have hsi : sZ.toNat = i := Int.toNat_natCast i
@@ -117,14 +117,14 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
     have h_halve : d_old = d_new.fdiv 2 := by
       rw [hd_old_fdiv, hd_new_fdiv]; exact fdiv_two_pow_succ c sZ hs_nn
     have hk_eq : (d_new - 1).fdiv 2 = d_new - d_old - 1 := by
-      rw [h_halve, Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : ℤ) ≤ 2),
-          Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : ℤ) ≤ 2)]
+      rw [h_halve, Int.fdiv_eq_ediv_of_nonneg (d_new - 1) (by norm_num : (0 : Int) ≤ 2),
+          Int.fdiv_eq_ediv_of_nonneg d_new (by norm_num : (0 : Int) ≤ 2)]
       omega
-    have hk_nn : (0 : ℤ) ≤ (d_new - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
+    have hk_nn : (0 : Int) ≤ (d_new - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by norm_num)
     have hJ : 0 ≤ 2 * c - d_old - d_new + 1 := by
       have hd_old_le : d_old ≤ c := by rw [hd_old_fdiv]; exact Int.fdiv_le_self _ hc
       omega
-    set M := (2 : ℤ) ^ ((d_new - 1).fdiv 2).toNat with hM_def
+    set M := (2 : Int) ^ ((d_new - 1).fdiv 2).toNat with hM_def
     -- the loop body's new `a`, in Python shift form, is the Newton combine on `subproblem n c d_new`
     have hX : a_old * 2 ^ (d_new - d_old - 1).toNat
             + Int.fdiv (Int.fdiv n (2 ^ (2 * c - d_old - d_new + 1).toNat)) a_old
@@ -136,7 +136,7 @@ private theorem monadicLoop_near {n c : ℤ} (hc : 0 ≤ c) (hn : 0 < n)
         unfold subproblem
         rw [Int.fdiv_fdiv_eq_fdiv_mul n (by positivity) (by positivity)]
         congr 1
-        rw [show (4 : ℤ) = 2 ^ 2 by norm_num]
+        rw [show (4 : Int) = 2 ^ 2 by norm_num]
         simp only [← pow_mul, ← pow_add]
         congr 1
         omega
@@ -191,7 +191,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         conv_lhs => unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show (2 : ℤ) ≠ 0 by norm_num)]
+          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by norm_num)]
         rw [Except.ok_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
           (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
