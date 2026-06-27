@@ -15,7 +15,6 @@ given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near squar
 
 module
 
-meta import Mathlib.Tactic.Positivity
 meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.FDivLemmas
@@ -75,7 +74,7 @@ theorem M_le_a {n M a : Int}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
     (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
     M ≤ a := by
-  have hdenom : 0 < 4 * M^2 := by positivity
+  have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have h1 : M^2 ≤ n.fdiv (4 * M^2) := by
     rw [Int.le_fdiv_iff_mul_le hdenom]
     nlinarith [hM4]
@@ -87,7 +86,7 @@ theorem M_le_a {n M a : Int}
 theorem n_upper {n M a : Int} (hM : 0 < M)
     (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
     n < 4 * M^2 * (a + 1)^2 := by
-  have hdenom : 0 < 4 * M^2 := by positivity
+  have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have := (Int.fdiv_lt_iff_lt_mul hdenom).mp ha_hi
   linarith
 
@@ -95,7 +94,7 @@ theorem n_upper {n M a : Int} (hM : 0 < M)
 theorem n_lower {n M a : Int} (hM : 0 < M)
     (ha_lo : (a - 1)^2 < n.fdiv (4 * M^2)) :
     ((a - 1)^2 + 1) * (4 * M^2) ≤ n := by
-  have hdenom : 0 < 4 * M^2 := by positivity
+  have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   rw [← Int.le_fdiv_iff_mul_le hdenom]
   linarith
 
@@ -119,10 +118,12 @@ public theorem key_isqrt_lemma {n M a : Int}
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [← pow_two] at ha_lo ha_hi
   set q := n.fdiv (4 * M * a)
-  have hMa_pos : 0 < 4 * M * a := by positivity
+  have hMa_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
   have hMa_one : 1 ≤ M * a := by linarith [mul_pos hM ha]
   have hM_le_a : M ≤ a := M_le_a hM ha hM4 ha_hi
-  have hn_nonneg : 0 ≤ n := le_trans (by positivity) hM4
+  have h4M4_nonneg : 0 ≤ 4 * M^4 :=
+    Int.mul_nonneg (by decide) (Int.pow_nonneg (Int.le_of_lt hM))
+  have hn_nonneg : 0 ≤ n := Int.le_trans h4M4_nonneg hM4
   have hq_nonneg : 0 ≤ q := Int.fdiv_nonneg hn_nonneg (le_of_lt hMa_pos)
   -- ===== Upper bound: n < (M*a + q + 1)² =====
   have upper : n < (M * a + q + 1)^2 := by
