@@ -21,13 +21,11 @@ meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.Specification
 import Isqrt.Proofs.FDivLemmas
 
-public section
-
 /-! ## Positivity -/
 
 /-- A near square root is positive: `(a-1)² < n < (a+1)²` forces `(a-1)² < (a+1)²`,
 i.e. `4a > 0`. -/
-theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := by
+public theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := by
   obtain ⟨h_lo, h_hi⟩ := h
   nlinarith [lt_trans h_lo h_hi]
 
@@ -36,7 +34,7 @@ theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := b
 /-- The algorithm's final return adjustment: a near square root `a` is either
 `⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
 yields the integer square root. Both correctness proofs close with this step. -/
-theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquareRoot n a) :
+public theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquareRoot n a) :
     isIntegerSquareRoot n (if n < a * a then a - 1 else a) := by
   obtain ⟨h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a
@@ -52,7 +50,7 @@ handle Nat subtraction. On Int they reduce to `nlinarith` one-liners. -/
 
 /-- If `x` and `y` are within `c` of each other (forcing `c ≥ 1` in ℤ),
 then `x² + y² < c² + 2xy`. Equivalent to `(x-y)² < c²`. -/
-private theorem close_to {x y c : Int} (h1 : x < y + c) (h2 : y < x + c) :
+theorem close_to {x y c : Int} (h1 : x < y + c) (h2 : y < x + c) :
     x^2 + y^2 < c^2 + 2*x*y := by
   have hd1 : 0 ≤ c - 1 - (x - y) := by linarith
   have hd2 : 0 ≤ c - 1 + (x - y) := by linarith
@@ -61,7 +59,7 @@ private theorem close_to {x y c : Int} (h1 : x < y + c) (h2 : y < x + c) :
 
 /-- If `a ≤ b ≤ c ≤ d`, then `b² + c² + 2ad ≤ a² + d² + 2bc`.
 Equivalent to `(d-a)² ≥ (c-b)²`. -/
-private theorem square_squeeze {a b c d : Int}
+theorem square_squeeze {a b c d : Int}
     (hab : a ≤ b) (hbc : b ≤ c) (hcd : c ≤ d) :
     b^2 + c^2 + 2*a*d ≤ a^2 + d^2 + 2*b*c := by
   have hd1 : 0 ≤ (d - a) - (c - b) := by linarith
@@ -71,7 +69,7 @@ private theorem square_squeeze {a b c d : Int}
 /-! ## Sub-lemmas about the setup -/
 
 /-- `M ≤ a`, given `4M⁴ ≤ n` and `n/(4M²) < (a+1)²`. -/
-private theorem M_le_a {n M a : Int}
+theorem M_le_a {n M a : Int}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
     (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
     M ≤ a := by
@@ -84,7 +82,7 @@ private theorem M_le_a {n M a : Int}
   nlinarith [h2, hM, ha, sq_nonneg (a + 1 - M), sq_nonneg (a + 1 + M)]
 
 /-- `n < 4M²(a+1)²`, restating `ha_hi`. -/
-private theorem n_upper {n M a : Int} (hM : 0 < M)
+theorem n_upper {n M a : Int} (hM : 0 < M)
     (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
     n < 4 * M^2 * (a + 1)^2 := by
   have hdenom : 0 < 4 * M^2 := by positivity
@@ -92,7 +90,7 @@ private theorem n_upper {n M a : Int} (hM : 0 < M)
   linarith
 
 /-- `((a-1)² + 1) · 4M² ≤ n`, restating `ha_lo`. -/
-private theorem n_lower {n M a : Int} (hM : 0 < M)
+theorem n_lower {n M a : Int} (hM : 0 < M)
     (ha_lo : (a - 1)^2 < n.fdiv (4 * M^2)) :
     ((a - 1)^2 + 1) * (4 * M^2) ≤ n := by
   have hdenom : 0 < 4 * M^2 := by positivity
@@ -103,13 +101,13 @@ private theorem n_lower {n M a : Int} (hM : 0 < M)
 
 /-- `M` is a *suitable scaler* for `n`: it is positive and `4M⁴ ≤ n`. That bound is the
 sense in which `M` is "small enough" — equivalently `M² ≤ ⌊n / 4M²⌋`. -/
-@[expose] def isSuitableScaler (n M : Int) : Prop := 0 < M ∧ 4 * M^4 ≤ n
+@[expose] public def isSuitableScaler (n M : Int) : Prop := 0 < M ∧ 4 * M^4 ≤ n
 
 /-! ## The key lemma -/
 
 /-- If `M` is a suitable scaler for `n` and `a` is a near square root of `⌊n / 4M²⌋`, then
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
-theorem key_isqrt_lemma {n M a : Int}
+public theorem key_isqrt_lemma {n M a : Int}
     (hM_scaler : isSuitableScaler n M)
     (h_near : isNearSquareRoot (n.fdiv (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n.fdiv (4 * M * a)) := by
@@ -172,5 +170,3 @@ theorem key_isqrt_lemma {n M a : Int}
     exact lt_of_mul_lt_mul_right h_squared (sq_nonneg _)
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
   exact ⟨by rw [← pow_two]; exact lower, by rw [← pow_two]; exact upper⟩
-
-end
