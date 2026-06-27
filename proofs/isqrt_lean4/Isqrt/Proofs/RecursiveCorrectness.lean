@@ -104,16 +104,13 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       have hc_def : c = (n.bitLength - 1).fdiv 2 := rfl
       obtain ⟨a, ha_eq, a_near⟩ :=
         nsqrtRecursive_correctness ⟨n, c, size_condition_initial hpos⟩
-      -- Re-state at clean `n` / `c` types so the `⟨n, c, _⟩` projections don't block `rw`.
-      have hsqrt : nsqrtRecursive n c = .ok a := ha_eq
-      have hnear : isNearSquareRoot n a := a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show 2 ≠ 0 by decide), ← hc_def]
-        rw [Except.ok_bind, hsqrt]
+        rw [Except.ok_bind, ha_eq]
         rfl
-      exact ⟨_, hred, hnear.toIntegerSquareRoot⟩
+      exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtRecursive n) (.valueError "isqrt() argument must be nonnegative")

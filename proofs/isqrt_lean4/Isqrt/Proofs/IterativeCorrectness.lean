@@ -6,6 +6,7 @@ import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.SizedProblem
 
 public section
 
@@ -66,13 +67,16 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
   rfl
 
 /-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
-near square root of `n`. A position-indexed `foldlM` invariant whose motive carries the
+near square root of `p.n`. A position-indexed `foldlM` invariant whose motive carries the
 running `a > 0`, the threaded shift `d = c >> s`, and the near-√ invariant
-`isNearSquareRoot (subproblem n c (c >> s)) a`. -/
-private theorem monadicLoop_near {n c : Int} (hc : 0 ≤ c) (hn : 0 < n)
-    (hsc : hasSizeCondition n c) :
-    ∃ y : MProd Int Int, (range c.bitLength).reverse.foldlM (stepM c n) ⟨1, 0⟩ = .ok y
-      ∧ 0 < y.fst ∧ isNearSquareRoot n y.fst := by
+`isNearSquareRoot (subproblem n c (c >> s)) a`. Takes the problem bundled as a `SizedProblem`,
+so `0 ≤ c` and `0 < n` come from the invariant. -/
+private theorem monadicLoop_near (p : SizedProblem) :
+    ∃ y : MProd Int Int, (range p.c.bitLength).reverse.foldlM (stepM p.c p.n) ⟨1, 0⟩ = .ok y
+      ∧ 0 < y.fst ∧ isNearSquareRoot p.n y.fst := by
+  obtain ⟨n, c, hsc⟩ := p
+  have hc : 0 ≤ c := hsc.c_nonneg
+  have hn : 0 < n := hsc.pos
   -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
   have hlist : (range c.bitLength).reverse
       = (List.range c.bitLength.toNat).reverse.map Int.ofNat := by
@@ -178,8 +182,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
-        monadicLoop_near (c := (n.bitLength - 1).fdiv 2) (isqrt_c_nonneg hn0) hpos
-          (size_condition_initial hpos)
+        monadicLoop_near ⟨n, (n.bitLength - 1).fdiv 2, size_condition_initial hpos⟩
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
