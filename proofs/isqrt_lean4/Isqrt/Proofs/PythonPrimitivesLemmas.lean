@@ -23,8 +23,6 @@ division by the scaler.
 
 module
 
-meta import Mathlib.Tactic.Positivity
-meta import Mathlib.Tactic.Ring
 public import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.FDivLemmas
 
@@ -57,7 +55,7 @@ theorem pyRshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
   unfold pyRshift; split
   · omega
   · show (Except.ok (n >>> k.toNat) : PyExcept Int) = .ok (Int.fdiv n (2 ^ k.toNat))
-    have h2 : (0 : Int) ≤ 2 ^ k.toNat := by positivity
+    have h2 : (0 : Int) ≤ 2 ^ k.toNat := Int.pow_nonneg (by omega)
     rw [Int.shiftRight_eq_div_pow, Int.fdiv_eq_ediv_of_nonneg n h2]
     norm_cast
 
@@ -99,7 +97,7 @@ through `n.natAbs` (and `Int.bitLength`'s `n = 0` guard agrees with `n.natAbs = 
 theorem Int.bitLength_def (n : Int) : n.bitLength = ↑(natBitLength n.natAbs) := by
   rw [← Int.bitLength_natCast]
   unfold Int.bitLength
-  simp [Int.natAbs_abs]
+  simp
 
 /-- `.toNat` of `Int.bitLength_natCast`: `((↑m : Int).bitLength).toNat = natBitLength m`. Not
 `@[simp]` (simp derives it from `Int.bitLength_def` + casts); kept as a named target for
@@ -136,27 +134,27 @@ theorem two_pow_pred_natBitLength_le {n : Nat} (hn : 0 < n) :
 /-- `natBitLength n ≤ k ↔ n < 2^k`. -/
 theorem natBitLength_le_iff {n k : Nat} : natBitLength n ≤ k ↔ n < 2 ^ k := by
   by_cases h : n = 0
-  · subst h; exact iff_of_true (Nat.zero_le k) (by positivity)
+  · subst h; exact iff_of_true (Nat.zero_le k) (by apply Nat.pow_pos; decide)
   · simp only [natBitLength, if_neg h, Nat.add_one_le_iff]; exact Nat.log2_lt h
 
 /-- `k < natBitLength n ↔ 2^k ≤ n`. Dual of `natBitLength_le_iff`. -/
 theorem lt_natBitLength_iff {n k : Nat} : k < natBitLength n ↔ 2 ^ k ≤ n := by
-  rw [← not_iff_not]
-  simp only [not_lt, not_le]
-  exact natBitLength_le_iff
+  have h := @natBitLength_le_iff n k
+  omega
 
 /-! ## Int.bitLength: Int-level properties -/
 
 theorem Int.bitLength_nonneg (n : Int) : 0 ≤ n.bitLength := by
-  rw [Int.bitLength_def]; positivity
+  rw [Int.bitLength_def]
+  exact Int.natCast_nonneg _
 
 theorem Int.bitLength_eq_zero_iff {n : Int} : n.bitLength = 0 ↔ n = 0 := by
   simp [natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
 
 theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
-  rcases eq_or_lt_of_le (Int.bitLength_nonneg n) with h | h
-  · exact absurd (Int.bitLength_eq_zero_iff.mp h.symm) hn
-  · exact h
+  have h0 := Int.bitLength_nonneg n
+  have hne : n.bitLength ≠ 0 := fun h => hn (Int.bitLength_eq_zero_iff.mp h)
+  omega
 
 /-! ## Int.bitLength: interaction with floor-halving
 
@@ -169,8 +167,8 @@ recursive isqrt translations. -/
 recursion's `c ↦ c // 2` step. No sign hypothesis on `c` is needed. -/
 theorem fdiv_two_pow_succ (c s : Int) (hs : 0 ≤ s) :
     Int.fdiv c (2 ^ (s + 1).toNat) = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
-  rw [show (s + 1).toNat = s.toNat + 1 from by omega, pow_succ,
-      ← Int.fdiv_fdiv_eq_fdiv_mul c (by positivity) (by norm_num)]
+  rw [show (s + 1).toNat = s.toNat + 1 from by omega, Int.pow_succ,
+      ← Int.fdiv_fdiv_eq_fdiv_mul c (Int.pow_nonneg (by omega)) (by omega)]
 
 /-- For `0 ≤ s < c.bit_length()`, the floor-halving `⌊c / 2^s⌋` is at least `1`:
 it still retains the leading bit. (Used to show the body's left-shift amount is
@@ -178,7 +176,7 @@ nonneg.) -/
 theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : Int}
     (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < c.bitLength) :
     1 ≤ Int.fdiv c (2 ^ s.toNat) := by
-  rw [Int.le_fdiv_iff_mul_le (by positivity), one_mul]
+  rw [Int.le_fdiv_iff_mul_le (Int.pow_pos (by omega)), Int.one_mul]
   obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
   rw [Int.bitLength_natCast] at hs_lt
   have hbl_pos : 0 < natBitLength cn := by omega
@@ -186,9 +184,9 @@ theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : Int}
   have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
   have hexp : s.toNat ≤ natBitLength cn - 1 := by omega
   calc (2 : Int) ^ s.toNat
-      ≤ (2 : Int) ^ (natBitLength cn - 1) := by
-        apply pow_le_pow_right₀ (by norm_num) hexp
-    _ = ((2 ^ (natBitLength cn - 1) : Nat) : Int) := by push_cast; rfl
+      = ((2 ^ s.toNat : Nat) : Int) := by push_cast; rfl
+    _ ≤ ((2 ^ (natBitLength cn - 1) : Nat) : Int) := by
+        exact_mod_cast Nat.pow_le_pow_right (by omega) hexp
     _ ≤ (↑cn : Int) := by exact_mod_cast hbound
 
 /-- Floor-halving `c` by `2 ^ c.bit_length()` yields `0` (since
@@ -219,9 +217,9 @@ theorem fdiv_two_pow_lshift_nonneg {c s d : Int} (hc : 0 ≤ c) (hs_nn : 0 ≤ s
   have hge1 : 1 ≤ Int.fdiv c (2 ^ s.toNat) :=
     one_le_fdiv_two_pow_of_lt_bitLength hc hs_nn hs_lt
   have hmul : Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 * 2 ≤ Int.fdiv c (2 ^ s.toNat) :=
-    Int.fdiv_mul_le_self (by norm_num)
+    Int.fdiv_mul_le_self (by omega)
   have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
-    Int.fdiv_nonneg (by omega) (by norm_num)
+    Int.fdiv_nonneg (by omega) (by omega)
   rw [hhalve]; omega
 
 /-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
@@ -235,7 +233,8 @@ scaler `M = 2^k` (`0 ≤ k`): `4·(2^k)² = 2^(2k+2)`. Lets both correctness pro
 `>> (2k+2)` as division by `4M²`. -/
 theorem four_mul_two_pow_sq {k : Int} (hk : 0 ≤ k) :
     (4 : Int) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
-  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]; ring
+  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]
+  rw [Int.pow_add, ←Int.pow_mul]; grind only
 
 /-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
 For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
@@ -252,8 +251,9 @@ theorem key_isqrt_body_eq {ν a M : Int} {k : Int} (hk : 0 ≤ k) (ha : 0 < a)
   subst hM
   have h_pow : (2 : Int) ^ (k + 2).toNat = 4 * 2 ^ k.toNat := by
     have hkt : (k + 2).toNat = k.toNat + 2 := by omega
-    rw [hkt, pow_add]; ring
-  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν (by positivity : (0 : Int) ≤ 4 * 2 ^ k.toNat) ha.le]
-  ring
+    rw [hkt, Int.pow_add]; grind only
+  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν
+      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega))) (Int.le_of_lt ha)]
+  grind only
 
 end

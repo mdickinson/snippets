@@ -31,6 +31,18 @@ theorem Int.fdiv_lt_iff_lt_mul {x y k : Int} (hk : 0 < k) :
   rw [Int.fdiv_eq_ediv_of_nonneg x (Int.le_of_lt hk)]
   exact Int.ediv_lt_iff_lt_mul hk
 
+/-! ## Nested floor division -/
+
+/-- Nested floor division collapses to division by the product:
+`⌊⌊a / b⌋ / c⌋ = ⌊a / (b * c)⌋` for nonneg divisors `b`, `c`. For nonneg `b`, `c`
+each `fdiv` agrees with `Int.ediv`, and core's `Int.ediv_ediv_of_nonneg` supplies the
+`ediv` identity. The recursion's `c ↦ c // 2` step and the iterative loop's
+scaler division both consume this. -/
+theorem Int.fdiv_fdiv_eq_fdiv_mul (a : Int) {b c : Int} (hb : 0 ≤ b) (hc : 0 ≤ c) :
+    (a.fdiv b).fdiv c = a.fdiv (b * c) := by
+  rw [Int.fdiv_eq_ediv_of_nonneg a hb, Int.fdiv_eq_ediv_of_nonneg _ hc,
+      Int.ediv_ediv_of_nonneg hb, Int.fdiv_eq_ediv_of_nonneg a (Int.mul_nonneg hb hc)]
+
 /-! ## Int ↔ Nat bridging -/
 
 /-- For nonneg `x` and nonneg `y`, `Int.fdiv` and `Nat` division agree
