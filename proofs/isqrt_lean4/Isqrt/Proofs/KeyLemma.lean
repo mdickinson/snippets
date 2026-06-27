@@ -60,9 +60,13 @@ Equivalent to `(d-a)² ≥ (c-b)²`. -/
 theorem square_squeeze {a b c d : Int}
     (hab : a ≤ b) (hbc : b ≤ c) (hcd : c ≤ d) :
     b^2 + c^2 + 2*a*d ≤ a^2 + d^2 + 2*b*c := by
+  -- `0 ≤ c - b ≤ d - a`: both `(d-a) ± (c-b)` are nonneg.
   have hd1 : 0 ≤ (d - a) - (c - b) := by omega
   have hd2 : 0 ≤ (d - a) + (c - b) := by omega
-  nlinarith [mul_nonneg hd1 hd2]
+  -- Their product is `(d-a)² - (c-b)²`, i.e. `(a² + d² + 2bc) - (b² + c² + 2ad)`.
+  have factor : ((d - a) - (c - b)) * ((d - a) + (c - b))
+      = a^2 + d^2 + 2*b*c - (b^2 + c^2 + 2*a*d) := by grind only
+  exact Int.sub_nonneg.mp (factor ▸ Int.mul_nonneg hd1 hd2)
 
 /-! ## Sub-lemmas about the setup -/
 
