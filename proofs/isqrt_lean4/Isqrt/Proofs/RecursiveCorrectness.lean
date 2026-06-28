@@ -79,8 +79,11 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
   · -- step: solve the descended problem, lift its near square root back.
     have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
-    exact ⟨p.newtonLift a, nsqrtRecursive_succ rfl hc_pos a_near.pos ha_eq,
-      isNearSquareRoot_newtonLift hc_pos a_near⟩
+    -- the subcall ran on `p.descend`'s shift-form value; read it as the key lemma's `⌊n / 4M²⌋`
+    rw [p.descend_n_eq hc_pos] at ha_eq
+    refine ⟨p.newtonLift a, ?_, isNearSquareRoot_newtonLift hc_pos a_near⟩
+    rw [p.newtonLift_eq a_near.pos]
+    exact nsqrtRecursive_succ rfl hc_pos a_near.pos ha_eq
 termination_by p.c
 decreasing_by simp only [SizedProblem.descend]; omega
 

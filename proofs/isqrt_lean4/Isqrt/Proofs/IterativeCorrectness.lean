@@ -77,15 +77,15 @@ private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM ↑p.c p.n) ⟨1, 0⟩ = .ok y
       ∧ 0 < y.fst ∧ isNearSquareRoot p.n y.fst := by
-  obtain ⟨n, c, hsc⟩ := p
-  have hn : 0 < n := hsc.pos
+  obtain ⟨n, c, hsize⟩ := p
+  have hn : 0 < n := hsize.pos
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
   have hcast : ∀ s : Nat, Int.fdiv (↑c : Int) (2 ^ s) = ↑(c / 2 ^ s) := fun s => by
     rw [show ((2 : Int) ^ s) = ((2 ^ s : Nat) : Int) from by push_cast; rfl,
         Int.fdiv_natCast_natCast]
   have hhi : ∀ s : Nat, c / 2 ^ s ≤ c := fun _ => Nat.div_le_self c _
   let chain : Nat → SizedProblem := fun s =>
-    (⟨n, c, hsc⟩ : SizedProblem).subAt (c / 2 ^ s) (hhi s)
+    (⟨n, c, hsize⟩ : SizedProblem).subAt (c / 2 ^ s) (hhi s)
   -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
   have hlist : (range (↑c : Int).bitLength).reverse
       = (List.range (↑c : Int).bitLength.toNat).reverse.map Int.ofNat := by
@@ -104,9 +104,10 @@ private theorem monadicLoop_near (p : SizedProblem) :
   -- near-√ `1`.
   have hseed : motive (↑c : Int).bitLength.toNat ⟨1, 0⟩ := by
     refine ⟨Int.one_pos, by rw [hz]; rfl, ?_⟩
-    show isNearSquareRoot (n.fdiv (4 ^ (c - c / 2 ^ (↑c : Int).bitLength.toNat))) 1
-    rw [hz]
-    exact isNearSquareRoot_one_of_hasSizeCondition (size_condition_at_depth (Nat.zero_le c) hsc)
+    show isNearSquareRoot (n >>> (2 * (c - c / 2 ^ (↑c : Int).bitLength.toNat))) 1
+    rw [hz, Int.shiftRight_eq_fdiv]
+    exact isNearSquareRoot_one_of_hasSizeCondition
+      (hasSizeCondition_of_isSizedAt (size_condition_at_depth (Nat.zero_le c) hsize))
   -- Step: one shared Newton lift (`isNearSquareRoot_newtonLift`, the same lemma the recursion uses),
   -- once `descend_subAt` identifies `chain (i+1)` with `descend (chain i)` and the `.ok`-ness of
   -- `stepM` and the Python-shift → subproblem encoding are discharged.
@@ -131,7 +132,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
     -- the IH gives a near-√ of `chain (i+1) = descend (chain i)` (`descend_subAt`, child `⌊(c≫i)/2⌋`)
     have h_child : isNearSquareRoot ((chain i).descend hdN_pos).n x.fst := by
       rw [SizedProblem.descend_subAt]
-      show isNearSquareRoot (n.fdiv (4 ^ (c - c / 2 ^ i / 2))) x.fst
+      show isNearSquareRoot (n >>> (2 * (c - c / 2 ^ i / 2))) x.fst
       rw [← heN_halve]
       exact hx_near
     -- assemble: `stepM` succeeds, and its new state is a near-√ at depth `c >> i`
@@ -152,7 +153,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
       have he2 : (2 * (↑c : Int) - ↑(c / 2 ^ (i + 1)) - ↑(c / 2 ^ i) + 1).toNat
           = 2 * c - c / 2 ^ (i + 1) - c / 2 ^ i + 1 := by omega
       rw [he1, he2,
-        SizedProblem.subAt_body_eq (p := ⟨n, c, hsc⟩) (hhi i) heN_halve hdN_pos ha_pos]
+        SizedProblem.subAt_body_eq (p := ⟨n, c, hsize⟩) (hhi i) heN_halve hdN_pos]
       exact isNearSquareRoot_newtonLift hdN_pos h_child
   obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM (↑c) n x (Int.ofNat s))
@@ -161,8 +162,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
   refine ⟨y, hy_eq, hy_pos, ?_⟩
   have hy_near' : isNearSquareRoot (chain 0).n y.fst := hy_near
   have hchain0 : (chain 0).n = n := by
-    show n.fdiv (4 ^ (c - c / 2 ^ 0)) = n
-    rw [Nat.pow_zero, Nat.div_one, Nat.sub_self, Int.pow_zero, Int.fdiv_one]
+    show n >>> (2 * (c - c / 2 ^ 0)) = n
+    rw [Nat.pow_zero, Nat.div_one, Nat.sub_self, Nat.mul_zero, Int.shiftRight_eq_fdiv,
+        Int.pow_zero, Int.fdiv_one]
   rwa [hchain0] at hy_near'
 
 /-- Correctness of the monadic integer square root `isqrtIterative`.

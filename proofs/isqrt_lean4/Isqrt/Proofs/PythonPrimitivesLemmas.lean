@@ -141,6 +141,32 @@ theorem lt_natBitLength_iff {n k : Nat} : k < natBitLength n ↔ 2 ^ k ≤ n := 
   have h := @natBitLength_le_iff n k
   omega
 
+/-- `natBitLength n = n.log2 + 1` for `0 < n`, so `natBitLength n - 1 = n.log2`. The
+off-by-one between the algorithm's `bit_length` and the proof's `Nat.log2`: the size
+condition's seed `(bitLength - 1) / 2` is `log2 / 2`. -/
+theorem natBitLength_sub_one {n : Nat} (hn : 0 < n) : natBitLength n - 1 = n.log2 := by
+  simp only [natBitLength, if_neg (Nat.ne_of_gt hn), Nat.add_sub_cancel]
+
+/-! ## Nat.log2: division by a power of two -/
+
+/-- Right-shifting drops the low `k` bits: `(n / 2^k).log2 = n.log2 - k` for `0 < n` and
+`k ≤ n.log2`. The bit-length core of the size condition's descent — dividing by `2^k`
+lowers the bit length by exactly `k` while `2^k` still fits. -/
+theorem log2_div_two_pow {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
+    (n / 2 ^ k).log2 = n.log2 - k := by
+  have hnne : n ≠ 0 := by omega
+  have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
+  have hlo : 2 ^ k ≤ n :=
+    Nat.le_trans (Nat.pow_le_pow_right (by decide) hk) (Nat.log2_self_le hnne)
+  have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
+  rw [Nat.log2_eq_iff (by omega)]
+  refine ⟨?_, ?_⟩
+  · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
+    exact Nat.log2_self_le hnne
+  · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
+        show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
+    exact Nat.lt_log2_self
+
 /-! ## Int.bitLength: Int-level properties -/
 
 theorem Int.bitLength_nonneg (n : Int) : 0 ≤ n.bitLength := by

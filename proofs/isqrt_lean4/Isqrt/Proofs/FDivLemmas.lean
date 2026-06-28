@@ -43,6 +43,17 @@ theorem Int.fdiv_fdiv_eq_fdiv_mul (a : Int) {b c : Int} (hb : 0 ≤ b) (hc : 0 �
   rw [Int.fdiv_eq_ediv_of_nonneg a hb, Int.fdiv_eq_ediv_of_nonneg _ hc,
       Int.ediv_ediv_of_nonneg hb, Int.fdiv_eq_ediv_of_nonneg a (Int.mul_nonneg hb hc)]
 
+/-! ## Shift ↔ floor division -/
+
+/-- The arithmetic right shift is floor division by a power of two: `n >>> k = ⌊n / 2^k⌋`.
+Core's `Int.shiftRight_eq_div_pow` gives `n / 2^k` (Euclidean division), which is `Int.fdiv` for
+the nonneg divisor `2^k`. The bridge that lets `SizedProblem`'s shift-form operations meet the
+`Int.fdiv` size-condition and key-lemma theory below them. -/
+theorem Int.shiftRight_eq_fdiv (n : Int) (k : Nat) : n >>> k = n.fdiv (2 ^ k) := by
+  have h2 : (0 : Int) ≤ 2 ^ k := Int.pow_nonneg (by omega)
+  rw [Int.shiftRight_eq_div_pow, Int.fdiv_eq_ediv_of_nonneg n h2]
+  norm_cast
+
 /-! ## Int ↔ Nat bridging -/
 
 /-- For nonneg `x` and nonneg `y`, `Int.fdiv` and `Nat` division agree
