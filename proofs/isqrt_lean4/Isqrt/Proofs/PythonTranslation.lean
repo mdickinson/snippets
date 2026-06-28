@@ -111,7 +111,7 @@ theorem natBitLength_pos_iff {n : Nat} : 0 < natBitLength n ↔ 0 < n := by
   rw [Nat.pos_iff_ne_zero, Nat.pos_iff_ne_zero]
   exact not_congr natBitLength_eq_zero_iff
 
-/-! ## natBitLength: power-of-two bounds -/
+/-! ## natBitLength: upper bound -/
 
 /-- Upper bound: `n < 2 ^ (natBitLength n)` for all `n`. -/
 theorem lt_two_pow_natBitLength (n : Nat) : n < 2 ^ natBitLength n := by
@@ -119,24 +119,7 @@ theorem lt_two_pow_natBitLength (n : Nat) : n < 2 ^ natBitLength n := by
   · subst h; simp [natBitLength]
   · simp only [natBitLength, if_neg h]; exact Nat.lt_log2_self
 
-/-- Lower bound: `2 ^ (natBitLength n - 1) ≤ n` when `n > 0`. -/
-theorem two_pow_pred_natBitLength_le {n : Nat} (hn : 0 < n) :
-    2 ^ (natBitLength n - 1) ≤ n := by
-  simp only [natBitLength, if_neg (by omega : ¬ n = 0), Nat.add_sub_cancel]
-  exact Nat.log2_self_le (by omega)
-
-/-! ## natBitLength: iff characterizations -/
-
-/-- `natBitLength n ≤ k ↔ n < 2^k`. -/
-theorem natBitLength_le_iff {n k : Nat} : natBitLength n ≤ k ↔ n < 2 ^ k := by
-  by_cases h : n = 0
-  · subst h; exact iff_of_true (Nat.zero_le k) (by apply Nat.pow_pos; decide)
-  · simp only [natBitLength, if_neg h, Nat.add_one_le_iff]; exact Nat.log2_lt h
-
-/-- `k < natBitLength n ↔ 2^k ≤ n`. Dual of `natBitLength_le_iff`. -/
-theorem lt_natBitLength_iff {n k : Nat} : k < natBitLength n ↔ 2 ^ k ≤ n := by
-  have h := @natBitLength_le_iff n k
-  omega
+/-! ## natBitLength: relation to Nat.log2 -/
 
 /-- `natBitLength n = n.log2 + 1` for `0 < n`, so `natBitLength n - 1 = n.log2`. The
 off-by-one between the algorithm's `bit_length` and the proof's `Nat.log2`: the size
