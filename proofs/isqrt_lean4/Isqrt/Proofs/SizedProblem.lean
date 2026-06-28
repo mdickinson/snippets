@@ -101,7 +101,7 @@ level field is `rfl`. This is what makes one loop iteration the reverse of a sin
 the loop and the recursion walk the same chain. -/
 theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0 < d) :
     (p.subAt d hhi).descend hd_pos
-      = p.subAt (d / 2) (Nat.le_trans (Nat.div_le_self d 2) hhi) := by
+      = p.subAt (d >>> 1) (Nat.le_trans (Nat.shiftRight_le d 1) hhi) := by
   apply SizedProblem.ext
   · show (p.n >>> (2 * (p.c - d))) >>> (2 * ((d - 1) / 2) + 2) = p.n >>> (2 * (p.c - d / 2))
     rw [← Int.shiftRight_add,
@@ -115,9 +115,11 @@ composing the lift's two right-shifts (`Int.shiftRight_add`), the flat shift `2c
 split shift `2(c-d) + (⌊(d-1)/2⌋+2)` agree by `omega`, as do the left-shift amounts `d-e-1` and
 `⌊(d-1)/2⌋`. -/
 theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
-    (he : e = d / 2) (hd_pos : 0 < d) :
+    (he : e = d >>> 1) (hd_pos : 0 < d) :
     a <<< (d - e - 1) + Int.fdiv (p.n >>> (2 * p.c - e - d + 1)) a
       = (p.subAt d hhi).newtonLift a := by
+  -- `d >>> 1` is `d / 2`; restate the child shift so the arithmetic below reads the division.
+  have he : e = d / 2 := he
   show a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)).fdiv a
       = a <<< ((d - 1) / 2) + ((p.n >>> (2 * (p.c - d))) >>> ((d - 1) / 2 + 2)).fdiv a
   rw [← Int.shiftRight_add,
