@@ -58,14 +58,11 @@ theorem Int.shiftRight_eq_fdiv (n : Int) (k : Nat) : n >>> k = n.fdiv (2 ^ k) :=
 
 /-- A nonneg integer is at most its left shift: `n ≤ n <<< s`. The left-shift companion to core's
 `Int.le_shiftRight_of_nonneg` (`0 ≤ n → 0 ≤ n >>> s`); core has the right-shift facts but not this
-one. Lets a positivity argument pass through a left shift without unfolding it to `· * 2^·`. -/
+one. For nonneg `n` it reduces to the `Nat` fact `Nat.le_shiftLeft` by pushing the cast through the
+shift (`natCast_shiftLeft`). -/
 theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <<< s := by
-  rw [Int.shiftLeft_eq]
-  have h2 : (1 : Int) ≤ 2 ^ s := by
-    have hp : (0 : Int) < 2 ^ s := Int.pow_pos (by decide)
-    omega
-  calc n = n * 1 := (Int.mul_one n).symm
-    _ ≤ n * 2 ^ s := Int.mul_le_mul_of_nonneg_left h2 h
+  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h
+  exact_mod_cast Nat.le_shiftLeft
 
 /-! ## Int ↔ Nat bridging -/
 
