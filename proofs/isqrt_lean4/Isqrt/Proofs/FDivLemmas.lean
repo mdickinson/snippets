@@ -1,10 +1,11 @@
 /-
-Lemmas about `Int.fdiv` (floor division) needed for the isqrt proof.
+Supporting lemmas for the isqrt proof that are *not* about our Python primitives — the kind of
+general `Int` / `Nat` facts Mathlib would supply, reproduced here for the Mathlib-free build.
 
-Many of these are thin wrappers around existing `Int.ediv` lemmas,
-using `Int.fdiv_eq_ediv_of_nonneg` to convert when the divisor is
-nonneg. We state them for `Int.fdiv` so that proofs downstream can
-use them directly after unfolding `pyFloordiv` / `pyRshift`.
+Most concern `Int.fdiv` (floor division): many are thin wrappers around existing `Int.ediv`
+lemmas, using `Int.fdiv_eq_ediv_of_nonneg` to convert when the divisor is nonneg, stated for
+`Int.fdiv` so downstream proofs use them directly after unfolding `pyFloordiv` / `pyRshift`. The
+file also collects the stray `Nat` facts (e.g. `Nat.log2`) the proofs need but core does not give.
 -/
 
 module
@@ -93,5 +94,25 @@ theorem Int.toNat_fdiv_pred_two {c : Nat} (hc : 0 < c) :
       show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
       Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
   simp
+
+/-! ## Nat.log2: division by a power of two -/
+
+/-- Dividing by `2^k` drops `k` from the base-2 log: `(n / 2^k).log2 = n.log2 - k` for `0 < n`
+and `k ≤ n.log2`. The arithmetic core of the size condition's descent (`size_condition_at_depth`):
+dividing by `2^k` lowers `n`'s bit length by exactly `k` while `2^k` still fits. -/
+theorem log2_div_two_pow {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
+    (n / 2 ^ k).log2 = n.log2 - k := by
+  have hnne : n ≠ 0 := by omega
+  have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
+  have hlo : 2 ^ k ≤ n :=
+    Nat.le_trans (Nat.pow_le_pow_right (by decide) hk) (Nat.log2_self_le hnne)
+  have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
+  rw [Nat.log2_eq_iff (by omega)]
+  refine ⟨?_, ?_⟩
+  · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
+    exact Nat.log2_self_le hnne
+  · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
+        show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
+    exact Nat.lt_log2_self
 
 end

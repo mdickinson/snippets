@@ -183,10 +183,12 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
-        monadicLoop_near ⟨n, ((n.bitLength - 1).fdiv 2).toNat, size_condition_initial hpos⟩
+        monadicLoop_near
+          ⟨n, ((n.bitLength - 1).fdiv 2).toNat,
+            (Int.toNat_fdiv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       rw [show ((↑(((n.bitLength - 1).fdiv 2).toNat)) : Int) = (n.bitLength - 1).fdiv 2
-            from Int.toNat_of_nonneg (isqrt_c_nonneg hn0)] at hy_eq
+            from Int.toNat_of_nonneg (Int.fdiv_bitLength_sub_one_nonneg hn0)] at hy_eq
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,

@@ -8,48 +8,28 @@ lemma instead wants the power bound `hasSizeCondition n c` (`4^c ≤ n < 4^(c+1)
 the shift/bit-length language its operations speak while the key-lemma side reads the power bound.
 
 These lemmas establish:
-- the seed `c = ⌊(n.bitLength - 1)/2⌋` satisfies `isSizedAt n c` (`size_condition_initial`),
+- `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
+  the algorithm's seed `(n.bit_length() - 1) // 2` equals that level via the bridge
+  `Int.toNat_fdiv_bitLength_sub_one` in `PythonPrimitivesLemmas`,
 - `isSizedAt` descends: dividing by the depth-`d` shift `2^(2(c-d))` lowers the level to `d`
   (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
   (`size_condition_step`),
 - `isSizedAt n c → hasSizeCondition n c` (`hasSizeCondition_of_isSizedAt`), and from the power
   bound `4·M⁴ ≤ n` for `M = 2^((c-1)/2)` (`M_bound_from_size` → `isSuitableScaler_of_hasSizeCondition`).
 
-The bit-length core (`log2_div_two_pow`, `natBitLength`) lives in `PythonPrimitivesLemmas`; this
-file adds the Int-level `isSizedAt` theory and the bridge to the power bound.
+The `Nat.log2` / `Int.fdiv` support this file leans on (`log2_div_two_pow`,
+`Int.fdiv_natCast_natCast`) lives in `FDivLemmas`; this file adds the Int-level `isSizedAt`
+theory and the bridge to the power bound.
 -/
 
 module
 
-public import Isqrt.Definitions.PythonPrimitives
 public import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.FDivLemmas
 
 public section
 
 /-! ## Nat-level power bounds -/
-
-/-- Initial power bound: for `0 < n`, the choice `c = (natBitLength n - 1) / 2` satisfies
-`4^c ≤ n < 4^(c+1)`. The engine behind `hasSizeCondition_of_isSizedAt`. -/
-private theorem size_condition_initial_nat {n : Nat} (hn : 0 < n) :
-    4 ^ ((natBitLength n - 1) / 2) ≤ n ∧
-    n < 4 ^ ((natBitLength n - 1) / 2 + 1) := by
-  -- Below, b = natBitLength n and c = ⌊(b-1)/2⌋ (spelled out in full).
-  have hb_pos : 0 < natBitLength n := natBitLength_pos_iff.mpr hn
-  refine ⟨?_, ?_⟩
-  · -- 4^c = 2^(2c) ≤ 2^(b-1) ≤ n
-    calc 4 ^ ((natBitLength n - 1) / 2)
-        = 2 ^ (2 * ((natBitLength n - 1) / 2)) := by
-          rw [show (4 : Nat) = 2^2 from rfl, ← Nat.pow_mul]
-      _ ≤ 2 ^ (natBitLength n - 1) := Nat.pow_le_pow_right (by omega) (by omega)
-      _ ≤ n := two_pow_pred_natBitLength_le hn
-  · -- n < 2^b ≤ 2^(2(c+1)) = 4^(c+1)
-    calc n
-        < 2 ^ natBitLength n := lt_two_pow_natBitLength n
-      _ ≤ 2 ^ (2 * ((natBitLength n - 1) / 2 + 1)) := Nat.pow_le_pow_right (by omega) (by omega)
-      _ = 4 ^ ((natBitLength n - 1) / 2 + 1) := by
-          rw [show (4 : Nat) = 2^2 from rfl, ← Nat.pow_mul]
 
 /-- `4·M⁴ ≤ n` from the power bound's lower bound, where `M = 2^((c-1)/2)`. -/
 private theorem M_bound_from_size_nat {c n : Nat} (hc : 0 < c) (h_lo : 4 ^ c ≤ n) :
@@ -105,42 +85,29 @@ theorem isSizedAt.pos {n : Int} {c : Nat} (h : isSizedAt n c) : 0 < n := h.1
 
 /-- The bridge from the bit-length size condition to the power bound: `isSizedAt n c` gives
 `4^c ≤ n < 4^(c+1)`. The single place the two forms cross — `SizedProblem.hsc` is this applied to
-the structure's `hsize` field. Reduces to `size_condition_initial_nat` after rewriting `c` back to
-`(natBitLength n.toNat - 1)/2` via the `bitLength = log2 + 1` off-by-one (`natBitLength_sub_one`). -/
+the structure's `hsize` field. With `c = ⌊log₂ n / 2⌋`, the two bounds `4^c ≤ n` and `n < 4^(c+1)`
+are `2^(2c) ≤ n` and `n < 2^(2(c+1))`, which `Nat.le_log2` / `Nat.log2_lt` turn into facts about
+`log₂ n` that `omega` discharges. -/
 theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
     hasSizeCondition n c := by
   obtain ⟨hpos, hc⟩ := h
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
-  have hm_pos : 0 < m := by exact_mod_cast hpos
   rw [Int.toNat_natCast] at hc
-  rw [hasSizeCondition_natCast_iff, hc, ← natBitLength_sub_one hm_pos]
-  exact size_condition_initial_nat hm_pos
+  rw [hasSizeCondition_natCast_iff, show 4 = 2 ^ 2 from rfl]
+  simp only [← Nat.pow_mul]
+  exact ⟨by rw [← Nat.le_log2 (by omega)]; omega, by rw [← Nat.log2_lt (by omega)]; omega⟩
 
-/-! ## Initial size condition and recursion depth -/
+/-! ## Initial size condition -/
 
-/-- The recursion depth `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n` — the
-seed `c` both isqrt formulations hand to the recursion, paired at the same `c` with
-`size_condition_initial` just below. Stated in pure `Int.fdiv` form (the `Except` `//`,
-`pyFloordiv`, reduces to it on its `.ok` branch), so both formulations share it. -/
-theorem isqrt_c_nonneg {n : Int} (hn : n ≠ 0) :
-    0 ≤ Int.fdiv (n.bitLength - 1) 2 :=
-  Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
+/-- Initial size condition: `n`'s own level `⌊log₂ n / 2⌋` satisfies `isSizedAt n` by definition
+(`isSizedAt` carries exactly this level, so the proof is `rfl`). The algorithm computes this level
+as `(n.bit_length() - 1) // 2`; that seed is reconciled with the level by the bridge
+`Int.toNat_fdiv_bitLength_sub_one` (in `PythonPrimitivesLemmas`), and the correctness proofs
+combine the two. -/
+theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log2 / 2) :=
+  ⟨hn, rfl⟩
 
-/-- Initial size condition for the Nat seed `c = ⌊(n.bitLength - 1)/2⌋.toNat`: this `c` is exactly
-`n`'s level `⌊log₂ n / 2⌋`, so `isSizedAt` holds almost by definition — the lone step is the
-`bitLength = log2 + 1` off-by-one (`natBitLength_sub_one`). The consumers reconcile their `Int` seed
-with `↑c` via `isqrt_c_nonneg`. -/
-theorem size_condition_initial {n : Int} (hn : 0 < n) :
-    isSizedAt n (Int.fdiv (n.bitLength - 1) 2).toNat := by
-  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hn)
-  have hm_pos : 0 < m := by exact_mod_cast hn
-  have hbl : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
-  refine ⟨hn, ?_⟩
-  rw [Int.toNat_natCast, ← natBitLength_sub_one hm_pos, Int.bitLength_natCast,
-      show ((natBitLength m : Nat) : Int) - 1 = ((natBitLength m - 1 : Nat) : Int) from by omega,
-      show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
-      Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-  simp only [Int.toNat_natCast]
+
 
 /-! ## Descent of the size condition -/
 

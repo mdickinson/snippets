@@ -144,26 +144,6 @@ condition's seed `(bitLength - 1) / 2` is `log2 / 2`. -/
 theorem natBitLength_sub_one {n : Nat} (hn : 0 < n) : natBitLength n - 1 = n.log2 := by
   simp only [natBitLength, if_neg (Nat.ne_of_gt hn), Nat.add_sub_cancel]
 
-/-! ## Nat.log2: division by a power of two -/
-
-/-- Right-shifting drops the low `k` bits: `(n / 2^k).log2 = n.log2 - k` for `0 < n` and
-`k ≤ n.log2`. The bit-length core of the size condition's descent — dividing by `2^k`
-lowers the bit length by exactly `k` while `2^k` still fits. -/
-theorem log2_div_two_pow {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
-    (n / 2 ^ k).log2 = n.log2 - k := by
-  have hnne : n ≠ 0 := by omega
-  have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
-  have hlo : 2 ^ k ≤ n :=
-    Nat.le_trans (Nat.pow_le_pow_right (by decide) hk) (Nat.log2_self_le hnne)
-  have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
-  rw [Nat.log2_eq_iff (by omega)]
-  refine ⟨?_, ?_⟩
-  · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
-    exact Nat.log2_self_le hnne
-  · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
-        show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
-    exact Nat.lt_log2_self
-
 /-! ## Int.bitLength: Int-level properties -/
 
 theorem Int.bitLength_nonneg (n : Int) : 0 ≤ n.bitLength := by
@@ -177,6 +157,28 @@ theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
   have h0 := Int.bitLength_nonneg n
   have hne : n.bitLength ≠ 0 := fun h => hn (Int.bitLength_eq_zero_iff.mp h)
   omega
+
+/-- `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n`: `bit_length()` is positive
+(`Int.bitLength_pos`), so `bit_length() - 1 ≥ 0` and the floor-division stays nonneg. Lets a
+consumer round-trip the value's `.toNat` back through `↑` (`Int.toNat_of_nonneg`). -/
+theorem Int.fdiv_bitLength_sub_one_nonneg {n : Int} (hn : n ≠ 0) :
+    0 ≤ Int.fdiv (n.bitLength - 1) 2 :=
+  Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
+
+/-- The algorithm's bit-length seed `⌊(n.bit_length() - 1)/2⌋` equals `n`'s level `⌊log₂ n / 2⌋`.
+The `bitLength = log2 + 1` off-by-one (`natBitLength_sub_one`) wrapped in the Int↔Nat casts: the
+seam where the Python `(n.bit_length() - 1) // 2` seed meets the size condition's level, so the
+correctness proofs can hand the size condition the algorithm's actual seed. -/
+theorem Int.toNat_fdiv_bitLength_sub_one {n : Int} (hn : 0 < n) :
+    (Int.fdiv (n.bitLength - 1) 2).toNat = n.toNat.log2 / 2 := by
+  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hn)
+  have hm_pos : 0 < m := by exact_mod_cast hn
+  have hbl : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
+  rw [Int.toNat_natCast, ← natBitLength_sub_one hm_pos, Int.bitLength_natCast,
+      show ((natBitLength m : Nat) : Int) - 1 = ((natBitLength m - 1 : Nat) : Int) from by omega,
+      show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
+      Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
+  simp only [Int.toNat_natCast]
 
 /-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
 
