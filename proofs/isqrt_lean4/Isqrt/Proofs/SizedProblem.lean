@@ -21,13 +21,11 @@ the bit-level identities (`four_mul_two_pow_sq`, `key_isqrt_body_eq`) from `Pyth
 
 module
 
-meta import Mathlib.Tactic.Ring
-meta import Mathlib.Tactic.Positivity
-meta import Mathlib.Tactic.Linarith
 public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.FDivLemmas
 
 public section
 
@@ -90,11 +88,12 @@ theorem descend_subAt {p : SizedProblem} {d : Int} (hlo : 0 ≤ d) (hhi : d ≤ 
           Int.fdiv_eq_ediv_of_nonneg d (by decide : (0 : Int) ≤ 2)]
       omega
     have hk_nn : (0 : Int) ≤ (d - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by decide)
-    have hd2_nn : (0 : Int) ≤ d.fdiv 2 := Int.fdiv_nonneg hd_pos.le (by decide)
-    rw [Int.fdiv_fdiv_eq_fdiv_mul p.n (by positivity) (by positivity), four_mul_two_pow_sq hk_nn]
+    have hd2_nn : (0 : Int) ≤ d.fdiv 2 := Int.fdiv_nonneg (Int.le_of_lt hd_pos) (by decide)
+    rw [four_mul_two_pow_sq hk_nn,
+        Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega))]
     congr 1
     rw [show (4 : Int) = 2 ^ 2 by decide]
-    simp only [← pow_mul, ← pow_add]
+    simp only [← Int.pow_mul, ← Int.pow_add]
     congr 1
     omega
   · rfl
@@ -103,7 +102,7 @@ theorem descend_subAt {p : SizedProblem} {d : Int} (hlo : 0 ≤ d) (hhi : d ≤ 
 theorem subAt_self (p : SizedProblem) (h0 : 0 ≤ p.c) : p.subAt p.c h0 (Int.le_refl _) = p := by
   apply SizedProblem.ext
   · show p.n.fdiv (4 ^ (p.c - p.c).toNat) = p.n
-    simp only [sub_self, Int.toNat_zero, pow_zero, Int.fdiv_one]
+    simp only [Int.sub_self, Int.toNat_zero, Int.pow_zero, Int.fdiv_one]
   · rfl
 
 /-- The iterative loop body, decoded, is the Newton lift of the depth-`d` subproblem `p.subAt d`.
@@ -128,10 +127,10 @@ theorem subAt_body_eq {p : SizedProblem} {d e a : Int} (hlo : 0 ≤ d) (hhi : d 
   -- split the flat shift into the subproblem's `4^(c-d)` and the key lemma's `2^(k+2)`
   have hbridge : Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1).toNat)
       = (p.n.fdiv (4 ^ (p.c - d).toNat)).fdiv (2 ^ ((d - 1).fdiv 2 + 2).toNat) := by
-    rw [Int.fdiv_fdiv_eq_fdiv_mul p.n (by positivity) (by positivity)]
+    rw [Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega))]
     congr 1
     rw [show (4 : Int) = 2 ^ 2 by decide]
-    simp only [← pow_mul, ← pow_add]
+    simp only [← Int.pow_mul, ← Int.pow_add]
     congr 1
     omega
   rw [show (d - e - 1).toNat = ((d - 1).fdiv 2).toNat from by rw [hk_eq], hbridge]
