@@ -11,7 +11,7 @@ These lemmas establish:
 - `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
   the algorithm's seed `(n.bit_length() - 1) // 2` equals that level via the bridge
   `Int.toNat_fdiv_bitLength_sub_one` in `PythonTranslation`,
-- `isSizedAt` descends: dividing by the depth-`d` shift `2^(2(c-d))` lowers the level to `d`
+- `isSizedAt` descends: right-shifting by `2(c-d)` lowers the level to `d`
   (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
   (`size_condition_step`),
 - `isSizedAt n c → hasSizeCondition n c` (`hasSizeCondition_of_isSizedAt`), and from the power
@@ -111,12 +111,13 @@ theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log
 
 /-! ## Descent of the size condition -/
 
-/-- Size condition at any depth `d ≤ c`: given `isSizedAt n c`, dividing by the depth-`d` shift
-`2^(2(c-d))` lowers the level to `d`. The bit-length core: dividing by `2^(2(c-d))` drops
-`2(c-d)` bits, so `log₂` falls by `2(c-d)` and the level `⌊log₂/2⌋` falls by `c-d` to `d`
-(`log2_div_two_pow`). The construction proof behind `SizedProblem.subAt`. -/
+/-- Size condition at any depth `d ≤ c`: given `isSizedAt n c`, right-shifting by `2(c-d)` lowers
+the level to `d`. The bit-length core: shifting right by `2(c-d)` drops `2(c-d)` bits, so `log₂`
+falls by `2(c-d)` and the level `⌊log₂/2⌋` falls by `c-d` to `d` (`log2_div_two_pow`). The
+construction proof behind `SizedProblem.subAt`. -/
 theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isSizedAt n c) :
-    isSizedAt (n.fdiv (2 ^ (2 * (c - d)))) d := by
+    isSizedAt (n >>> (2 * (c - d))) d := by
+  rw [Int.shiftRight_eq_fdiv]
   obtain ⟨hpos, hc⟩ := h
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
   have hm_pos : 0 < m := by exact_mod_cast hpos
@@ -132,12 +133,12 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   · rw [hval]; exact_mod_cast Nat.div_pos h2k_le (Nat.pow_pos (by decide))
   · rw [hval, Int.toNat_natCast, log2_div_two_pow hm_pos hk_le]; omega
 
-/-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: dividing by the step's shift
-`2^(2⌊(c-1)/2⌋+2)` (the `4M²` denominator for `M = 2^⌊(c-1)/2⌋`) lands the level at `c/2`. The
-`d = c/2` case of `size_condition_at_depth`, since the step shift equals the depth-`c/2` shift
-`2^(2(c - c/2))` — an identity `omega` discharges. -/
+/-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2`
+— division by the step's `4M²` for `M = 2^⌊(c-1)/2⌋` — lands the level at `c/2`. The `d = c/2`
+case of `size_condition_at_depth`, since the step shift `2⌊(c-1)/2⌋+2` equals the depth-`c/2`
+shift `2(c - c/2)` — an identity `omega` discharges. -/
 theorem size_condition_step {n : Int} {c : Nat} (hc : 0 < c) (h : isSizedAt n c) :
-    isSizedAt (n.fdiv (2 ^ (2 * ((c - 1) / 2) + 2))) (c / 2) := by
+    isSizedAt (n >>> (2 * ((c - 1) / 2) + 2)) (c / 2) := by
   rw [show 2 * ((c - 1) / 2) + 2 = 2 * (c - c / 2) from by omega]
   exact size_condition_at_depth (Nat.div_le_self c 2) h
 

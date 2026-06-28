@@ -68,8 +68,7 @@ the child (`size_condition_step`). The right-shift by `2·shift+2` is the algori
 the step's `4M²`; `hc : 0 < p.c` feeds only the child's invariant, so the value field reduces
 without it. -/
 @[expose] def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
-  ⟨p.n >>> (2 * p.shifter + 2), p.c >>> 1, by
-    rw [Int.shiftRight_eq_fdiv]; exact size_condition_step hc p.hsize⟩
+  ⟨p.n >>> (2 * p.shifter + 2), p.c >>> 1, size_condition_step hc p.hsize⟩
 
 /-- The Newton combine: lift a value `a` for the descended problem back to one for `p`, as
 `(a << shift) + ⌊(n >> shift+2) / a⌋` — a left shift of `a` (the `Ma` term) plus the divided-down
@@ -85,8 +84,7 @@ the depth-`d` shift) paired with level `d` and the inherited size invariant
 is phrased in — the loop walks the chain `p.subAt 0` (the base) up to `p.subAt p.c = p` (the whole
 problem). -/
 @[expose] def subAt (p : SizedProblem) (d : Nat) (hhi : d ≤ p.c) : SizedProblem :=
-  ⟨p.n >>> (2 * (p.c - d)), d, by
-    rw [Int.shiftRight_eq_fdiv]; exact size_condition_at_depth hhi p.hsize⟩
+  ⟨p.n >>> (2 * (p.c - d)), d, size_condition_at_depth hhi p.hsize⟩
 
 /-- Descending the depth-`d` subproblem gives the depth-`⌊d/2⌋` subproblem:
 `descend (p.subAt d) = p.subAt ⌊d/2⌋`. The value field is the shift identity that composing the
