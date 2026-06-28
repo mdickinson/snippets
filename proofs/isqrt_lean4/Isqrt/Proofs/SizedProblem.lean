@@ -108,13 +108,6 @@ theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0
         show 2 * (p.c - d) + (2 * ((d - 1) / 2) + 2) = 2 * (p.c - d / 2) from by omega]
   · rfl
 
-/-- At full depth the subproblem is the whole problem: `p.subAt p.c = p`. -/
-theorem subAt_self (p : SizedProblem) : p.subAt p.c (Nat.le_refl _) = p := by
-  apply SizedProblem.ext
-  · show p.n >>> (2 * (p.c - p.c)) = p.n
-    rw [Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
-  · rfl
-
 /-- The iterative loop body, decoded, is the Newton lift of the depth-`d` subproblem `p.subAt d`.
 With the threaded child shift `e = ⌊d/2⌋` (`0 < d`), the body value
 `(a << d-e-1) + ⌊(p.n >> 2c-e-d+1) / a⌋` equals `(p.subAt d).newtonLift a`. Both sides are shifts:
@@ -142,8 +135,8 @@ the right-shift by `2·shift+2` is division by `2^(2·shift+2) = 4M²` (`four_mu
 theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
     (p.descend hc).n = p.n.fdiv (4 * p.scaler ^ 2) := by
   show p.n >>> (2 * p.shifter + 2) = p.n.fdiv (4 * p.scaler ^ 2)
-  rw [Int.shiftRight_eq_fdiv, show (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) from by
-    rw [show p.scaler = 2 ^ p.shifter from rfl]; exact four_mul_two_pow_sq p.shifter]
+  rw [Int.shiftRight_eq_fdiv,
+    show (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) from four_mul_two_pow_sq p.shifter]
 
 /-- `newtonLift` in the key lemma's multiplicative form, for `0 < a`:
 `(a << shift) + ⌊(n >> shift+2) / a⌋ = Ma + ⌊n / 4Ma⌋` (`M = scaler = 2^shift`). The left shift is

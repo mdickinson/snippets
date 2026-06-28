@@ -80,11 +80,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
   obtain ⟨n, c, hsize⟩ := p
   have hn : 0 < n := hsize.pos
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
-  have hcast : ∀ s : Nat, (↑c : Int) >>> s = ↑(c >>> s) := fun s => by
-    rw [Int.shiftRight_eq_fdiv, show ((2 : Int) ^ s) = ((2 ^ s : Nat) : Int) from by push_cast; rfl,
-        Int.fdiv_natCast_natCast, Nat.shiftRight_eq_div_pow]
-  have hhi : ∀ s : Nat, c >>> s ≤ c := fun s => by
-    rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_le_self c _
+  have hcast : ∀ s : Nat, (↑c : Int) >>> s = ↑(c >>> s) := fun s =>
+    (Int.natCast_shiftRight c s).symm
+  have hhi : ∀ s : Nat, c >>> s ≤ c := fun s => Nat.shiftRight_le c s
   let chain : Nat → SizedProblem := fun s =>
     (⟨n, c, hsize⟩ : SizedProblem).subAt (c >>> s) (hhi s)
   -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
@@ -95,9 +93,8 @@ private theorem monadicLoop_near (p : SizedProblem) :
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `L = (↑c).bit_length() = natBitLength c`, where `c >> L = 0`.
-  have hz : c >>> (↑c : Int).bitLength.toNat = 0 := by
-    rw [Nat.shiftRight_eq_div_pow, Int.toNat_bitLength_natCast]
-    exact Nat.div_eq_of_lt (lt_two_pow_natBitLength c)
+  have hz : c >>> (↑c : Int).bitLength.toNat = 0 :=
+    Nat.shiftRight_eq_zero c _ (by rw [Int.toNat_bitLength_natCast]; exact lt_two_pow_natBitLength c)
   let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     0 < r.fst ∧ r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
   have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
@@ -124,9 +121,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
       rw [Int.toNat_bitLength_natCast] at hi; exact lt_natBitLength_iff.mp hi
     have hdN_pos : 0 < c >>> i := by rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_pos hi_le h2i
     have hdN_le : c >>> i ≤ c := hhi i
-    have heN_le : c >>> (i + 1) ≤ c := hhi (i + 1)
-    have heN_halve : c >>> (i + 1) = c >>> i / 2 := by
-      rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow, Nat.pow_succ, Nat.div_div_eq_div_mul]
+    have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
     have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
     -- The loop's Int shift `c >> i` is `↑(c >> i)`; the threaded `x.snd` is `↑(c >> (i+1))`.
     have hd_new : (↑c : Int) >>> (Int.ofNat i).toNat = ↑(c >>> i) := by
@@ -141,12 +136,10 @@ private theorem monadicLoop_near (p : SizedProblem) :
     refine ⟨_, stepM_eq_ok x (Int.ofNat i) (Int.natCast_nonneg i) ha_pos ?_ ?_, ?_, ?_, ?_⟩
     · rw [hd_new, hx_snd]; omega
     · rw [hd_new, hx_snd]; omega
-    · -- positivity of the new `a` (read the shifts as `· * 2^·` / `fdiv` to bound them)
-      simp only [Int.shiftLeft_eq, Int.shiftRight_eq_fdiv]
+    · -- positivity: `0 < a` survives the left shift; the divided-down remainder is `≥ 0`
       exact Int.add_pos_of_pos_of_nonneg
-        (Int.mul_pos ha_pos (Int.pow_pos (by decide)))
-        (Int.fdiv_nonneg (Int.fdiv_nonneg (Int.le_of_lt hn) (Int.pow_nonneg (by decide)))
-          (Int.le_of_lt ha_pos))
+        (Int.lt_of_lt_of_le ha_pos (Int.le_shiftLeft_of_nonneg (Int.le_of_lt ha_pos)))
+        (Int.fdiv_nonneg (Int.le_shiftRight_of_nonneg (Int.le_of_lt hn)) (Int.le_of_lt ha_pos))
     · -- new `d = ↑(c >> i)`
       rw [hd_new]
     · -- near-√ at the new depth: the loop body is the Newton lift of `chain i`, shared with recursion
@@ -166,8 +159,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
   have hy_near' : isNearSquareRoot (chain 0).n y.fst := hy_near
   have hchain0 : (chain 0).n = n := by
     show n >>> (2 * (c - c >>> 0)) = n
-    rw [Nat.shiftRight_eq_div_pow, Nat.pow_zero, Nat.div_one, Nat.sub_self, Nat.mul_zero,
-        Int.shiftRight_eq_fdiv, Int.pow_zero, Int.fdiv_one]
+    rw [Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
   rwa [hchain0] at hy_near'
 
 /-- Correctness of the monadic integer square root `isqrtIterative`.
