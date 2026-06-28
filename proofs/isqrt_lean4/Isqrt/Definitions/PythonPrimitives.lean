@@ -28,6 +28,6 @@ def pyRshift (n k : Int) : PyExcept Int := do
 def range (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
 
 /-- Minimum number of bits needed to represent abs(n). -/
-def Int.bitLength (n : Int) : Int := if n = 0 then 0 else Nat.log2 n.natAbs + 1
+def Int.bitLength (n : Int) : Int := if n = 0 then 0 else n.natAbs.log2 + 1
 
 end
