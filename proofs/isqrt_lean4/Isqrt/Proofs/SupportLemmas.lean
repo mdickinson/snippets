@@ -95,13 +95,20 @@ theorem Int.toNat_fdiv_pred_two {c : Nat} (hc : 0 < c) :
       Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
   simp
 
-/-! ## Nat.log2: division by a power of two -/
+/-! ## Nat.log2 under right shifts -/
 
-/-- Dividing by `2^k` drops `k` from the base-2 log: `(n / 2^k).log2 = n.log2 - k` for `0 < n`
-and `k ≤ n.log2`. The arithmetic core of the size condition's descent (`size_condition_at_depth`):
-dividing by `2^k` lowers `n`'s bit length by exactly `k` while `2^k` still fits. -/
-theorem log2_div_two_pow {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
-    (n / 2 ^ k).log2 = n.log2 - k := by
+/-- A positive `n` stays positive after a right shift by at most its bit length: `0 < n >>> k`
+when `k ≤ n.log2` (equivalently `2^k ≤ n`). -/
+theorem Nat.shiftRight_pos {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) : 0 < n >>> k := by
+  rw [Nat.shiftRight_eq_div_pow]
+  exact Nat.div_pos ((Nat.le_log2 (Nat.ne_of_gt hn)).mp hk) (Nat.pow_pos (by decide))
+
+/-- Right-shifting by `k ≤ n.log2` drops exactly `k` from the base-2 log:
+`(n >>> k).log2 = n.log2 - k`. The arithmetic core of the size condition's descent
+(`size_condition_at_depth`): shifting right by `k` lowers `n`'s bit length by exactly `k`. -/
+theorem Nat.log2_shiftRight {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
+    (n >>> k).log2 = n.log2 - k := by
+  rw [Nat.shiftRight_eq_div_pow]
   have hnne : n ≠ 0 := by omega
   have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
   have hlo : 2 ^ k ≤ n :=

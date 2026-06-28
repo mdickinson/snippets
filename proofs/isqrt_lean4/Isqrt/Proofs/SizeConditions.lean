@@ -17,9 +17,9 @@ These lemmas establish:
 - `isSizedAt n c → hasSizeCondition n c` (`hasSizeCondition_of_isSizedAt`), and from the power
   bound `4·M⁴ ≤ n` for `M = 2^((c-1)/2)` (`M_bound_from_size` → `isSuitableScaler_of_hasSizeCondition`).
 
-The `Nat.log2` / `Int.fdiv` support this file leans on (`log2_div_two_pow`,
-`Int.fdiv_natCast_natCast`) lives in `SupportLemmas`; this file adds the Int-level `isSizedAt`
-theory and the bridge to the power bound.
+The `Nat.log2` shift facts this file leans on (`Nat.log2_shiftRight`, `Nat.shiftRight_pos`) live
+in `SupportLemmas`; this file adds the Int-level `isSizedAt` theory and the bridge to the power
+bound.
 -/
 
 module
@@ -113,25 +113,21 @@ theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log
 
 /-- Size condition at any depth `d ≤ c`: given `isSizedAt n c`, right-shifting by `2(c-d)` lowers
 the level to `d`. The bit-length core: shifting right by `2(c-d)` drops `2(c-d)` bits, so `log₂`
-falls by `2(c-d)` and the level `⌊log₂/2⌋` falls by `c-d` to `d` (`log2_div_two_pow`). The
-construction proof behind `SizedProblem.subAt`. -/
+falls by `2(c-d)` and the level `⌊log₂/2⌋` falls by `c-d` to `d` (`Nat.log2_shiftRight`, the
+shifted value staying positive by `Nat.shiftRight_pos`). The construction proof behind
+`SizedProblem.subAt`. -/
 theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isSizedAt n c) :
     isSizedAt (n >>> (2 * (c - d))) d := by
-  rw [Int.shiftRight_eq_fdiv]
   obtain ⟨hpos, hc⟩ := h
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
   have hm_pos : 0 < m := by exact_mod_cast hpos
   rw [Int.toNat_natCast] at hc
   have hk_le : 2 * (c - d) ≤ m.log2 := by omega
-  -- The fdiv of nonneg-nat casts is the natCast of the Nat division.
-  have hval : (↑m : Int).fdiv (2 ^ (2 * (c - d))) = ↑(m / 2 ^ (2 * (c - d))) := by
-    rw [show ((2 : Int) ^ (2 * (c - d))) = ((2 ^ (2 * (c - d)) : Nat) : Int) from by push_cast; rfl,
-        Int.fdiv_natCast_natCast]
-  have h2k_le : 2 ^ (2 * (c - d)) ≤ m :=
-    Nat.le_trans (Nat.pow_le_pow_right (by decide) hk_le) (Nat.log2_self_le (Nat.ne_of_gt hm_pos))
+  -- Push the Int shift down to the Nat shift, then read off positivity and the level in `Nat.log2`.
+  rw [← Int.natCast_shiftRight]
   refine ⟨?_, ?_⟩
-  · rw [hval]; exact_mod_cast Nat.div_pos h2k_le (Nat.pow_pos (by decide))
-  · rw [hval, Int.toNat_natCast, log2_div_two_pow hm_pos hk_le]; omega
+  · exact_mod_cast Nat.shiftRight_pos hm_pos hk_le
+  · rw [Int.toNat_natCast, Nat.log2_shiftRight hm_pos hk_le]; omega
 
 /-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2`
 — division by the step's `4M²` for `M = 2^⌊(c-1)/2⌋` — lands the level at `c/2`. The `d = c/2`
