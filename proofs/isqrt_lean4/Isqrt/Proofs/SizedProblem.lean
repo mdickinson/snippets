@@ -17,8 +17,8 @@ reverse of a single `descend`, and `subAt_body_eq` decodes the loop body to a `n
 `shift = shifter p = ⌊(c-1)/2⌋` is the shared shift amount; `scaler = 2^shift = M` is the
 multiplicative scaler the key lemma reads. The size-condition theory (`size_condition_step`,
 `size_condition_at_depth`, the power-bound bridge behind `hsc`) comes from `SizeConditions`; the
-shift↔`fdiv` value bridge (`Int.shiftRight_eq_fdiv`) from `FDivLemmas`; the `4M²`/`4Ma` scaler
-identity (`key_isqrt_body_eq`) from `PythonPrimitivesLemmas`.
+shift↔`fdiv` value bridge (`Int.shiftRight_eq_fdiv`) from `SupportLemmas`; the `4M²`/`4Ma` scaler
+identity (`key_isqrt_body_eq`) from `PythonTranslation`.
 -/
 
 module
@@ -26,8 +26,8 @@ module
 public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.PythonPrimitivesLemmas
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.PythonTranslation
+import Isqrt.Proofs.SupportLemmas
 
 public section
 

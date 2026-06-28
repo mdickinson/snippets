@@ -10,8 +10,8 @@ depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 
 module
 
-import Isqrt.Proofs.FDivLemmas
-import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.SupportLemmas
+import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizedProblem

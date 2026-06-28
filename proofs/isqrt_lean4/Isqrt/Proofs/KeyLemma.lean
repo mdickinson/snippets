@@ -1,7 +1,7 @@
 /-
 The isqrt correctness proof's pure-integer mathematics: near-square-root theory and the
 Newton-step key lemma. It is all general `Int` arithmetic — the bit-level encoding the
-algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.PythonPrimitivesLemmas`.
+algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.PythonTranslation`.
 
 The **near square root** predicate, `isNearSquareRoot` (`(a - 1)² < n < (a + 1)²`; for
 positive `n`, `a` is `⌊√n⌋` or `⌈√n⌉`), is defined in `Isqrt.Definitions.Specification`
@@ -16,7 +16,7 @@ given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near squar
 module
 
 public import Isqrt.Definitions.Specification
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.SupportLemmas
 
 /-! ## Positivity -/
 

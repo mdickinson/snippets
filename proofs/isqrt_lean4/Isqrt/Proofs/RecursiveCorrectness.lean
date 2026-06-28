@@ -16,9 +16,9 @@ public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.SupportLemmas
 
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
 theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :

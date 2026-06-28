@@ -5,9 +5,9 @@ public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
-import Isqrt.Proofs.PythonPrimitivesLemmas
+import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.SupportLemmas
 
 public section
 

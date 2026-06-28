@@ -24,7 +24,7 @@ division by the scaler.
 module
 
 public import Isqrt.Definitions.PythonPrimitives
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.SupportLemmas
 
 public section
 

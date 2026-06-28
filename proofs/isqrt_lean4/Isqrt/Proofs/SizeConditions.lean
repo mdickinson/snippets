@@ -10,7 +10,7 @@ the shift/bit-length language its operations speak while the key-lemma side read
 These lemmas establish:
 - `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
   the algorithm's seed `(n.bit_length() - 1) // 2` equals that level via the bridge
-  `Int.toNat_fdiv_bitLength_sub_one` in `PythonPrimitivesLemmas`,
+  `Int.toNat_fdiv_bitLength_sub_one` in `PythonTranslation`,
 - `isSizedAt` descends: dividing by the depth-`d` shift `2^(2(c-d))` lowers the level to `d`
   (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
   (`size_condition_step`),
@@ -18,14 +18,14 @@ These lemmas establish:
   bound `4·M⁴ ≤ n` for `M = 2^((c-1)/2)` (`M_bound_from_size` → `isSuitableScaler_of_hasSizeCondition`).
 
 The `Nat.log2` / `Int.fdiv` support this file leans on (`log2_div_two_pow`,
-`Int.fdiv_natCast_natCast`) lives in `FDivLemmas`; this file adds the Int-level `isSizedAt`
+`Int.fdiv_natCast_natCast`) lives in `SupportLemmas`; this file adds the Int-level `isSizedAt`
 theory and the bridge to the power bound.
 -/
 
 module
 
 public import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.FDivLemmas
+import Isqrt.Proofs.SupportLemmas
 
 public section
 
@@ -102,7 +102,7 @@ theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
 /-- Initial size condition: `n`'s own level `⌊log₂ n / 2⌋` satisfies `isSizedAt n` by definition
 (`isSizedAt` carries exactly this level, so the proof is `rfl`). The algorithm computes this level
 as `(n.bit_length() - 1) // 2`; that seed is reconciled with the level by the bridge
-`Int.toNat_fdiv_bitLength_sub_one` (in `PythonPrimitivesLemmas`), and the correctness proofs
+`Int.toNat_fdiv_bitLength_sub_one` (in `PythonTranslation`), and the correctness proofs
 combine the two. -/
 theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log2 / 2) :=
   ⟨hn, rfl⟩
