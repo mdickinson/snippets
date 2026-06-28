@@ -127,7 +127,7 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   rw [← Int.natCast_shiftRight]
   refine ⟨?_, ?_⟩
   · exact_mod_cast Nat.shiftRight_pos hm_pos hk_le
-  · rw [Int.toNat_natCast, Nat.log2_shiftRight hm_pos hk_le]; omega
+  · rw [Int.toNat_natCast, Nat.log2_shiftRight]; omega
 
 /-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2`
 — division by the step's `4M²` for `M = 2^⌊(c-1)/2⌋` — lands the level at `c/2`. The `d = c/2`

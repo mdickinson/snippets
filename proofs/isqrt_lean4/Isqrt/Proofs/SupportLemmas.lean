@@ -103,23 +103,28 @@ theorem Nat.shiftRight_pos {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) : 0 < n 
   rw [Nat.shiftRight_eq_div_pow]
   exact Nat.div_pos ((Nat.le_log2 (Nat.ne_of_gt hn)).mp hk) (Nat.pow_pos (by decide))
 
-/-- Right-shifting by `k ≤ n.log2` drops exactly `k` from the base-2 log:
-`(n >>> k).log2 = n.log2 - k`. The arithmetic core of the size condition's descent
-(`size_condition_at_depth`): shifting right by `k` lowers `n`'s bit length by exactly `k`. -/
-theorem Nat.log2_shiftRight {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) :
-    (n >>> k).log2 = n.log2 - k := by
+/-- Right-shifting drops exactly `k` from the base-2 log: `(n >>> k).log2 = n.log2 - k`, for all
+`n` and `k` (the `log2`/right-shift analogue of Mathlib's `Nat.log_div_base_pow`). The arithmetic
+core of the size condition's descent (`size_condition_at_depth`): shifting right by `k` lowers `n`'s
+bit length by exactly `k` (and to `0` once `k` exceeds it, where both sides vanish). -/
+theorem Nat.log2_shiftRight (n k : Nat) : (n >>> k).log2 = n.log2 - k := by
   rw [Nat.shiftRight_eq_div_pow]
-  have hnne : n ≠ 0 := by omega
-  have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
-  have hlo : 2 ^ k ≤ n :=
-    Nat.le_trans (Nat.pow_le_pow_right (by decide) hk) (Nat.log2_self_le hnne)
-  have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
-  rw [Nat.log2_eq_iff (by omega)]
-  refine ⟨?_, ?_⟩
-  · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
-    exact Nat.log2_self_le hnne
-  · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
-        show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
-    exact Nat.lt_log2_self
+  rcases Nat.eq_zero_or_pos n with rfl | hn
+  · simp
+  · have hnne : n ≠ 0 := by omega
+    rcases Nat.lt_or_ge n.log2 k with hk | hk
+    · -- `k` past the bit length: `n < 2^k`, so `n / 2^k = 0` and `n.log2 - k = 0`.
+      rw [Nat.div_eq_of_lt ((Nat.log2_lt hnne).mp hk), show n.log2 - k = 0 from by omega]; simp
+    · -- `k ≤ n.log2`: `2^k` still fits, so the bit length drops by exactly `k`.
+      have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
+      have hlo : 2 ^ k ≤ n := (Nat.le_log2 hnne).mp hk
+      have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
+      rw [Nat.log2_eq_iff (by omega)]
+      refine ⟨?_, ?_⟩
+      · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
+        exact Nat.log2_self_le hnne
+      · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
+            show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
+        exact Nat.lt_log2_self
 
 end
