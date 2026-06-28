@@ -36,7 +36,7 @@ public section
 vocabulary `descend` / `newtonLift` are stated in. The invariant is carried in its bit-length form
 so instances are built in the same shift/bit-length language; the power bound `4^c ≤ n < 4^(c+1)`
 the key lemma wants is the derived `hsc`. -/
-structure SizedProblem where
+@[ext] structure SizedProblem where
   /-- The value whose near square root is sought (at this recursion level). -/
   n : Int
   /-- The recursion level. -/
@@ -45,11 +45,6 @@ structure SizedProblem where
   hsize : isSizedAt n c
 
 namespace SizedProblem
-
-/-- Two sized problems are equal when their value and level agree — the size invariant `hsize` is
-proof-irrelevant, so it need not be compared. -/
-theorem ext {p q : SizedProblem} (hn : p.n = q.n) (hc : p.c = q.c) : p = q := by
-  cases p; cases q; subst hn; subst hc; rfl
 
 /-- The power bound `4^c ≤ n < 4^(c+1)`, derived from the bit-length field `hsize`
 (`hasSizeCondition_of_isSizedAt`). The form the key lemma consumes; exposed as `.hsc` so the
@@ -73,7 +68,7 @@ the child (`size_condition_step`). The right-shift by `2·shift+2` is the algori
 the step's `4M²`; `hc : 0 < p.c` feeds only the child's invariant, so the value field reduces
 without it. -/
 @[expose] def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
-  ⟨p.n >>> (2 * p.shifter + 2), p.c / 2, by
+  ⟨p.n >>> (2 * p.shifter + 2), p.c >>> 1, by
     rw [Int.shiftRight_eq_fdiv]; exact size_condition_step hc p.hsize⟩
 
 /-- The Newton combine: lift a value `a` for the descended problem back to one for `p`, as
