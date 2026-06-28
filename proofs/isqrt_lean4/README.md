@@ -75,9 +75,10 @@ In addition to the files under [`Isqrt`](Isqrt), there are three root files:
 imports the tests; the third contains the source for the `isqrt` command-line executable
 described below.
 
-The project relies on the [Mathlib][mathlib] mathematical library for its proofs,
-primarily for the `linarith`, `ring` and `positivity` proof tactics. The definitions and
-tests are Mathlib-free.
+The project does not depend on [Mathlib][mathlib]: its proofs, definitions and tests are
+written using only Lean's core library. The sole external dependency is
+[Batteries][batteries], and that only to provide the linter (`lake lint`) — no Batteries
+code is used in the proofs themselves.
 
 ## Validating the proof
 
@@ -97,7 +98,6 @@ The key commands are all executed via Lean's build tool, `lake`. The first time 
 in `lean-toolchain`). From this directory:
 
 ```
-lake exe cache get    # download prebuilt Mathlib (avoids slow compilation from source)
 lake build            # build the project - definitions, proofs, tests and executable
 lake build --wfail    # build, failing on warnings too (matches CI)
 lake exe isqrt 1729   # run the command-line executable (should print 41)
@@ -124,10 +124,9 @@ $ lake exe isqrt 1729
 The single argument must be a nonnegative integer.
 
 The executable is backed by the correctness proof — it is that proof which guarantees
-the computation never raises — yet neither the proof nor Mathlib forms part of the
-compiled program. Lean's module system lets us mark these as compile-time-only
-dependencies (`meta import`), so they are erased from the runtime binary, leaving an
-`isqrt` executable well under a megabyte that contains no Mathlib code.
+the computation never raises — yet the proof forms no part of the compiled program: Lean
+erases proofs from the runtime binary, and the project pulls in no heavyweight
+dependencies, leaving an `isqrt` executable well under a megabyte.
 
 ## What do I need to trust?
 
@@ -161,12 +160,8 @@ needs to have confidence in:
   conceivable (but highly unlikely) that Lean itself has bugs that mean that it reports
   validity of a proof that is actually invalid.
 
-Things that *don't* need to be trusted:
-
-- The contents of the proofs. No matter how gnarly the proofs look, if Lean says that
-  they're valid, then they're valid.
-- `Mathlib`. While the proofs use Mathlib, the definitions and statements of correctness
-  do not. An error in `Mathlib` cannot cause Lean to accept an invalid proof as valid.
+Notably, the proofs themselves do *not* need to be trusted. No matter how gnarly they
+look, if Lean says that they're valid then they're valid.
 
 So for this project, it's enough to read through and validate everything under
 [`Isqrt.Definitions`](Isqrt/Definitions), along with the one-line statement (but not the
@@ -452,6 +447,7 @@ theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := ...
 ```
 
 
+[batteries]: https://github.com/leanprover-community/batteries
 [do-unchained]: https://lean-lang.org/papers/do.pdf
 [elan]: https://github.com/leanprover/elan
 [elan-installation]: https://github.com/leanprover/elan#installation

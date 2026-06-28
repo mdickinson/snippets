@@ -6,8 +6,8 @@ defaultTargets = ["Isqrt", "IsqrtTests", "isqrt"]
 autoImplicit = false
 
 [[require]]
-name = "mathlib"
-git = "https://github.com/leanprover-community/mathlib4"
+name = "batteries"
+git = "https://github.com/leanprover-community/batteries"
 rev = "v4.31.0"
 
 [[lean_lib]]
