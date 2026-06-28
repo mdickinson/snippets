@@ -104,9 +104,7 @@ theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0
       = p.subAt (d / 2) (Nat.le_trans (Nat.div_le_self d 2) hhi) := by
   apply SizedProblem.ext
   · show (p.n >>> (2 * (p.c - d))) >>> (2 * ((d - 1) / 2) + 2) = p.n >>> (2 * (p.c - d / 2))
-    rw [Int.shiftRight_eq_fdiv, Int.shiftRight_eq_fdiv, Int.shiftRight_eq_fdiv,
-        Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega)),
-        ← Int.pow_add,
+    rw [← Int.shiftRight_add,
         show 2 * (p.c - d) + (2 * ((d - 1) / 2) + 2) = 2 * (p.c - d / 2) from by omega]
   · rfl
 
@@ -114,24 +112,22 @@ theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0
 theorem subAt_self (p : SizedProblem) : p.subAt p.c (Nat.le_refl _) = p := by
   apply SizedProblem.ext
   · show p.n >>> (2 * (p.c - p.c)) = p.n
-    rw [Nat.sub_self, Nat.mul_zero, Int.shiftRight_eq_fdiv, Int.pow_zero, Int.fdiv_one]
+    rw [Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
   · rfl
 
 /-- The iterative loop body, decoded, is the Newton lift of the depth-`d` subproblem `p.subAt d`.
-With the threaded child shift `e = ⌊d/2⌋` (`0 < d`, `0 < a`), the body value
-`a·2^(d-e-1) + ⌊⌊p.n / 2^(2c-e-d+1)⌋ / a⌋` equals `(p.subAt d).newtonLift a`. Both sides are shifts:
-once the lift's two right-shifts collapse, the flat shift `2c-e-d+1` and the split shift
-`2(c-d) + (⌊(d-1)/2⌋+2)` agree by `omega`, as do the left-shift amounts `d-e-1` and `⌊(d-1)/2⌋`. -/
+With the threaded child shift `e = ⌊d/2⌋` (`0 < d`), the body value
+`(a << d-e-1) + ⌊(p.n >> 2c-e-d+1) / a⌋` equals `(p.subAt d).newtonLift a`. Both sides are shifts:
+composing the lift's two right-shifts (`Int.shiftRight_add`), the flat shift `2c-e-d+1` and the
+split shift `2(c-d) + (⌊(d-1)/2⌋+2)` agree by `omega`, as do the left-shift amounts `d-e-1` and
+`⌊(d-1)/2⌋`. -/
 theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
     (he : e = d / 2) (hd_pos : 0 < d) :
-    a * 2 ^ (d - e - 1)
-        + Int.fdiv (Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1))) a
+    a <<< (d - e - 1) + Int.fdiv (p.n >>> (2 * p.c - e - d + 1)) a
       = (p.subAt d hhi).newtonLift a := by
-  show a * 2 ^ (d - e - 1) + (p.n.fdiv (2 ^ (2 * p.c - e - d + 1))).fdiv a
-      = (a <<< ((d - 1) / 2)) + ((p.n >>> (2 * (p.c - d))) >>> ((d - 1) / 2 + 2)).fdiv a
-  rw [Int.shiftLeft_eq, Int.shiftRight_eq_fdiv, Int.shiftRight_eq_fdiv,
-      Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega)),
-      ← Int.pow_add,
+  show a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)).fdiv a
+      = a <<< ((d - 1) / 2) + ((p.n >>> (2 * (p.c - d))) >>> ((d - 1) / 2 + 2)).fdiv a
+  rw [← Int.shiftRight_add,
       show d - e - 1 = (d - 1) / 2 from by omega,
       show 2 * p.c - e - d + 1 = 2 * (p.c - d) + ((d - 1) / 2 + 2) from by omega]
 

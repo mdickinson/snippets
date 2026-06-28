@@ -25,18 +25,17 @@ theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :
     nsqrtRecursive n c = .ok 1 := by
   unfold nsqrtRecursive; rw [if_pos hc]; rfl
 
-/-- One unfolding of the recursion at `0 < c`, in the key lemma's `M`-form: for the step's
-scaler `M = 2^⌊(c-1)/2⌋` (`0 < c`), a successful subcall on the reduced problem `⌊n / 4M²⌋`
-returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns
-the combined value `Ma + ⌊n / 4Ma⌋`. The Python shift/floor-divide encoding (`2^(2k+2)`,
-`2^(k+2)`) and the `key_isqrt_body_eq` body rewrite are discharged here, so the caller works
-only with `M`, `4M²`, `4Ma`. -/
-theorem nsqrtRecursive_succ {n a M : Int} {c : Nat}
-    (hM : M = 2 ^ ((c - 1) / 2)) (hc : 0 < c) (ha : 0 < a)
-    (h_sub : nsqrtRecursive (n.fdiv (4 * M ^ 2)) ↑(c / 2) = .ok a) :
-    nsqrtRecursive n ↑c = .ok (M * a + n.fdiv (4 * M * a)) := by
+/-- One unfolding of the recursion at `0 < c`, in `SizedProblem`'s shift form: a successful subcall
+on the descended value `n >> (2⌊(c-1)/2⌋+2)` returning `0 < a` makes every Python operation take its
+`.ok` branch, and the step returns the lift `(a << ⌊(c-1)/2⌋) + ⌊(n >> ⌊(c-1)/2⌋+2) / a⌋`. Stays in
+shift vocabulary throughout — its `h_sub` value matches `(p.descend hc).n` and its result matches
+`p.newtonLift a` definitionally, so `nsqrtRecursive_correctness` hands it the IH with no bridge. -/
+theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
+    (h_sub : nsqrtRecursive (n >>> (2 * ((c - 1) / 2) + 2)) ↑(c / 2) = .ok a) :
+    nsqrtRecursive n ↑c
+      = .ok (a <<< ((c - 1) / 2) + Int.fdiv (n >>> ((c - 1) / 2 + 2)) a) := by
   have hc' : (0 : Int) < ↑c := by exact_mod_cast hc
-  -- `kk` is the def's `Int` recursion depth `(↑c - 1) // 2`; its `.toNat` is the scaler exponent.
+  -- `kk` is the def's `Int` recursion depth `(↑c - 1) // 2`; its `.toNat` is the shift amount.
   let kk : Int := (↑c - 1 : Int).fdiv 2
   have hkk_def : kk = (↑c - 1 : Int).fdiv 2 := rfl
   have kk_nn : 0 ≤ kk := Int.fdiv_nonneg (by omega) (by omega)
@@ -45,12 +44,11 @@ theorem nsqrtRecursive_succ {n a M : Int} {c : Nat}
   have hk2 : (kk + 2).toNat = kk.toNat + 2 := by omega
   have hcdiv : (↑c : Int).fdiv 2 = ↑(c / 2) := by
     rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl, Int.fdiv_natCast_natCast]
-  have hMk : M = 2 ^ kk.toNat := by rw [hM, hkk]
-  -- The subcall's `4M²` denominator is the Python shift `2^(2k+2)`.
-  rw [hMk, four_mul_two_pow_sq kk.toNat] at h_sub
-  -- Thread the `.ok` branches to the shift-form body, then rewrite it to `Ma + ⌊n / 4Ma⌋`.
+  -- Match the subcall's shift amount `(2*kk+2).toNat` to `h_sub`'s `2⌊(c-1)/2⌋+2`.
+  rw [← hkk] at h_sub
+  -- Thread the `.ok` branches; the body comes out already in the lift's shift form.
   have hred : nsqrtRecursive n ↑c
-      = .ok (a * 2 ^ kk.toNat + (n.fdiv (2 ^ (kk.toNat + 2))).fdiv a) := by
+      = .ok (a <<< kk.toNat + Int.fdiv (n >>> (kk.toNat + 2)) a) := by
     unfold nsqrtRecursive
     rw [if_neg (Int.not_le.mpr hc')]
     simp only [pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide), ← hkk_def, Except.ok_bind,
@@ -58,7 +56,7 @@ theorem nsqrtRecursive_succ {n a M : Int} {c : Nat}
       pyLshift_eq_ok kk_nn, pyRshift_eq_ok (show (0 : Int) ≤ kk + 2 by omega), hk2,
       pyFloordiv_eq_ok (Int.ne_of_gt ha)]
     rfl
-  rw [hred, key_isqrt_body_eq ha hMk]
+  rw [hred, hkk]
 
 /-- The recursive auxiliary returns a near square root of `p.n` and **never raises**, for any
 `SizedProblem p`.
@@ -79,11 +77,10 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
   · -- step: solve the descended problem, lift its near square root back.
     have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
-    -- the subcall ran on `p.descend`'s shift-form value; read it as the key lemma's `⌊n / 4M²⌋`
-    rw [p.descend_n_eq hc_pos] at ha_eq
-    refine ⟨p.newtonLift a, ?_, isNearSquareRoot_newtonLift hc_pos a_near⟩
-    rw [p.newtonLift_eq a_near.pos]
-    exact nsqrtRecursive_succ rfl hc_pos a_near.pos ha_eq
+    -- `(p.descend).n` and `p.newtonLift a` are the shift forms `nsqrtRecursive_succ` speaks, so the
+    -- IH `ha_eq` and the returned value land definitionally — no shift↔multiplicative bridge here.
+    exact ⟨p.newtonLift a, nsqrtRecursive_succ hc_pos a_near.pos ha_eq,
+      isNearSquareRoot_newtonLift hc_pos a_near⟩
 termination_by p.c
 decreasing_by simp only [SizedProblem.descend]; omega
 

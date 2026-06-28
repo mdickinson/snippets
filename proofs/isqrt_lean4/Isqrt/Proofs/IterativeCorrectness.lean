@@ -57,11 +57,11 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
 shift count `s`, positive running `a = r.fst`, and the two derived shift-amount bounds. -/
 private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
-    (hK : 0 ≤ Int.fdiv c (2 ^ s.toNat) - r.snd - 1)
-    (hJ : 0 ≤ 2 * c - r.snd - Int.fdiv c (2 ^ s.toNat) + 1) :
-    stepM c n r s = .ok ⟨r.fst * 2 ^ (Int.fdiv c (2 ^ s.toNat) - r.snd - 1).toNat
-        + Int.fdiv (Int.fdiv n (2 ^ (2 * c - r.snd - Int.fdiv c (2 ^ s.toNat) + 1).toNat)) r.fst,
-      Int.fdiv c (2 ^ s.toNat)⟩ := by
+    (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
+    (hJ : 0 ≤ 2 * c - r.snd - c >>> s.toNat + 1) :
+    stepM c n r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
+        + Int.fdiv (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) r.fst,
+      c >>> s.toNat⟩ := by
   simp only [stepM, pyRshift_eq_ok hs_nn, Except.ok_bind,
     pyLshift_eq_ok hK, pyRshift_eq_ok hJ,
     pyFloordiv_eq_ok (Int.ne_of_gt ha_pos)]
@@ -80,8 +80,8 @@ private theorem monadicLoop_near (p : SizedProblem) :
   obtain ⟨n, c, hsize⟩ := p
   have hn : 0 < n := hsize.pos
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
-  have hcast : ∀ s : Nat, Int.fdiv (↑c : Int) (2 ^ s) = ↑(c >>> s) := fun s => by
-    rw [show ((2 : Int) ^ s) = ((2 ^ s : Nat) : Int) from by push_cast; rfl,
+  have hcast : ∀ s : Nat, (↑c : Int) >>> s = ↑(c >>> s) := fun s => by
+    rw [Int.shiftRight_eq_fdiv, show ((2 : Int) ^ s) = ((2 ^ s : Nat) : Int) from by push_cast; rfl,
         Int.fdiv_natCast_natCast, Nat.shiftRight_eq_div_pow]
   have hhi : ∀ s : Nat, c >>> s ≤ c := fun s => by
     rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_le_self c _
@@ -129,7 +129,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
       rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow, Nat.pow_succ, Nat.div_div_eq_div_mul]
     have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
     -- The loop's Int shift `c >> i` is `↑(c >> i)`; the threaded `x.snd` is `↑(c >> (i+1))`.
-    have hd_new : Int.fdiv (↑c : Int) (2 ^ (Int.ofNat i).toNat) = ↑(c >>> i) := by
+    have hd_new : (↑c : Int) >>> (Int.ofNat i).toNat = ↑(c >>> i) := by
       rw [hsi]; exact hcast i
     -- the IH gives a near-√ of `chain (i+1) = descend (chain i)` (`descend_subAt`, child `⌊(c≫i)/2⌋`)
     have h_child : isNearSquareRoot ((chain i).descend hdN_pos).n x.fst := by
@@ -141,7 +141,8 @@ private theorem monadicLoop_near (p : SizedProblem) :
     refine ⟨_, stepM_eq_ok x (Int.ofNat i) (Int.natCast_nonneg i) ha_pos ?_ ?_, ?_, ?_, ?_⟩
     · rw [hd_new, hx_snd]; omega
     · rw [hd_new, hx_snd]; omega
-    · -- positivity of the new `a`
+    · -- positivity of the new `a` (read the shifts as `· * 2^·` / `fdiv` to bound them)
+      simp only [Int.shiftLeft_eq, Int.shiftRight_eq_fdiv]
       exact Int.add_pos_of_pos_of_nonneg
         (Int.mul_pos ha_pos (Int.pow_pos (by decide)))
         (Int.fdiv_nonneg (Int.fdiv_nonneg (Int.le_of_lt hn) (Int.pow_nonneg (by decide)))

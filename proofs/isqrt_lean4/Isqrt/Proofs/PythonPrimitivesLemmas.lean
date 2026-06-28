@@ -4,10 +4,11 @@ The bit-level theory the correctness proofs consume, all stated in pure `Int.fdi
 (The pure-integer mathematics — near-square-root theory and the Newton-step key lemma —
 lives in `Isqrt.Proofs.KeyLemma`.)
 
-**Value extraction.** On its non-raising branch each of `pyFloordiv`, `pyLshift`,
-`pyRshift` returns `.ok` of the corresponding `Int.fdiv` / power-of-two value. The
-`_eq_ok` lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through
-the `do`-block once the side conditions (nonzero divisor, nonneg shift) are discharged.
+**Value extraction.** On its non-raising branch `pyFloordiv` returns `.ok` of the `Int.fdiv`,
+and `pyLshift` / `pyRshift` return `.ok` of the native shift `· <<< ·` / `· >>> ·`. The `_eq_ok`
+lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through the `do`-block once
+the side conditions (nonzero divisor, nonneg shift) are discharged; the shift forms keep the proofs
+in shift vocabulary until the key-lemma seam.
 
 **Bit length.** The power-of-two facts about `int.bit_length()`. The public `Int.bitLength`
 inlines its bit-length computation; this file re-declares it as the Nat-level `natBitLength`
@@ -36,27 +37,23 @@ theorem pyFloordiv_eq_ok {a b : Int} (hb : b ≠ 0) :
   · omega
   · rfl
 
-/-- For a nonneg shift count, `pyLshift` takes its `.ok` branch. The native
-`<<<` is `· * 2 ^ ·` by core's `Int.shiftLeft_eq`. -/
+/-- For a nonneg shift count, `pyLshift` takes its `.ok` branch, returning the native left shift
+`· <<< ·`. The shift-form value flows directly into the proofs (`Int.shiftLeft_eq` converts it to
+`· * 2^·` only at the key-lemma seam). -/
 theorem pyLshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
-    pyLshift n k = .ok (n * 2 ^ k.toNat) := by
+    pyLshift n k = .ok (n <<< k.toNat) := by
   unfold pyLshift; split
   · omega
-  · show (Except.ok (n <<< k.toNat) : PyExcept Int) = .ok (n * 2 ^ k.toNat)
-    rw [Int.shiftLeft_eq]
+  · rfl
 
-/-- For a nonneg shift count, `pyRshift` takes its `.ok` branch. The native
-`>>>` is the arithmetic (floor) shift `Int.fdiv · (2 ^ ·)`: core's
-`Int.shiftRight_eq_div_pow` gives `· / 2 ^ ·`, which is `Int.fdiv` for the
-positive divisor `2 ^ k.toNat` (`Int.fdiv_eq_ediv_of_nonneg`). -/
+/-- For a nonneg shift count, `pyRshift` takes its `.ok` branch, returning the native arithmetic
+right shift `· >>> ·`. The shift-form value flows directly into the proofs (`Int.shiftRight_eq_fdiv`
+converts it to `Int.fdiv · (2^·)` only at the seam). -/
 theorem pyRshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
-    pyRshift n k = .ok (Int.fdiv n (2 ^ k.toNat)) := by
+    pyRshift n k = .ok (n >>> k.toNat) := by
   unfold pyRshift; split
   · omega
-  · show (Except.ok (n >>> k.toNat) : PyExcept Int) = .ok (Int.fdiv n (2 ^ k.toNat))
-    have h2 : (0 : Int) ≤ 2 ^ k.toNat := Int.pow_nonneg (by omega)
-    rw [Int.shiftRight_eq_div_pow, Int.fdiv_eq_ediv_of_nonneg n h2]
-    norm_cast
+  · rfl
 
 /-- `Except.ok a >>= f = f a` (definitional). The companion to the `_eq_ok`
 lemmas above: once one of them rewrites an operation to `.ok v`, this steps the
