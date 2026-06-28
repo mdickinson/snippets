@@ -18,6 +18,7 @@ import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonPrimitivesLemmas
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.FDivLemmas
 
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
 theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :
@@ -30,28 +31,34 @@ returning `0 < a` makes every Python operation take its `.ok` branch, and the st
 the combined value `Ma + ⌊n / 4Ma⌋`. The Python shift/floor-divide encoding (`2^(2k+2)`,
 `2^(k+2)`) and the `key_isqrt_body_eq` body rewrite are discharged here, so the caller works
 only with `M`, `4M²`, `4Ma`. -/
-theorem nsqrtRecursive_succ {n c a M : Int}
-    (hM : M = 2 ^ ((c - 1).fdiv 2).toNat) (hc : 0 < c) (ha : 0 < a)
-    (h_sub : nsqrtRecursive (n.fdiv (4 * M ^ 2)) (c.fdiv 2) = .ok a) :
-    nsqrtRecursive n c = .ok (M * a + n.fdiv (4 * M * a)) := by
-  subst hM
-  let k := (c - 1).fdiv 2
-  have hk_def : k = (c - 1).fdiv 2 := rfl
-  have k_nn : 0 ≤ k := by grind only
-  have h2k2_nn : 0 ≤ 2 * k + 2 := by omega
-  have hk2_nn : 0 ≤ k + 2 := by omega
+theorem nsqrtRecursive_succ {n a M : Int} {c : Nat}
+    (hM : M = 2 ^ ((c - 1) / 2)) (hc : 0 < c) (ha : 0 < a)
+    (h_sub : nsqrtRecursive (n.fdiv (4 * M ^ 2)) ↑(c / 2) = .ok a) :
+    nsqrtRecursive n ↑c = .ok (M * a + n.fdiv (4 * M * a)) := by
+  have hc' : (0 : Int) < ↑c := by exact_mod_cast hc
+  -- `kk` is the def's `Int` recursion depth `(↑c - 1) // 2`; its `.toNat` is the scaler exponent.
+  let kk : Int := (↑c - 1 : Int).fdiv 2
+  have hkk_def : kk = (↑c - 1 : Int).fdiv 2 := rfl
+  have kk_nn : 0 ≤ kk := Int.fdiv_nonneg (by omega) (by omega)
+  have hkk : kk.toNat = (c - 1) / 2 := Int.toNat_fdiv_pred_two hc
+  have h2k2 : (2 * kk + 2).toNat = 2 * kk.toNat + 2 := by omega
+  have hk2 : (kk + 2).toNat = kk.toNat + 2 := by omega
+  have hcdiv : (↑c : Int).fdiv 2 = ↑(c / 2) := by
+    rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl, Int.fdiv_natCast_natCast]
+  have hMk : M = 2 ^ kk.toNat := by rw [hM, hkk]
   -- The subcall's `4M²` denominator is the Python shift `2^(2k+2)`.
-  rw [four_mul_two_pow_sq k_nn] at h_sub
+  rw [hMk, four_mul_two_pow_sq kk.toNat] at h_sub
   -- Thread the `.ok` branches to the shift-form body, then rewrite it to `Ma + ⌊n / 4Ma⌋`.
-  have hred : nsqrtRecursive n c
-      = .ok (a * 2 ^ k.toNat + (n.fdiv (2 ^ (k + 2).toNat)).fdiv a) := by
+  have hred : nsqrtRecursive n ↑c
+      = .ok (a * 2 ^ kk.toNat + (n.fdiv (2 ^ (kk.toNat + 2))).fdiv a) := by
     unfold nsqrtRecursive
-    simp only [if_neg (Int.not_le.mpr hc),
-      pyFloordiv_eq_ok (show 2 ≠ 0 by decide), ← hk_def, Except.ok_bind,
-      pyRshift_eq_ok h2k2_nn, h_sub,
-      pyLshift_eq_ok k_nn, pyRshift_eq_ok hk2_nn, pyFloordiv_eq_ok (Int.ne_of_gt ha)]
+    rw [if_neg (Int.not_le.mpr hc')]
+    simp only [pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide), ← hkk_def, Except.ok_bind,
+      pyRshift_eq_ok (show (0 : Int) ≤ 2 * kk + 2 by omega), h2k2, hcdiv, h_sub,
+      pyLshift_eq_ok kk_nn, pyRshift_eq_ok (show (0 : Int) ≤ kk + 2 by omega), hk2,
+      pyFloordiv_eq_ok (Int.ne_of_gt ha)]
     rfl
-  rw [hred, key_isqrt_body_eq k_nn ha (rfl : (2 : Int) ^ k.toNat = 2 ^ k.toNat)]
+  rw [hred, key_isqrt_body_eq ha hMk]
 
 /-- The recursive auxiliary returns a near square root of `p.n` and **never raises**, for any
 `SizedProblem p`.
@@ -64,19 +71,18 @@ forces `p.c = 0` (the invariant gives `0 ≤ p.c`), where `1` is a near square r
 problem `p.descend` and lifts its near square root back with `p.newtonLift`
 (`isNearSquareRoot_newtonLift`, `nsqrtRecursive_succ`). -/
 theorem nsqrtRecursive_correctness (p : SizedProblem) :
-    ∃ a, nsqrtRecursive p.n p.c = .ok a ∧ isNearSquareRoot p.n a := by
-  by_cases hc : p.c ≤ 0
-  · -- base: `p.c ≤ 0` with `0 ≤ p.c` forces `p.c = 0`, where `1` is a near square root.
-    have hc0 : p.c = 0 := Int.le_antisymm hc p.hsc.c_nonneg
-    exact ⟨1, nsqrtRecursive_base p.n hc,
-      isNearSquareRoot_one_of_hasSizeCondition (hc0 ▸ p.hsc)⟩
+    ∃ a, nsqrtRecursive p.n ↑p.c = .ok a ∧ isNearSquareRoot p.n a := by
+  by_cases hc : p.c = 0
+  · -- base: at `p.c = 0`, `1` is a near square root.
+    exact ⟨1, nsqrtRecursive_base p.n (by omega),
+      isNearSquareRoot_one_of_hasSizeCondition (hc ▸ p.hsc)⟩
   · -- step: solve the descended problem, lift its near square root back.
-    have hc_pos : 0 < p.c := Int.not_le.mp hc
+    have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
     exact ⟨p.newtonLift a, nsqrtRecursive_succ rfl hc_pos a_near.pos ha_eq,
       isNearSquareRoot_newtonLift hc_pos a_near⟩
-termination_by p.c.toNat
-decreasing_by simp only [SizedProblem.descend]; grind only
+termination_by p.c
+decreasing_by simp only [SizedProblem.descend]; omega
 
 /-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
@@ -100,14 +106,15 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; decide
     · -- 0 < n: the recursion runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
-      let c := (n.bitLength - 1).fdiv 2
-      have hc_def : c = (n.bitLength - 1).fdiv 2 := rfl
       obtain ⟨a, ha_eq, a_near⟩ :=
-        nsqrtRecursive_correctness ⟨n, c, size_condition_initial hpos⟩
+        nsqrtRecursive_correctness ⟨n, ((n.bitLength - 1).fdiv 2).toNat, size_condition_initial hpos⟩
+      -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
+      rw [show ((↑(((n.bitLength - 1).fdiv 2).toNat)) : Int) = (n.bitLength - 1).fdiv 2
+            from Int.toNat_of_nonneg (isqrt_c_nonneg hn0)] at ha_eq
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show 2 ≠ 0 by decide), ← hc_def]
+          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide)]
         rw [Except.ok_bind, ha_eq]
         rfl
       exact ⟨_, hred, a_near.toIntegerSquareRoot⟩

@@ -9,11 +9,10 @@ lives in `Isqrt.Proofs.KeyLemma`.)
 `_eq_ok` lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through
 the `do`-block once the side conditions (nonzero divisor, nonneg shift) are discharged.
 
-**Bit length.** The power-of-two and floor-division facts about `int.bit_length()`.
-The public `Int.bitLength` inlines its bit-length computation; this file re-declares it
-as the Nat-level `natBitLength` — kept honest by `Int.bitLength_natCast` — and connects it,
-via `Nat.log2`, to power-of-two bounds, the per-step halving of a right shift, and the
-loop-body left-shift nonnegativity fact.
+**Bit length.** The power-of-two facts about `int.bit_length()`. The public `Int.bitLength`
+inlines its bit-length computation; this file re-declares it as the Nat-level `natBitLength`
+— kept honest by `Int.bitLength_natCast` — and connects it, via `Nat.log2`, to the
+power-of-two bounds the size-condition and loop-depth proofs consume.
 
 **Scaler encoding.** The shift exponents the algorithm divides by are the key lemma's
 `4M²` / `4Ma` denominators for the scaler `M = 2^k`: `four_mul_two_pow_sq` and
@@ -156,72 +155,6 @@ theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
   have hne : n.bitLength ≠ 0 := fun h => hn (Int.bitLength_eq_zero_iff.mp h)
   omega
 
-/-! ## Int.bitLength: interaction with floor-halving
-
-The right shift `c >> s` is the floor division `⌊c / 2^s⌋`; these lemmas are
-stated directly on `Int.fdiv c (2 ^ s.toNat)` so they serve both the iterative and
-recursive isqrt translations. -/
-
-/-- One more step of floor-halving by a power of two:
-`⌊c / 2^(s+1)⌋ = ⌊⌊c / 2^s⌋ / 2⌋`. The `Int.fdiv` twin of `pyRshift_succ` — the
-recursion's `c ↦ c // 2` step. No sign hypothesis on `c` is needed. -/
-theorem fdiv_two_pow_succ (c s : Int) (hs : 0 ≤ s) :
-    Int.fdiv c (2 ^ (s + 1).toNat) = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
-  rw [show (s + 1).toNat = s.toNat + 1 from by omega, Int.pow_succ,
-      ← Int.fdiv_fdiv_eq_fdiv_mul c (Int.pow_nonneg (by omega)) (by omega)]
-
-/-- For `0 ≤ s < c.bit_length()`, the floor-halving `⌊c / 2^s⌋` is at least `1`:
-it still retains the leading bit. (Used to show the body's left-shift amount is
-nonneg.) -/
-theorem one_le_fdiv_two_pow_of_lt_bitLength {c s : Int}
-    (hc : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < c.bitLength) :
-    1 ≤ Int.fdiv c (2 ^ s.toNat) := by
-  rw [Int.le_fdiv_iff_mul_le (Int.pow_pos (by omega)), Int.one_mul]
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-  rw [Int.bitLength_natCast] at hs_lt
-  have hbl_pos : 0 < natBitLength cn := by omega
-  have hcn_pos : 0 < cn := natBitLength_pos_iff.mp hbl_pos
-  have hbound : 2 ^ (natBitLength cn - 1) ≤ cn := two_pow_pred_natBitLength_le hcn_pos
-  have hexp : s.toNat ≤ natBitLength cn - 1 := by omega
-  calc (2 : Int) ^ s.toNat
-      = ((2 ^ s.toNat : Nat) : Int) := by push_cast; rfl
-    _ ≤ ((2 ^ (natBitLength cn - 1) : Nat) : Int) := by
-        exact_mod_cast Nat.pow_le_pow_right (by omega) hexp
-    _ ≤ (↑cn : Int) := by exact_mod_cast hbound
-
-/-- Floor-halving `c` by `2 ^ c.bit_length()` yields `0` (since
-`c < 2 ^ c.bit_length()`). This is the loop's seed value of `d`. -/
-theorem fdiv_two_pow_bitLength_eq_zero {c : Int} (hc : 0 ≤ c) :
-    Int.fdiv c (2 ^ c.bitLength.toNat) = 0 := by
-  apply Int.fdiv_eq_zero_of_lt hc
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le hc
-  rw [Int.toNat_bitLength_natCast]
-  exact_mod_cast lt_two_pow_natBitLength cn
-
-/-! ## Loop-body left-shift nonnegativity
-
-The iterative isqrt recomputes, at loop position `s`, the shifts `d' = ⌊c/2^s⌋`
-(new) and `d = ⌊c/2^(s+1)⌋` (the previous iteration's `d`), then forms the
-left-shift amount `d' - d - 1`. This lemma shows it is nonneg, in pure `Int.fdiv`
-form. -/
-
-/-- The left-shift amount `⌊c/2^s⌋ - d - 1` is nonneg, where `d = ⌊c/2^(s+1)⌋`,
-for `0 ≤ s < c.bit_length()`. The body's hardest precondition: it needs
-`⌊c/2^s⌋ ≥ 1` (from `s < c.bit_length()`, `one_le_fdiv_two_pow_of_lt_bitLength`)
-and the halving link `d = ⌊⌊c/2^s⌋/2⌋` (`fdiv_two_pow_succ`). -/
-theorem fdiv_two_pow_lshift_nonneg {c s d : Int} (hc : 0 ≤ c) (hs_nn : 0 ≤ s)
-    (hs_lt : s < c.bitLength) (hd : d = Int.fdiv c (2 ^ (s + 1).toNat)) :
-    0 ≤ Int.fdiv c (2 ^ s.toNat) - d - 1 := by
-  have hhalve : d = Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 := by
-    rw [hd]; exact fdiv_two_pow_succ c s hs_nn
-  have hge1 : 1 ≤ Int.fdiv c (2 ^ s.toNat) :=
-    one_le_fdiv_two_pow_of_lt_bitLength hc hs_nn hs_lt
-  have hmul : Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 * 2 ≤ Int.fdiv c (2 ^ s.toNat) :=
-    Int.fdiv_mul_le_self (by omega)
-  have hnn : 0 ≤ Int.fdiv (Int.fdiv c (2 ^ s.toNat)) 2 :=
-    Int.fdiv_nonneg (by omega) (by omega)
-  rw [hhalve]; omega
-
 /-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
 
 The algorithm reduces its input by right-shifting; these identities rewrite those shift
@@ -229,29 +162,27 @@ exponents into the `4M²` / `4Ma` scaler form that `Isqrt.Proofs.KeyLemma`'s
 `key_isqrt_lemma` consumes, for the scaler `M = 2^k`. -/
 
 /-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
-scaler `M = 2^k` (`0 ≤ k`): `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
+scaler `M = 2^k`: `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
 `>> (2k+2)` as division by `4M²`. -/
-theorem four_mul_two_pow_sq {k : Int} (hk : 0 ≤ k) :
-    (4 : Int) * (2 ^ k.toNat) ^ 2 = 2 ^ (2 * k + 2).toNat := by
-  rw [show (2 * k + 2).toNat = 2 * k.toNat + 2 from by omega]
+theorem four_mul_two_pow_sq (k : Nat) :
+    (4 : Int) * (2 ^ k) ^ 2 = 2 ^ (2 * k + 2) := by
   rw [Int.pow_add, ←Int.pow_mul]; grind only
 
 /-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
-For `0 ≤ k`, `0 < a`, and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
+For `0 < a` and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
 — a left shift of `a` by `k`, plus the divided-down remainder — equals
 `Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
 correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
 recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
 (`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
 move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
-theorem key_isqrt_body_eq {ν a M : Int} {k : Int} (hk : 0 ≤ k) (ha : 0 < a)
-    (hM : M = 2 ^ k.toNat) :
-    a * 2 ^ k.toNat + Int.fdiv (Int.fdiv ν (2 ^ (k + 2).toNat)) a
+theorem key_isqrt_body_eq {ν a M : Int} {k : Nat} (ha : 0 < a)
+    (hM : M = 2 ^ k) :
+    a * 2 ^ k + Int.fdiv (Int.fdiv ν (2 ^ (k + 2))) a
       = M * a + Int.fdiv ν (4 * M * a) := by
   subst hM
-  have h_pow : (2 : Int) ^ (k + 2).toNat = 4 * 2 ^ k.toNat := by
-    have hkt : (k + 2).toNat = k.toNat + 2 := by omega
-    rw [hkt, Int.pow_add]; grind only
+  have h_pow : (2 : Int) ^ (k + 2) = 4 * 2 ^ k := by
+    rw [Int.pow_add]; grind only
   rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν
       (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega))) (Int.le_of_lt ha)]
   grind only

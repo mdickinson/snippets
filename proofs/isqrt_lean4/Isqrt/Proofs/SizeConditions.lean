@@ -107,48 +107,27 @@ private theorem M_bound_from_size_nat {c n : Nat} (hc : 0 < c) (h_lo : 4 ^ c ≤
 through the `nsqrtRecursive` recursion. The Int-level lemmas are corollaries of
 the Nat-level ones, with the bridging done once here. -/
 
-/-- The size condition: `4^c ≤ n < 4^(c+1)` (using `toNat` so the exponents are naturals).
-The upper bound is written `4^(c+1).toNat`, not `4^(c.toNat + 1)`, so that `0 ≤ c` is a
-*consequence* (`hasSizeCondition.c_nonneg`): for `c < 0` both exponents collapse to `0` and
-the bounds `1 ≤ n < 1` are unsatisfiable. For `0 ≤ c` the two forms agree. -/
-@[expose] def hasSizeCondition (n c : Int) : Prop :=
-  (4 : Int) ^ c.toNat ≤ n ∧ n < (4 : Int) ^ (c + 1).toNat
+/-- The size condition: `4^c ≤ n < 4^(c+1)`. The level `c` is a `Nat`, so both exponents are
+naturals directly and `0 ≤ c` holds by construction; only the value `n` stays an `Int`. -/
+@[expose] def hasSizeCondition (n : Int) (c : Nat) : Prop :=
+  (4 : Int) ^ c ≤ n ∧ n < (4 : Int) ^ (c + 1)
 
-/-- The size condition forces `0 < n` (since `1 ≤ 4^c.toNat ≤ n`). -/
-theorem hasSizeCondition.pos {n c : Int} (h : hasSizeCondition n c) : 0 < n := by
-  have h0 : (0 : Int) < 4 ^ c.toNat := Int.pow_pos (by omega)
+/-- The size condition forces `0 < n` (since `1 ≤ 4^c ≤ n`). -/
+theorem hasSizeCondition.pos {n : Int} {c : Nat} (h : hasSizeCondition n c) : 0 < n := by
+  have h0 : (0 : Int) < 4 ^ c := Int.pow_pos (by omega)
   have h1 := h.1
   omega
 
 /-- The size condition forces `0 ≤ n`. -/
-private theorem hasSizeCondition.nonneg {n c : Int} (h : hasSizeCondition n c) : 0 ≤ n :=
+private theorem hasSizeCondition.nonneg {n : Int} {c : Nat} (h : hasSizeCondition n c) : 0 ≤ n :=
   Int.le_of_lt h.pos
 
-/-- The size condition forces `0 ≤ c`: the bounds give `4^c.toNat < 4^(c+1).toNat`, but for
-`c < 0` both exponents are `0`, leaving `4^0 < 4^0`. -/
-theorem hasSizeCondition.c_nonneg {n c : Int} (h : hasSizeCondition n c) : 0 ≤ c := by
-  obtain ⟨h_lo, h_hi⟩ := h
-  have hlt : (4 : Int) ^ c.toNat < (4 : Int) ^ (c + 1).toNat := Int.lt_of_le_of_lt h_lo h_hi
-  -- For `c < 0` both exponents collapse to `0`, contradicting `4^0 < 4^0`.
-  have hne : c.toNat ≠ (c + 1).toNat := by intro heq; rw [heq] at hlt; omega
-  omega
-
-/-- Construct a size condition from the `c.toNat + 1` form of the upper bound, given `0 ≤ c`
-(for which `4^(c+1).toNat = 4^(c.toNat + 1)`). Lets the construction sites below work in the
-simpler `c.toNat` form. -/
-private theorem hasSizeCondition_of_toNat {n c : Int} (hc : 0 ≤ c)
-    (h_lo : (4 : Int) ^ c.toNat ≤ n) (h_hi : n < (4 : Int) ^ (c.toNat + 1)) :
-    hasSizeCondition n c :=
-  ⟨h_lo, by rwa [show (c + 1).toNat = c.toNat + 1 from by omega]⟩
-
-/-- For `Nat`-cast arguments the size condition is exactly its `Nat`-level form. The single
-Int↔Nat bridge the three Int-level corollaries below funnel through, sparing each its own
-`Int.eq_ofNat_of_zero_le` / `exact_mod_cast` unpacking. -/
+/-- For a `Nat`-cast value the size condition is exactly its `Nat`-level form. The single
+Int↔Nat bridge — now only on the value `n` — the three Int-level corollaries below funnel
+through, sparing each its own `exact_mod_cast` unpacking. -/
 private theorem hasSizeCondition_natCast_iff {n c : Nat} :
-    hasSizeCondition (↑n) (↑c) ↔ 4 ^ c ≤ n ∧ n < 4 ^ (c + 1) := by
+    hasSizeCondition (↑n) c ↔ 4 ^ c ≤ n ∧ n < 4 ^ (c + 1) := by
   unfold hasSizeCondition
-  rw [Int.toNat_natCast,
-      show ((c : Int) + 1) = ((c + 1 : Nat) : Int) by omega, Int.toNat_natCast]
   norm_cast
 
 /-- The recursion depth `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n` — the
@@ -159,9 +138,11 @@ theorem isqrt_c_nonneg {n : Int} (hn : n ≠ 0) :
     0 ≤ Int.fdiv (n.bitLength - 1) 2 :=
   Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
 
-/-- Initial size condition holds for `c = ⌊(n.bitLength - 1) / 2⌋`. -/
+/-- Initial size condition holds for the Nat seed `c = ⌊(n.bitLength - 1) / 2⌋.toNat`. The lone
+`.toNat` is the boundary between the algorithm's `Int` seed and the proof's `Nat` level; the
+consumers reconcile their `Int` seed with `↑c` via `isqrt_c_nonneg`. -/
 theorem size_condition_initial {n : Int} (hn : 0 < n) :
-    hasSizeCondition n (Int.fdiv (n.bitLength - 1) 2) := by
+    hasSizeCondition n (Int.fdiv (n.bitLength - 1) 2).toNat := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hn)
   have hm_pos : 0 < m := by exact_mod_cast hn
   have h_bl_pos : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
@@ -174,66 +155,40 @@ theorem size_condition_initial {n : Int} (hn : 0 < n) :
         show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
         Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
     rfl
-  obtain ⟨h_lo, h_hi⟩ := size_condition_initial_nat hm_pos
-  refine hasSizeCondition_of_toNat (isqrt_c_nonneg (by omega)) ?_ ?_
-  · rw [h_toNat]; exact_mod_cast h_lo
-  · rw [h_toNat]; exact_mod_cast h_hi
+  rw [h_toNat, hasSizeCondition_natCast_iff]
+  exact size_condition_initial_nat hm_pos
 
 /-- Size condition preserved by the recursive step: `c ↦ ⌊c/2⌋`, `n ↦ ⌊n / 4M²⌋` where the
 step's scaler is `M = 2^⌊(c-1)/2⌋`. The `4M²` denominator is the Python shift `2^(2⌊(c-1)/2⌋+2)`
 the recursion divides by, written in the form `key_isqrt_lemma` consumes. -/
-theorem size_condition_step {n c M : Int} (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat)
+theorem size_condition_step {n M : Int} {c : Nat} (hM : M = 2 ^ ((c - 1) / 2))
     (hc : 0 < c) (h : hasSizeCondition n c) :
-    hasSizeCondition (Int.fdiv n (4 * M ^ 2)) (Int.fdiv c 2) := by
+    hasSizeCondition (Int.fdiv n (4 * M ^ 2)) (c / 2) := by
   -- Read the `4M²` denominator as the Python shift `2^(2k+2)`, then descend in shift form.
-  have hk_nn : (0 : Int) ≤ Int.fdiv (c - 1) 2 := Int.fdiv_nonneg (by omega) (by omega)
-  rw [hM, four_mul_two_pow_sq hk_nn]
+  rw [hM, four_mul_two_pow_sq ((c - 1) / 2)]
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hc)
-  have hcn_pos : 0 < cn := by exact_mod_cast hc
   obtain ⟨h_lo_nat, h_hi_nat⟩ := hasSizeCondition_natCast_iff.mp h
-  -- ⌊cn / 2⌋.toNat = cn / 2
-  have h_c2 : (Int.fdiv (↑cn : Int) 2).toNat = cn / 2 := by
-    rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
-        Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-    simp
-  -- ⌊(cn - 1) / 2⌋.toNat = (cn - 1) / 2
-  have h_c12 : (Int.fdiv (↑cn - 1 : Int) 2).toNat = (cn - 1) / 2 :=
-    Int.toNat_fdiv_pred_two hcn_pos
   -- The shifted value equals the Int-cast of the Nat-level shifted value.
-  have h_shift :
-      Int.fdiv (↑nn : Int) (2 ^ (2 * Int.fdiv (↑cn - 1 : Int) 2 + 2).toNat)
-        = ((nn / 2 ^ (2 * ((cn - 1) / 2) + 2) : Nat) : Int) := by
-    have h_shamt : (2 * Int.fdiv (↑cn - 1 : Int) 2 + 2).toNat
-                  = 2 * ((cn - 1) / 2) + 2 := by
-      have h_k_nn : 0 ≤ Int.fdiv (↑cn - 1 : Int) 2 :=
-        Int.fdiv_nonneg (by omega) (by omega)
-      rw [← h_c12]; omega
-    rw [h_shamt,
-        show ((2 : Int) ^ (2 * ((cn - 1) / 2) + 2))
-              = ((2 ^ (2 * ((cn - 1) / 2) + 2) : Nat) : Int) by push_cast; rfl,
+  have h_shift : Int.fdiv (↑nn : Int) (2 ^ (2 * ((c - 1) / 2) + 2))
+      = ((nn / 2 ^ (2 * ((c - 1) / 2) + 2) : Nat) : Int) := by
+    rw [show ((2 : Int) ^ (2 * ((c - 1) / 2) + 2))
+          = ((2 ^ (2 * ((c - 1) / 2) + 2) : Nat) : Int) by push_cast; rfl,
         Int.fdiv_natCast_natCast]
-  obtain ⟨step_lo, step_hi⟩ := size_condition_step_nat hcn_pos h_lo_nat h_hi_nat
-  -- Assemble the Int-level conclusion.
-  refine hasSizeCondition_of_toNat (Int.fdiv_nonneg (by omega) (by omega)) ?_ ?_
-  · rw [h_c2, h_shift]; exact_mod_cast step_lo
-  · rw [h_c2, h_shift]; exact_mod_cast step_hi
+  rw [h_shift, hasSizeCondition_natCast_iff]
+  exact size_condition_step_nat hc h_lo_nat h_hi_nat
 
-/-- `4 * M^4 ≤ n` from the size condition, where `M = 2^⌊(c-1)/2⌋.toNat`. -/
-theorem M_bound_from_size {n c : Int} (hc : 0 < c) (h : hasSizeCondition n c) :
-    4 * ((2 : Int) ^ ((Int.fdiv (c - 1) 2).toNat)) ^ 4 ≤ n := by
+/-- `4 * M^4 ≤ n` from the size condition, where `M = 2^⌊(c-1)/2⌋`. -/
+theorem M_bound_from_size {n : Int} {c : Nat} (hc : 0 < c) (h : hasSizeCondition n c) :
+    4 * ((2 : Int) ^ ((c - 1) / 2)) ^ 4 ≤ n := by
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hc)
-  have hcn_pos : 0 < cn := by exact_mod_cast hc
   obtain ⟨h_lo_nat, _⟩ := hasSizeCondition_natCast_iff.mp h
-  rw [Int.toNat_fdiv_pred_two hcn_pos]
-  exact_mod_cast M_bound_from_size_nat hcn_pos h_lo_nat
+  exact_mod_cast M_bound_from_size_nat hc h_lo_nat
 
 /-- A suitable scaler from the size condition: for `0 < c` with `4^c ≤ n < 4^(c+1)`, the step's
 scaler `M = 2^⌊(c-1)/2⌋` is suitable for `n` — positivity is immediate, and the `4M⁴ ≤ n` bound
 is `M_bound_from_size`. This is the form the key lemma consumes. -/
-theorem isSuitableScaler_of_hasSizeCondition {n c M : Int}
-    (hM : M = 2 ^ (Int.fdiv (c - 1) 2).toNat) (hc : 0 < c) (h : hasSizeCondition n c) :
+theorem isSuitableScaler_of_hasSizeCondition {n M : Int} {c : Nat}
+    (hM : M = 2 ^ ((c - 1) / 2)) (hc : 0 < c) (h : hasSizeCondition n c) :
     isSuitableScaler n M := by
   subst hM
   exact ⟨Int.pow_pos (by omega), M_bound_from_size hc h⟩
@@ -244,7 +199,7 @@ square root of `n`. The counterpart to the step-case bridge
 theorem isNearSquareRoot_one_of_hasSizeCondition {n : Int} (h : hasSizeCondition n 0) :
     isNearSquareRoot n 1 := by
   obtain ⟨h_lo, h_hi⟩ := h
-  simp only [Int.toNat_zero, Int.toNat_one, Int.zero_add, Int.pow_zero, Int.pow_one] at h_lo h_hi
+  simp only [Nat.zero_add, Int.pow_zero, Int.pow_one] at h_lo h_hi
   exact ⟨by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
 
 /-! ## Size condition at depth -/
@@ -252,28 +207,17 @@ theorem isNearSquareRoot_one_of_hasSizeCondition {n : Int} (h : hasSizeCondition
 /-- The value `⌊n / 4^(c-d)⌋` at depth `d` (`0 ≤ d ≤ c`) inherits the size condition from
 `hasSizeCondition n c`, now at level `d`. The construction proof behind `SizedProblem.subAt`, and
 the `(n,c)`-only fact the seed and step of both loop invariants lean on. -/
-theorem size_condition_at_depth {n c d : Int} (hd_lo : 0 ≤ d) (hd_hi : d ≤ c)
+theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c)
     (h : hasSizeCondition n c) :
-    hasSizeCondition (n.fdiv (4 ^ (c - d).toNat)) d := by
+    hasSizeCondition (n.fdiv (4 ^ (c - d))) d := by
   obtain ⟨nn, rfl⟩ := Int.eq_ofNat_of_zero_le h.nonneg
-  obtain ⟨cn, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_trans hd_lo hd_hi)
-  obtain ⟨dn, rfl⟩ := Int.eq_ofNat_of_zero_le hd_lo
-  have hdN : (↑dn : Int).toNat = dn := Int.toNat_natCast dn
-  have hdc : dn ≤ cn := by exact_mod_cast hd_hi
-  -- (c - d).toNat = cn - dn
-  have h_cd : ((↑cn - ↑dn : Int)).toNat = cn - dn := by
-    rw [show ((↑cn : Int) - ↑dn) = ((cn - dn : Nat) : Int) from by omega]
-    exact Int.toNat_natCast _
   -- The fdiv of nonneg-nat casts is the natCast of the Nat division.
-  have h_bridge : Int.fdiv (↑nn : Int) ((4 : Int) ^ (cn - dn))
-                    = ((nn / 4 ^ (cn - dn) : Nat) : Int) := by
-    rw [show ((4 : Int) ^ (cn - dn)) = ((4 ^ (cn - dn) : Nat) : Int) from by push_cast; rfl,
+  have h_bridge : Int.fdiv (↑nn : Int) ((4 : Int) ^ (c - d))
+      = ((nn / 4 ^ (c - d) : Nat) : Int) := by
+    rw [show ((4 : Int) ^ (c - d)) = ((4 ^ (c - d) : Nat) : Int) from by push_cast; rfl,
         Int.fdiv_natCast_natCast]
   obtain ⟨h_lo_nat, h_hi_nat⟩ := hasSizeCondition_natCast_iff.mp h
-  obtain ⟨step_lo, step_hi⟩ := size_condition_at_depth_nat hdc h_lo_nat h_hi_nat
-  -- Assemble the Int-level conclusion.
-  refine hasSizeCondition_of_toNat (by omega) ?_ ?_
-  · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_lo
-  · rw [hdN, h_cd, h_bridge]; exact_mod_cast step_hi
+  rw [h_bridge, hasSizeCondition_natCast_iff]
+  exact size_condition_at_depth_nat hd_hi h_lo_nat h_hi_nat
 
 end

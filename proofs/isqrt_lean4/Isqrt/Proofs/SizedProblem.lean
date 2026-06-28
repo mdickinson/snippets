@@ -36,7 +36,7 @@ structure SizedProblem where
   /-- The value whose near square root is sought (at this recursion level). -/
   n : Int
   /-- The recursion level. -/
-  c : Int
+  c : Nat
   /-- The size invariant `4^c ≤ n < 4^(c+1)`. -/
   hsc : hasSizeCondition n c
 
@@ -47,16 +47,17 @@ proof-irrelevant, so it need not be compared. -/
 theorem ext {p q : SizedProblem} (hn : p.n = q.n) (hc : p.c = q.c) : p = q := by
   cases p; cases q; subst hn; subst hc; rfl
 
-/-- The step scaler `M = 2^⌊(c-1)/2⌋`. Total: at `c ≤ 0` the `.toNat` clamps the exponent to `0`,
-giving `M = 1` — harmless, since `M` is never `0` and every fact that gives it meaning takes
-`0 < c`. `descend` and `newtonLift` both read their `M` from here, so they agree by definition. -/
-@[expose] def scaler (p : SizedProblem) : Int := 2 ^ ((p.c - 1).fdiv 2).toNat
+/-- The step scaler `M = 2^⌊(c-1)/2⌋`. Total: at `c = 0` the `Nat` subtraction `c - 1` truncates to
+`0`, giving exponent `0` and `M = 1` — harmless, since `M` is never `0` and every fact that gives it
+meaning takes `0 < c`. `descend` and `newtonLift` both read their `M` from here, so they agree by
+definition. -/
+@[expose] def scaler (p : SizedProblem) : Int := 2 ^ ((p.c - 1) / 2)
 
 /-- One reduction step: `(n, c) ↦ (⌊n / 4M²⌋, ⌊c/2⌋)`, carrying the size invariant down to the
 child (`size_condition_step`). The divisor `4M²` is the form the algorithm and `key_isqrt_lemma`
 divide by; `hc : 0 < p.c` feeds only the child's invariant, so the value fields reduce without it. -/
 @[expose] def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
-  ⟨p.n.fdiv (4 * p.scaler ^ 2), p.c.fdiv 2, size_condition_step rfl hc p.hsc⟩
+  ⟨p.n.fdiv (4 * p.scaler ^ 2), p.c / 2, size_condition_step rfl hc p.hsc⟩
 
 /-- The Newton combine: lift a value `a` for the descended problem back to one for `p`, as
 `Ma + ⌊n / 4Ma⌋`. Paired with `descend` through the shared `scaler`; `isNearSquareRoot_newtonLift`
@@ -65,31 +66,24 @@ is the fact that it carries a near square root to a near square root. -/
   p.scaler * a + p.n.fdiv (4 * p.scaler * a)
 
 /-- The depth-`d` subproblem of `p` as a sized problem: the value `⌊p.n / 4^(p.c-d)⌋` paired with
-level `d` and the inherited size invariant (`size_condition_at_depth`), for `0 ≤ d ≤ p.c`. This is
+level `d` and the inherited size invariant (`size_condition_at_depth`), for `d ≤ p.c`. This is
 the vocabulary the iterative loop's invariant is phrased in — the loop walks the chain
 `p.subAt 0` (the base) up to `p.subAt p.c = p` (the whole problem). -/
-@[expose] def subAt (p : SizedProblem) (d : Int) (hlo : 0 ≤ d) (hhi : d ≤ p.c) : SizedProblem :=
-  ⟨p.n.fdiv (4 ^ (p.c - d).toNat), d, size_condition_at_depth hlo hhi p.hsc⟩
+@[expose] def subAt (p : SizedProblem) (d : Nat) (hhi : d ≤ p.c) : SizedProblem :=
+  ⟨p.n.fdiv (4 ^ (p.c - d)), d, size_condition_at_depth hhi p.hsc⟩
 
 /-- Descending the depth-`d` subproblem gives the depth-`⌊d/2⌋` subproblem:
 `descend (p.subAt d) = p.subAt ⌊d/2⌋`. The value field is the base-4 identity that the step's
 divisor `4M²` (for `M = 2^⌊(d-1)/2⌋`) bridges depths `d` and `⌊d/2⌋`; the level field is `rfl`. This
 is what makes one loop iteration the reverse of a single `descend`, so the loop and the recursion
 walk the same chain. -/
-theorem descend_subAt {p : SizedProblem} {d : Int} (hlo : 0 ≤ d) (hhi : d ≤ p.c) (hd_pos : 0 < d) :
-    (p.subAt d hlo hhi).descend hd_pos
-      = p.subAt (d.fdiv 2) (Int.fdiv_nonneg hlo (by decide))
-          (Int.le_trans (Int.fdiv_le_self 2 hlo) hhi) := by
+theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0 < d) :
+    (p.subAt d hhi).descend hd_pos
+      = p.subAt (d / 2) (Nat.le_trans (Nat.div_le_self d 2) hhi) := by
   apply SizedProblem.ext
-  · show (p.n.fdiv (4 ^ (p.c - d).toNat)).fdiv (4 * (2 ^ ((d - 1).fdiv 2).toNat) ^ 2)
-        = p.n.fdiv (4 ^ (p.c - d.fdiv 2).toNat)
-    have hk_eq : (d - 1).fdiv 2 = d - d.fdiv 2 - 1 := by
-      rw [Int.fdiv_eq_ediv_of_nonneg (d - 1) (by decide : (0 : Int) ≤ 2),
-          Int.fdiv_eq_ediv_of_nonneg d (by decide : (0 : Int) ≤ 2)]
-      omega
-    have hk_nn : (0 : Int) ≤ (d - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by decide)
-    have hd2_nn : (0 : Int) ≤ d.fdiv 2 := Int.fdiv_nonneg (Int.le_of_lt hd_pos) (by decide)
-    rw [four_mul_two_pow_sq hk_nn,
+  · show (p.n.fdiv (4 ^ (p.c - d))).fdiv (4 * (2 ^ ((d - 1) / 2)) ^ 2)
+        = p.n.fdiv (4 ^ (p.c - d / 2))
+    rw [four_mul_two_pow_sq ((d - 1) / 2),
         Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega))]
     congr 1
     rw [show (4 : Int) = 2 ^ 2 by decide]
@@ -99,10 +93,10 @@ theorem descend_subAt {p : SizedProblem} {d : Int} (hlo : 0 ≤ d) (hhi : d ≤ 
   · rfl
 
 /-- At full depth the subproblem is the whole problem: `p.subAt p.c = p`. -/
-theorem subAt_self (p : SizedProblem) (h0 : 0 ≤ p.c) : p.subAt p.c h0 (Int.le_refl _) = p := by
+theorem subAt_self (p : SizedProblem) : p.subAt p.c (Nat.le_refl _) = p := by
   apply SizedProblem.ext
-  · show p.n.fdiv (4 ^ (p.c - p.c).toNat) = p.n
-    simp only [Int.sub_self, Int.toNat_zero, Int.pow_zero, Int.fdiv_one]
+  · show p.n.fdiv (4 ^ (p.c - p.c)) = p.n
+    simp only [Nat.sub_self, Int.pow_zero, Int.fdiv_one]
   · rfl
 
 /-- The iterative loop body, decoded, is the Newton lift of the depth-`d` subproblem `p.subAt d`.
@@ -110,31 +104,27 @@ With the threaded child shift `e = ⌊d/2⌋` (`0 < d`, `0 < a`), the body value
 `a·2^(d-e-1) + ⌊⌊p.n / 2^(2c-e-d+1)⌋ / a⌋` equals `(p.subAt d).newtonLift a`. The work beyond
 `key_isqrt_body_eq` is undoing the loop's encoding of depth as `c >> s`: the flat shift
 `2^(2c-e-d+1)` splits into the subproblem's `4^(c-d)` and the key lemma's `2^(⌊(d-1)/2⌋+2)`. -/
-theorem subAt_body_eq {p : SizedProblem} {d e a : Int} (hlo : 0 ≤ d) (hhi : d ≤ p.c)
-    (he : e = d.fdiv 2) (hd_pos : 0 < d) (ha : 0 < a) :
-    a * 2 ^ (d - e - 1).toNat
-        + Int.fdiv (Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1).toNat)) a
-      = (p.subAt d hlo hhi).newtonLift a := by
-  show a * 2 ^ (d - e - 1).toNat
-      + Int.fdiv (Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1).toNat)) a
-    = 2 ^ ((d - 1).fdiv 2).toNat * a
-      + (p.n.fdiv (4 ^ (p.c - d).toNat)).fdiv (4 * 2 ^ ((d - 1).fdiv 2).toNat * a)
-  have hk_eq : (d - 1).fdiv 2 = d - e - 1 := by
-    rw [he, Int.fdiv_eq_ediv_of_nonneg (d - 1) (by decide : (0 : Int) ≤ 2),
-        Int.fdiv_eq_ediv_of_nonneg d (by decide : (0 : Int) ≤ 2)]
-    omega
-  have hk_nn : (0 : Int) ≤ (d - 1).fdiv 2 := Int.fdiv_nonneg (by omega) (by decide)
+theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
+    (he : e = d / 2) (hd_pos : 0 < d) (ha : 0 < a) :
+    a * 2 ^ (d - e - 1)
+        + Int.fdiv (Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1))) a
+      = (p.subAt d hhi).newtonLift a := by
+  show a * 2 ^ (d - e - 1)
+      + Int.fdiv (Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1))) a
+    = 2 ^ ((d - 1) / 2) * a
+      + (p.n.fdiv (4 ^ (p.c - d))).fdiv (4 * 2 ^ ((d - 1) / 2) * a)
+  have hk_eq : (d - 1) / 2 = d - e - 1 := by rw [he]; omega
   -- split the flat shift into the subproblem's `4^(c-d)` and the key lemma's `2^(k+2)`
-  have hbridge : Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1).toNat)
-      = (p.n.fdiv (4 ^ (p.c - d).toNat)).fdiv (2 ^ ((d - 1).fdiv 2 + 2).toNat) := by
+  have hbridge : Int.fdiv p.n (2 ^ (2 * p.c - e - d + 1))
+      = (p.n.fdiv (4 ^ (p.c - d))).fdiv (2 ^ ((d - 1) / 2 + 2)) := by
     rw [Int.fdiv_fdiv_eq_fdiv_mul p.n (Int.pow_nonneg (by omega)) (Int.pow_nonneg (by omega))]
     congr 1
     rw [show (4 : Int) = 2 ^ 2 by decide]
     simp only [← Int.pow_mul, ← Int.pow_add]
     congr 1
     omega
-  rw [show (d - e - 1).toNat = ((d - 1).fdiv 2).toNat from by rw [hk_eq], hbridge]
-  exact key_isqrt_body_eq hk_nn ha rfl
+  rw [show (d - e - 1) = (d - 1) / 2 from hk_eq.symm, hbridge]
+  exact key_isqrt_body_eq ha rfl
 
 end SizedProblem
 
