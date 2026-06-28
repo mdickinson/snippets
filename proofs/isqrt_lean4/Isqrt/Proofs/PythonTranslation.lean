@@ -10,10 +10,10 @@ lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through th
 the side conditions (nonzero divisor, nonneg shift) are discharged; the shift forms keep the proofs
 in shift vocabulary until the key-lemma seam.
 
-**Bit length.** The power-of-two facts about `int.bit_length()`. The public `Int.bitLength`
-inlines its bit-length computation; this file re-declares it as the Nat-level `natBitLength`
-— kept honest by `Int.bitLength_natCast` — and connects it, via `Nat.log2`, to the
-power-of-two bounds the size-condition and loop-depth proofs consume.
+**Bit length.** The power-of-two facts about `int.bit_length()`. The public `Int.bitLength` is the
+Python `bit_length()` model; these lemmas connect it, via `Nat.log2`, to the power-of-two bounds
+the size-condition and loop-depth proofs consume — with the `n = 0` guard discharged at the seam,
+since each consumer applies them to a positive argument.
 
 **Scaler encoding.** The shift exponents the algorithm divides by are the key lemma's
 `4M²` / `4Ma` denominators for the scaler `M = 2^k`: `four_mul_two_pow_sq` and
@@ -63,83 +63,44 @@ not `pure`). Both correctness proofs use it. -/
 theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
     (Except.ok a >>= f) = f a := rfl
 
-/-! ## natBitLength: the Nat-level bit length -/
+/-! ## Int.bitLength: relating the trust surface to `Nat.log2`
 
-/-- Bit length of a natural number: the number of bits needed to represent `n`,
-with `natBitLength 0 = 0`. Equivalent to `Nat.size`; defined via `Nat.log2` for
-access to core Lean 4's `log2` lemma library.
+The public `Int.bitLength` (`Isqrt.Definitions.PythonPrimitives`) is the Python `bit_length()`
+model `if n = 0 then 0 else n.natAbs.log2 + 1`. The proofs reason about it through core Lean 4's
+`Nat.log2` library. The lone wrinkle is the `n = 0` guard — `Nat.log2 0 + 1 = 1`, not `0` — so the
+identification with `log2 + 1` holds only for positive arguments, which is where every consumer
+uses it. -/
 
-This is the Nat-level workhorse the bit-length proofs run on. It is *not* trust
-surface: the public `Int.bitLength` (`Isqrt.Definitions.PythonPrimitives`) computes the same
-bit length, and `Int.bitLength_natCast` below verifies — by a one-line `cases` — that
-the two agree, so this re-declaration cannot silently drift from it. -/
-def natBitLength (n : Nat) : Nat := if n = 0 then 0 else Nat.log2 n + 1
-
-/-! ## Int.bitLength: defining-equation lemmas -/
-
-/-- `Int.bitLength` of a `Nat`-cast drops the `natAbs`: `(↑m : Int).bitLength = ↑(natBitLength m)`.
-This is the bridge tying the trust-surface `Int.bitLength` to the named `natBitLength` above:
-`cases m <;> rfl` checks they agree on each constructor — splitting `m` lets the `n = 0`
-conditional reduce — so the re-declaration cannot silently drift. It's also the
-form the Int↔Nat bridges below (and in `Isqrt.Proofs.SizeConditions`) `rw` with directly;
-the general `Int.bitLength_def` is the `@[simp]` normal form, so this one isn't `@[simp]`. -/
-theorem Int.bitLength_natCast (m : Nat) : (↑m : Int).bitLength = ↑(natBitLength m) := by
-  cases m <;> rfl
-
-/-- `Int.bitLength` unfolds to `natBitLength` on the underlying `natAbs`. Generalises
-`Int.bitLength_natCast` from a `Nat`-cast to any `n : Int`: both sides depend on `n` only
-through `n.natAbs` (and `Int.bitLength`'s `n = 0` guard agrees with `n.natAbs = 0`). -/
-@[simp]
-theorem Int.bitLength_def (n : Int) : n.bitLength = ↑(natBitLength n.natAbs) := by
-  rw [← Int.bitLength_natCast]
+/-- For positive `m`, `int.bit_length()` is `log2 + 1`: the `n = 0` guard is discharged and
+`(↑m).natAbs = m`. The bridge through which the bit-length proofs reach `Nat.log2`. -/
+theorem Int.toNat_bitLength_of_pos {m : Nat} (hm : 0 < m) :
+    ((↑m : Int).bitLength).toNat = m.log2 + 1 := by
   unfold Int.bitLength
-  simp
-
-/-- `.toNat` of `Int.bitLength_natCast`: `((↑m : Int).bitLength).toNat = natBitLength m`. Not
-`@[simp]` (simp derives it from `Int.bitLength_def` + casts); kept as a named target for
-the *targeted* `rw`s below that must not disturb neighbouring casts. -/
-theorem Int.toNat_bitLength_natCast (m : Nat) :
-    ((↑m : Int).bitLength).toNat = natBitLength m := by
-  rw [Int.bitLength_natCast, Int.toNat_natCast]
-
-/-! ## natBitLength: basic properties -/
-
-theorem natBitLength_eq_zero_iff {n : Nat} : natBitLength n = 0 ↔ n = 0 := by
-  by_cases h : n = 0 <;> simp [natBitLength, h]
-
-theorem natBitLength_pos_iff {n : Nat} : 0 < natBitLength n ↔ 0 < n := by
-  rw [Nat.pos_iff_ne_zero, Nat.pos_iff_ne_zero]
-  exact not_congr natBitLength_eq_zero_iff
-
-/-! ## natBitLength: upper bound -/
-
-/-- Upper bound: `n < 2 ^ (natBitLength n)` for all `n`. -/
-theorem lt_two_pow_natBitLength (n : Nat) : n < 2 ^ natBitLength n := by
-  by_cases h : n = 0
-  · subst h; simp [natBitLength]
-  · simp only [natBitLength, if_neg h]; exact Nat.lt_log2_self
-
-/-! ## natBitLength: relation to Nat.log2 -/
-
-/-- `natBitLength n = n.log2 + 1` for `0 < n`, so `natBitLength n - 1 = n.log2`. The
-off-by-one between the algorithm's `bit_length` and the proof's `Nat.log2`: the size
-condition's seed `(bitLength - 1) / 2` is `log2 / 2`. -/
-theorem natBitLength_sub_one {n : Nat} (hn : 0 < n) : natBitLength n - 1 = n.log2 := by
-  simp only [natBitLength, if_neg (Nat.ne_of_gt hn), Nat.add_sub_cancel]
-
-/-! ## Int.bitLength: Int-level properties -/
-
-theorem Int.bitLength_nonneg (n : Int) : 0 ≤ n.bitLength := by
-  rw [Int.bitLength_def]
-  exact Int.natCast_nonneg _
-
-theorem Int.bitLength_eq_zero_iff {n : Int} : n.bitLength = 0 ↔ n = 0 := by
-  simp [natBitLength_eq_zero_iff, Int.natAbs_eq_zero]
-
-theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
-  have h0 := Int.bitLength_nonneg n
-  have hne : n.bitLength ≠ 0 := fun h => hn (Int.bitLength_eq_zero_iff.mp h)
+  rw [if_neg (by omega), Int.natAbs_natCast]
   omega
+
+/-- Upper bound `m < 2 ^ bit_length(m)` — the loop-termination fact (`c >> bit_length(c) = 0`).
+Holds for all `m`: at `m = 0` the guard gives `bit_length(0) = 0` and `0 < 2 ^ 0`. -/
+theorem Int.lt_two_pow_toNat_bitLength (m : Nat) : m < 2 ^ ((↑m : Int).bitLength).toNat := by
+  rcases Nat.eq_zero_or_pos m with h | h
+  · subst h; simp [Int.bitLength]
+  · rw [Int.toNat_bitLength_of_pos h]; exact Nat.lt_log2_self
+
+/-- `0 < bit_length(m) ↔ 0 < m`: the loop's range is nonempty exactly when `m > 0`. -/
+theorem Int.toNat_bitLength_pos_iff {m : Nat} : 0 < ((↑m : Int).bitLength).toNat ↔ 0 < m := by
+  rcases Nat.eq_zero_or_pos m with h | h
+  · subst h; simp [Int.bitLength]
+  · rw [Int.toNat_bitLength_of_pos h]; omega
+
+/-- `bit_length(m) - 1 = m.log2` for `0 < m`: the off-by-one between the algorithm's `bit_length()`
+and the proof's `Nat.log2`, so the seed `(bit_length() - 1) / 2` is `log2 / 2`. -/
+theorem Int.toNat_bitLength_sub_one {m : Nat} (hm : 0 < m) :
+    ((↑m : Int).bitLength).toNat - 1 = m.log2 := by
+  rw [Int.toNat_bitLength_of_pos hm, Nat.add_sub_cancel]
+
+/-- `int.bit_length()` is positive for nonzero `n`: the `n = 0` guard is off, leaving `log2 + 1`. -/
+theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
+  unfold Int.bitLength; rw [if_neg hn]; omega
 
 /-- `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n`: `bit_length()` is positive
 (`Int.bitLength_pos`), so `bit_length() - 1 ≥ 0` and the floor-division stays nonneg. Lets a
@@ -149,19 +110,19 @@ theorem Int.fdiv_bitLength_sub_one_nonneg {n : Int} (hn : n ≠ 0) :
   Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
 
 /-- The algorithm's bit-length seed `⌊(n.bit_length() - 1)/2⌋` equals `n`'s level `⌊log₂ n / 2⌋`.
-The `bitLength = log2 + 1` off-by-one (`natBitLength_sub_one`) wrapped in the Int↔Nat casts: the
-seam where the Python `(n.bit_length() - 1) // 2` seed meets the size condition's level, so the
-correctness proofs can hand the size condition the algorithm's actual seed. -/
+The `bit_length() = log2 + 1` off-by-one wrapped in the Int↔Nat casts: the seam where the Python
+`(n.bit_length() - 1) // 2` seed meets the size condition's level, so the correctness proofs can
+hand the size condition the algorithm's actual seed. -/
 theorem Int.toNat_fdiv_bitLength_sub_one {n : Int} (hn : 0 < n) :
     (Int.fdiv (n.bitLength - 1) 2).toNat = n.toNat.log2 / 2 := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hn)
   have hm_pos : 0 < m := by exact_mod_cast hn
-  have hbl : 1 ≤ natBitLength m := natBitLength_pos_iff.mpr hm_pos
-  rw [Int.toNat_natCast, ← natBitLength_sub_one hm_pos, Int.bitLength_natCast,
-      show ((natBitLength m : Nat) : Int) - 1 = ((natBitLength m - 1 : Nat) : Int) from by omega,
-      show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
-      Int.toNat_fdiv_of_nonneg (Int.natCast_nonneg _) (Int.natCast_nonneg _)]
-  simp only [Int.toNat_natCast]
+  have hbl : (↑m : Int).bitLength - 1 = ↑(m.log2) := by
+    unfold Int.bitLength
+    rw [if_neg (by omega), Int.natAbs_natCast]
+    omega
+  rw [hbl, Int.toNat_natCast, show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
+      Int.fdiv_natCast_natCast, Int.toNat_natCast]
 
 /-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
 

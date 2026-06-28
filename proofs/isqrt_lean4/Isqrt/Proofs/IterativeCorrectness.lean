@@ -92,9 +92,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
           = (List.range (↑c : Int).bitLength.toNat).map Int.ofNat from rfl,
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
-  -- `L = (↑c).bit_length() = natBitLength c`, where `c >> L = 0`.
+  -- `c >> bit_length(c) = 0`: shifting past all of `c`'s bits.
   have hz : c >>> (↑c : Int).bitLength.toNat = 0 :=
-    Nat.shiftRight_eq_zero c _ (by rw [Int.toNat_bitLength_natCast]; exact lt_two_pow_natBitLength c)
+    Nat.shiftRight_eq_zero c _ (Int.lt_two_pow_toNat_bitLength c)
   let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     0 < r.fst ∧ r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
   have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
@@ -116,10 +116,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
     simp only [hmotive] at hx ⊢
     obtain ⟨ha_pos, hx_snd, hx_near⟩ := hx
     -- Nat depths at this level (`c >> i`) and its child (`c >> (i+1) = ⌊(c >> i)/2⌋`).
-    rw [Int.toNat_bitLength_natCast] at hi
-    have hc_pos : 0 < c := natBitLength_pos_iff.mp (by omega)
+    have hc_pos : 0 < c := Int.toNat_bitLength_pos_iff.mp (by omega)
     have hdN_pos : 0 < c >>> i :=
-      Nat.shiftRight_pos hc_pos (by rw [← natBitLength_sub_one hc_pos]; omega)
+      Nat.shiftRight_pos hc_pos (by rw [← Int.toNat_bitLength_sub_one hc_pos]; omega)
     have hdN_le : c >>> i ≤ c := hhi i
     have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
     have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
