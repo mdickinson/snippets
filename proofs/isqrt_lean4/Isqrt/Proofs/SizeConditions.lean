@@ -10,7 +10,7 @@ the shift/bit-length language its operations speak while the key-lemma side read
 These lemmas establish:
 - `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
   the algorithm's seed `(n.bit_length() - 1) // 2` equals that level via the bridge
-  `Int.toNat_fdiv_bitLength_sub_one` in `PythonTranslation`,
+  `Int.toNat_ediv_bitLength_sub_one` in `PythonTranslation`,
 - `isSizedAt` descends: right-shifting by `2(c-d)` lowers the level to `d`
   (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
   (`size_condition_step`),
@@ -102,7 +102,7 @@ theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
 /-- Initial size condition: `n`'s own level `⌊log₂ n / 2⌋` satisfies `isSizedAt n` by definition
 (`isSizedAt` carries exactly this level, so the proof is `rfl`). The algorithm computes this level
 as `(n.bit_length() - 1) // 2`; that seed is reconciled with the level by the bridge
-`Int.toNat_fdiv_bitLength_sub_one` (in `PythonTranslation`), and the correctness proofs
+`Int.toNat_ediv_bitLength_sub_one` (in `PythonTranslation`), and the correctness proofs
 combine the two. -/
 theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log2 / 2) :=
   ⟨hn, rfl⟩

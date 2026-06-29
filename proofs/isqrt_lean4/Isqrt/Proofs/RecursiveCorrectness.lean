@@ -33,28 +33,28 @@ shift vocabulary throughout — its `h_sub` value matches `(p.descend hc).n` and
 theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
     (h_sub : nsqrtRecursive (n >>> (2 * ((c - 1) / 2) + 2)) ↑(c / 2) = .ok a) :
     nsqrtRecursive n ↑c
-      = .ok (a <<< ((c - 1) / 2) + Int.fdiv (n >>> ((c - 1) / 2 + 2)) a) := by
+      = .ok (a <<< ((c - 1) / 2) + (n >>> ((c - 1) / 2 + 2)) / a) := by
   have hc' : (0 : Int) < ↑c := by exact_mod_cast hc
   -- `kk` is the def's `Int` recursion depth `(↑c - 1) // 2`; its `.toNat` is the shift amount.
-  let kk : Int := (↑c - 1 : Int).fdiv 2
-  have hkk_def : kk = (↑c - 1 : Int).fdiv 2 := rfl
-  have kk_nn : 0 ≤ kk := Int.fdiv_nonneg (by omega) (by omega)
-  have hkk : kk.toNat = (c - 1) / 2 := Int.toNat_fdiv_pred_two hc
+  let kk : Int := (↑c - 1 : Int) / 2
+  have hkk_def : kk = (↑c - 1 : Int) / 2 := rfl
+  have kk_nn : 0 ≤ kk := Int.ediv_nonneg (by omega) (by omega)
+  have hkk : kk.toNat = (c - 1) / 2 := Int.toNat_ediv_pred_two hc
   have h2k2 : (2 * kk + 2).toNat = 2 * kk.toNat + 2 := by omega
   have hk2 : (kk + 2).toNat = kk.toNat + 2 := by omega
-  have hcdiv : (↑c : Int).fdiv 2 = ↑(c / 2) := by
-    rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl, Int.fdiv_natCast_natCast]
+  have hcdiv : (↑c : Int) / 2 = ↑(c / 2) := by
+    rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl, ← Int.natCast_ediv]
   -- Match the subcall's shift amount `(2*kk+2).toNat` to `h_sub`'s `2⌊(c-1)/2⌋+2`.
   rw [← hkk] at h_sub
   -- Thread the `.ok` branches; the body comes out already in the lift's shift form.
   have hred : nsqrtRecursive n ↑c
-      = .ok (a <<< kk.toNat + Int.fdiv (n >>> (kk.toNat + 2)) a) := by
+      = .ok (a <<< kk.toNat + (n >>> (kk.toNat + 2)) / a) := by
     unfold nsqrtRecursive
     rw [if_neg (Int.not_le.mpr hc')]
-    simp only [pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide), ← hkk_def, Except.ok_bind,
+    simp only [pyFloordiv_eq_ok (show (0 : Int) < 2 by decide), ← hkk_def, Except.ok_bind,
       pyRshift_eq_ok (show (0 : Int) ≤ 2 * kk + 2 by omega), h2k2, hcdiv, h_sub,
       pyLshift_eq_ok kk_nn, pyRshift_eq_ok (show (0 : Int) ≤ kk + 2 by omega), hk2,
-      pyFloordiv_eq_ok (Int.ne_of_gt ha)]
+      pyFloordiv_eq_ok ha]
     rfl
   rw [hred, hkk]
 
@@ -108,15 +108,15 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨a, ha_eq, a_near⟩ :=
         nsqrtRecursive_correctness
-          ⟨n, ((n.bitLength - 1).fdiv 2).toNat,
-            (Int.toNat_fdiv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
+          ⟨n, (((n.bitLength - 1) / 2).toNat),
+            (Int.toNat_ediv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
-      rw [show ((↑(((n.bitLength - 1).fdiv 2).toNat)) : Int) = (n.bitLength - 1).fdiv 2
-            from Int.toNat_of_nonneg (Int.fdiv_bitLength_sub_one_nonneg hn0)] at ha_eq
+      rw [show ((↑(((n.bitLength - 1) / 2).toNat)) : Int) = (n.bitLength - 1) / 2
+            from Int.toNat_of_nonneg (Int.ediv_bitLength_sub_one_nonneg hn0)] at ha_eq
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide)]
+          pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
         rw [Except.ok_bind, ha_eq]
         rfl
       exact ⟨_, hred, a_near.toIntegerSquareRoot⟩

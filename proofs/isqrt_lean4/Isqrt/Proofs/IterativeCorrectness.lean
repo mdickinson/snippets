@@ -60,11 +60,11 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
     (hJ : 0 ≤ 2 * c - r.snd - c >>> s.toNat + 1) :
     stepM c n r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
-        + Int.fdiv (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) r.fst,
+        + (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) / r.fst,
       c >>> s.toNat⟩ := by
   simp only [stepM, pyRshift_eq_ok hs_nn, Except.ok_bind,
     pyLshift_eq_ok hK, pyRshift_eq_ok hJ,
-    pyFloordiv_eq_ok (Int.ne_of_gt ha_pos)]
+    pyFloordiv_eq_ok ha_pos]
   rfl
 
 /-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
@@ -138,7 +138,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
     · -- positivity: `0 < a` survives the left shift; the divided-down remainder is `≥ 0`
       exact Int.add_pos_of_pos_of_nonneg
         (Int.lt_of_lt_of_le ha_pos (Int.le_shiftLeft_of_nonneg (Int.le_of_lt ha_pos)))
-        (Int.fdiv_nonneg (Int.le_shiftRight_of_nonneg (Int.le_of_lt hn)) (Int.le_of_lt ha_pos))
+        (Int.ediv_nonneg (Int.le_shiftRight_of_nonneg (Int.le_of_lt hn)) (Int.le_of_lt ha_pos))
     · -- new `d = ↑(c >> i)`
       rw [hd_new]
     · -- near-√ at the new depth: the loop body is the Newton lift of `chain i`, shared with recursion
@@ -183,18 +183,18 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
         monadicLoop_near
-          ⟨n, ((n.bitLength - 1).fdiv 2).toNat,
-            (Int.toNat_fdiv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
+          ⟨n, (((n.bitLength - 1) / 2).toNat),
+            (Int.toNat_ediv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
-      rw [show ((↑(((n.bitLength - 1).fdiv 2).toNat)) : Int) = (n.bitLength - 1).fdiv 2
-            from Int.toNat_of_nonneg (Int.fdiv_bitLength_sub_one_nonneg hn0)] at hy_eq
+      rw [show ((↑(((n.bitLength - 1) / 2).toNat)) : Int) = (n.bitLength - 1) / 2
+            from Int.toNat_of_nonneg (Int.ediv_bitLength_sub_one_nonneg hn0)] at hy_eq
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show (2 : Int) ≠ 0 by decide)]
+          pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
         rw [Except.ok_bind]
-        have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1).fdiv 2) n)
-          (range ((n.bitLength - 1).fdiv 2).bitLength).reverse ⟨1, 0⟩
+        have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1) / 2) n)
+          (range ((n.bitLength - 1) / 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         rw [key, hy_eq]; rfl
       exact ⟨_, hred, hy_near.toIntegerSquareRoot⟩

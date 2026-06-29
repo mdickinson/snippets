@@ -16,7 +16,6 @@ given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near squar
 module
 
 public import Isqrt.Definitions.Specification
-import Isqrt.Proofs.SupportLemmas
 
 /-! ## Positivity -/
 
@@ -87,11 +86,11 @@ theorem four_mul_le_add_sq (x y : Int) : 4 * x * y ≤ (x + y) ^ 2 := by
 /-- `M ≤ a`, given `4M⁴ ≤ n` and `n/(4M²) < (a+1)²`. -/
 theorem M_le_a {n M a : Int}
     (hM : 0 < M) (ha : 0 < a) (hM4 : 4 * M^4 ≤ n)
-    (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
+    (ha_hi : n / (4 * M^2) < (a + 1)^2) :
     M ≤ a := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
-  have h1 : M^2 ≤ n.fdiv (4 * M^2) := by
-    rw [Int.le_fdiv_iff_mul_le hdenom, show M^2 * (4 * M^2) = 4 * M^4 from by grind only]
+  have h1 : M^2 ≤ n / (4 * M^2) := by
+    rw [Int.le_ediv_iff_mul_le hdenom, show M^2 * (4 * M^2) = 4 * M^4 from by grind only]
     exact hM4
   have h2 : M^2 < (a + 1)^2 := Int.lt_of_le_of_lt h1 ha_hi
   -- `M² < (a+1)²` with `a+1 ≥ 0` gives `M < a+1`, hence `M ≤ a`.
@@ -100,18 +99,18 @@ theorem M_le_a {n M a : Int}
 
 /-- `n < 4M²(a+1)²`, restating `ha_hi`. -/
 theorem n_upper {n M a : Int} (hM : 0 < M)
-    (ha_hi : n.fdiv (4 * M^2) < (a + 1)^2) :
+    (ha_hi : n / (4 * M^2) < (a + 1)^2) :
     n < 4 * M^2 * (a + 1)^2 := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
-  have := (Int.fdiv_lt_iff_lt_mul hdenom).mp ha_hi
+  have := (Int.ediv_lt_iff_lt_mul hdenom).mp ha_hi
   grind only
 
 /-- `((a-1)² + 1) · 4M² ≤ n`, restating `ha_lo`. -/
 theorem n_lower {n M a : Int} (hM : 0 < M)
-    (ha_lo : (a - 1)^2 < n.fdiv (4 * M^2)) :
+    (ha_lo : (a - 1)^2 < n / (4 * M^2)) :
     ((a - 1)^2 + 1) * (4 * M^2) ≤ n := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
-  rw [← Int.le_fdiv_iff_mul_le hdenom]
+  rw [← Int.le_ediv_iff_mul_le hdenom]
   grind only
 
 /-! ## Suitable scalers -/
@@ -126,26 +125,26 @@ sense in which `M` is "small enough" — equivalently `M² ≤ ⌊n / 4M²⌋`. 
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
 public theorem key_isqrt_lemma {n M a : Int}
     (hM_scaler : isSuitableScaler n M)
-    (h_near : isNearSquareRoot (n.fdiv (4 * M^2)) a) :
-    isNearSquareRoot n (M * a + n.fdiv (4 * M * a)) := by
+    (h_near : isNearSquareRoot (n / (4 * M^2)) a) :
+    isNearSquareRoot n (M * a + n / (4 * M * a)) := by
   obtain ⟨hM, hM4⟩ := hM_scaler
   have ha : 0 < a := h_near.pos
   obtain ⟨ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [show (a - 1) * (a - 1) = (a - 1) ^ 2 from by grind only] at ha_lo
   rw [show (a + 1) * (a + 1) = (a + 1) ^ 2 from by grind only] at ha_hi
-  let q := n.fdiv (4 * M * a)
+  let q := n / (4 * M * a)
   have hMa_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
   have hMa_one : 1 ≤ M * a := by have := Int.mul_pos hM ha; grind only
   have hM_le_a : M ≤ a := M_le_a hM ha hM4 ha_hi
   have h4M4_nonneg : 0 ≤ 4 * M^4 :=
     Int.mul_nonneg (by decide) (Int.pow_nonneg (Int.le_of_lt hM))
   have hn_nonneg : 0 ≤ n := Int.le_trans h4M4_nonneg hM4
-  have hq_nonneg : 0 ≤ q := Int.fdiv_nonneg hn_nonneg (Int.le_of_lt hMa_pos)
+  have hq_nonneg : 0 ≤ q := Int.ediv_nonneg hn_nonneg (Int.le_of_lt hMa_pos)
   -- ===== Upper bound: n < (M*a + q + 1)² =====
   have upper : n < (M * a + q + 1)^2 := by
     -- floor-div upper: n < (q+1)·4Ma
-    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_fdiv_add_one_mul_self n hMa_pos
+    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_ediv_add_one_mul_self n hMa_pos
     -- (q+1)·4Ma ≤ (Ma+q+1)² by AM–GM (4xy ≤ (x+y)²)
     have hle : (q + 1) * (4 * M * a) ≤ (M * a + q + 1)^2 := by
       have := four_mul_le_add_sq (M * a) (q + 1)
@@ -166,7 +165,7 @@ public theorem key_isqrt_lemma {n M a : Int}
     have key3 : 4 * M^2 * a^2 + 4 * M * a * q ≤ 4 * M^2 * a^2 + n := by
       -- 4Maq ≤ n (floor div); add 4M²a² to both sides
       have hqm : 4 * M * a * q ≤ n := by
-        exact Int.mul_fdiv_self_le hMa_pos
+        exact Int.mul_ediv_self_le (Int.ne_of_gt hMa_pos)
       exact Int.add_le_add_left hqm (4 * M^2 * a^2)
     have hsq := square_squeeze key1 key2 key3
     -- d_large: n < 4M²a² + 4M² + 8M²a  (rearranged from n_upper)

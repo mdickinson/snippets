@@ -35,7 +35,7 @@ considered as a natural number.
 The second inconvenience is that we can't use the `← c // 2` notation that we'd like to
 use in the recursive call, because Lean can't surface the wrapped `Int` value for use in
 the proof that the measure decreases. So we accept a slight loss of fidelity with
-respect to the Python code and use the equivalent `c.fdiv 2` instead.
+respect to the Python code and use the equivalent `c / 2` instead.
 -/
 
 module
@@ -60,7 +60,7 @@ def nsqrtRecursive (n c : Int) : PyExcept Int := do
     return 1
   else
     let k ← (c - 1) // 2
-    let a ← nsqrtRecursive (← n >> 2 * k + 2) (c.fdiv 2)
+    let a ← nsqrtRecursive (← n >> 2 * k + 2) (c / 2)
     return (← a << k) + (← (← n >> k + 2) // a)
 termination_by c.toNat
 decreasing_by grind only

@@ -1,14 +1,15 @@
 /-
-The bit-level theory the correctness proofs consume, all stated in pure `Int.fdiv` /
-`2 ^ ·` form (no Python operators) so the proofs build on them directly. Three groups.
-(The pure-integer mathematics — near-square-root theory and the Newton-step key lemma —
+The bit-level theory the correctness proofs consume, all stated in pure Euclidean division `· / ·`
+(`Int.ediv`) / `2 ^ ·` form (no Python operators) so the proofs build on them directly. Three
+groups. (The pure-integer mathematics — near-square-root theory and the Newton-step key lemma —
 lives in `Isqrt.Proofs.KeyLemma`.)
 
-**Value extraction.** On its non-raising branch `pyFloordiv` returns `.ok` of the `Int.fdiv`,
-and `pyLshift` / `pyRshift` return `.ok` of the native shift `· <<< ·` / `· >>> ·`. The `_eq_ok`
-lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through the `do`-block once
-the side conditions (nonzero divisor, nonneg shift) are discharged; the shift forms keep the proofs
-in shift vocabulary until the key-lemma seam.
+**Value extraction.** For a positive divisor `pyFloordiv` returns `.ok (a / b)` — its `Int.fdiv`
+agrees with `Int.ediv` there, so the bridge hands the proofs the `· / ·` form core's library is
+richest in — and `pyLshift` / `pyRshift` return `.ok` of the native shift `· <<< ·` / `· >>> ·`. The
+`_eq_ok` lemmas (with `Except.ok_bind`) are the bridges the proofs use to step through the `do`-block
+once the side conditions (positive divisor, nonneg shift) are discharged; the shift forms keep the
+proofs in shift vocabulary until the key-lemma seam.
 
 **Bit length.** The power-of-two facts about `int.bit_length()`. The public `Int.bitLength` is the
 Python `bit_length()` model; these lemmas connect it, via `Nat.log2`, to the power-of-two bounds
@@ -30,12 +31,15 @@ public section
 
 /-! ## Value extraction: the `Except`-returning operations -/
 
-/-- For a nonzero divisor, `pyFloordiv` takes its `.ok` branch. -/
-theorem pyFloordiv_eq_ok {a b : Int} (hb : b ≠ 0) :
-    pyFloordiv a b = .ok (Int.fdiv a b) := by
+/-- For a positive divisor, `pyFloordiv` takes its `.ok` branch, returning the Euclidean quotient
+`a / b`: its `Int.fdiv` agrees with `Int.ediv` once the divisor is nonneg
+(`Int.fdiv_eq_ediv_of_nonneg`) — the single spot the two divisions are reconciled, so everything
+downstream is `· / ·`. -/
+theorem pyFloordiv_eq_ok {a b : Int} (hb : 0 < b) :
+    pyFloordiv a b = .ok (a / b) := by
   unfold pyFloordiv; split
   · omega
-  · rfl
+  · rw [Int.fdiv_eq_ediv_of_nonneg a (Int.le_of_lt hb)]; rfl
 
 /-- For a nonneg shift count, `pyLshift` takes its `.ok` branch, returning the native left shift
 `· <<< ·`. The shift-form value flows directly into the proofs (`Int.shiftLeft_eq` converts it to
@@ -47,8 +51,8 @@ theorem pyLshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
   · rfl
 
 /-- For a nonneg shift count, `pyRshift` takes its `.ok` branch, returning the native arithmetic
-right shift `· >>> ·`. The shift-form value flows directly into the proofs (`Int.shiftRight_eq_fdiv`
-converts it to `Int.fdiv · (2^·)` only at the seam). -/
+right shift `· >>> ·`. The shift-form value flows directly into the proofs (`Int.shiftRight_eq_ediv`
+converts it to `· / 2^·` only at the seam). -/
 theorem pyRshift_eq_ok {n k : Int} (hk : 0 ≤ k) :
     pyRshift n k = .ok (n >>> k.toNat) := by
   unfold pyRshift; split
@@ -103,18 +107,18 @@ theorem Int.bitLength_pos {n : Int} (hn : n ≠ 0) : 0 < n.bitLength := by
   unfold Int.bitLength; rw [if_neg hn]; omega
 
 /-- `⌊(n.bit_length() - 1) / 2⌋` is nonneg for nonzero `n`: `bit_length()` is positive
-(`Int.bitLength_pos`), so `bit_length() - 1 ≥ 0` and the floor-division stays nonneg. Lets a
+(`Int.bitLength_pos`), so `bit_length() - 1 ≥ 0` and the division stays nonneg. Lets a
 consumer round-trip the value's `.toNat` back through `↑` (`Int.toNat_of_nonneg`). -/
-theorem Int.fdiv_bitLength_sub_one_nonneg {n : Int} (hn : n ≠ 0) :
-    0 ≤ Int.fdiv (n.bitLength - 1) 2 :=
-  Int.fdiv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
+theorem Int.ediv_bitLength_sub_one_nonneg {n : Int} (hn : n ≠ 0) :
+    0 ≤ (n.bitLength - 1) / 2 :=
+  Int.ediv_nonneg (by have := Int.bitLength_pos hn; omega) (by omega)
 
 /-- The algorithm's bit-length seed `⌊(n.bit_length() - 1)/2⌋` equals `n`'s level `⌊log₂ n / 2⌋`.
 The `bit_length() = log2 + 1` off-by-one wrapped in the Int↔Nat casts: the seam where the Python
 `(n.bit_length() - 1) // 2` seed meets the size condition's level, so the correctness proofs can
 hand the size condition the algorithm's actual seed. -/
-theorem Int.toNat_fdiv_bitLength_sub_one {n : Int} (hn : 0 < n) :
-    (Int.fdiv (n.bitLength - 1) 2).toNat = n.toNat.log2 / 2 := by
+theorem Int.toNat_ediv_bitLength_sub_one {n : Int} (hn : 0 < n) :
+    ((n.bitLength - 1) / 2).toNat = n.toNat.log2 / 2 := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hn)
   have hm_pos : 0 < m := by exact_mod_cast hn
   have hbl : (↑m : Int).bitLength - 1 = ↑(m.log2) := by
@@ -122,7 +126,7 @@ theorem Int.toNat_fdiv_bitLength_sub_one {n : Int} (hn : 0 < n) :
     rw [if_neg (by omega), Int.natAbs_natCast]
     omega
   rw [hbl, Int.toNat_natCast, show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
-      Int.fdiv_natCast_natCast, Int.toNat_natCast]
+      ← Int.natCast_ediv, Int.toNat_natCast]
 
 /-! ## Scaler encoding: shifts as the key lemma's `4M²` / `4Ma`
 
@@ -138,22 +142,23 @@ theorem four_mul_two_pow_sq (k : Nat) :
   rw [Int.pow_add, ←Int.pow_mul]; grind only
 
 /-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
-For `0 < a` and `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
+For `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
 — a left shift of `a` by `k`, plus the divided-down remainder — equals
 `Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
 correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
 recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
 (`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
-move is factoring `2^(k+2)` as `4·2^k = 4M`. -/
-theorem key_isqrt_body_eq {ν a M : Int} {k : Nat} (ha : 0 < a)
+move is factoring `2^(k+2)` as `4·2^k = 4M`. (Euclidean nesting `⌊⌊ν/y⌋/a⌋ = ⌊ν/(ya)⌋` needs only
+`0 ≤ y`, so — unlike the floor-division form — no constraint on `a`.) -/
+theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
     (hM : M = 2 ^ k) :
-    a * 2 ^ k + Int.fdiv (Int.fdiv ν (2 ^ (k + 2))) a
-      = M * a + Int.fdiv ν (4 * M * a) := by
+    a * 2 ^ k + ν / 2 ^ (k + 2) / a
+      = M * a + ν / (4 * M * a) := by
   subst hM
   have h_pow : (2 : Int) ^ (k + 2) = 4 * 2 ^ k := by
     rw [Int.pow_add]; grind only
-  rw [h_pow, Int.fdiv_fdiv_eq_fdiv_mul ν
-      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega))) (Int.le_of_lt ha)]
+  rw [h_pow, Int.ediv_ediv_of_nonneg
+      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega)))]
   grind only
 
 end

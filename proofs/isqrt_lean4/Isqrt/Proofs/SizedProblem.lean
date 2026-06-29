@@ -17,7 +17,7 @@ reverse of a single `descend`, and `subAt_body_eq` decodes the loop body to a `n
 `shift = shifter p = ⌊(c-1)/2⌋` is the shared shift amount; `scaler = 2^shift = M` is the
 multiplicative scaler the key lemma reads. The size-condition theory (`size_condition_step`,
 `size_condition_at_depth`, the power-bound bridge behind `hsc`) comes from `SizeConditions`; the
-shift↔`fdiv` value bridge (`Int.shiftRight_eq_fdiv`) from `SupportLemmas`; the `4M²`/`4Ma` scaler
+shift↔division value bridge (`Int.shiftRight_eq_ediv`) from `SupportLemmas`; the `4M²`/`4Ma` scaler
 identity (`key_isqrt_body_eq`) from `PythonTranslation`.
 -/
 
@@ -76,7 +76,7 @@ remainder. Paired with `descend` through the shared `shifter`; `isNearSquareRoot
 fact that it carries a near square root to a near square root, crossing to the key lemma's
 `Ma + ⌊n / 4Ma⌋` there. -/
 @[expose] def newtonLift (p : SizedProblem) (a : Int) : Int :=
-  (a <<< p.shifter) + (p.n >>> (p.shifter + 2)).fdiv a
+  (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
 
 /-- The depth-`d` subproblem of `p` as a sized problem: the value `p.n >>> 2(c-d)` (right-shift by
 the depth-`d` shift) paired with level `d` and the inherited size invariant
@@ -109,12 +109,12 @@ split shift `2(c-d) + (⌊(d-1)/2⌋+2)` agree by `omega`, as do the left-shift 
 `⌊(d-1)/2⌋`. -/
 theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
     (he : e = d >>> 1) (hd_pos : 0 < d) :
-    a <<< (d - e - 1) + Int.fdiv (p.n >>> (2 * p.c - e - d + 1)) a
+    a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)) / a
       = (p.subAt d hhi).newtonLift a := by
   -- `d >>> 1` is `d / 2`; restate the child shift so the arithmetic below reads the division.
   have he : e = d / 2 := he
-  show a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)).fdiv a
-      = a <<< ((d - 1) / 2) + ((p.n >>> (2 * (p.c - d))) >>> ((d - 1) / 2 + 2)).fdiv a
+  show a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)) / a
+      = a <<< ((d - 1) / 2) + ((p.n >>> (2 * (p.c - d))) >>> ((d - 1) / 2 + 2)) / a
   rw [← Int.shiftRight_add,
       show d - e - 1 = (d - 1) / 2 from by omega,
       show 2 * p.c - e - d + 1 = 2 * (p.c - d) + ((d - 1) / 2 + 2) from by omega]
@@ -128,20 +128,20 @@ across the proofs. -/
 /-- The descended value `n >> (2·shift+2)` is the key lemma's `⌊n / 4M²⌋` (`M = scaler = 2^shift`):
 the right-shift by `2·shift+2` is division by `2^(2·shift+2) = 4M²` (`four_mul_two_pow_sq`). -/
 theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
-    (p.descend hc).n = p.n.fdiv (4 * p.scaler ^ 2) := by
-  show p.n >>> (2 * p.shifter + 2) = p.n.fdiv (4 * p.scaler ^ 2)
-  rw [Int.shiftRight_eq_fdiv,
+    (p.descend hc).n = p.n / (4 * p.scaler ^ 2) := by
+  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * p.scaler ^ 2)
+  rw [Int.shiftRight_eq_ediv,
     show (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) from four_mul_two_pow_sq p.shifter]
 
-/-- `newtonLift` in the key lemma's multiplicative form, for `0 < a`:
+/-- `newtonLift` in the key lemma's multiplicative form:
 `(a << shift) + ⌊(n >> shift+2) / a⌋ = Ma + ⌊n / 4Ma⌋` (`M = scaler = 2^shift`). The left shift is
 `Ma` and the inner right-shift divides by `4M` (`key_isqrt_body_eq`). -/
-theorem newtonLift_eq (p : SizedProblem) {a : Int} (ha : 0 < a) :
-    p.newtonLift a = p.scaler * a + p.n.fdiv (4 * p.scaler * a) := by
-  show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)).fdiv a
-      = p.scaler * a + p.n.fdiv (4 * p.scaler * a)
-  rw [Int.shiftLeft_eq, Int.shiftRight_eq_fdiv]
-  exact key_isqrt_body_eq ha rfl
+theorem newtonLift_eq (p : SizedProblem) {a : Int} :
+    p.newtonLift a = p.scaler * a + p.n / (4 * p.scaler * a) := by
+  show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
+      = p.scaler * a + p.n / (4 * p.scaler * a)
+  rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
+  exact key_isqrt_body_eq rfl
 
 end SizedProblem
 
@@ -155,7 +155,7 @@ theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
   have hscaler : isSuitableScaler p.n p.scaler :=
     isSuitableScaler_of_hasSizeCondition rfl hc p.hsc
   rw [p.descend_n_eq hc] at h
-  rw [p.newtonLift_eq h.pos]
+  rw [p.newtonLift_eq]
   exact key_isqrt_lemma hscaler h
 
 end
