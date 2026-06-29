@@ -14,12 +14,6 @@ public section
 
 /-! ## Basic ordering lemmas for `Int.fdiv` -/
 
-/-- `(x.fdiv k) * k ≤ x` when `0 < k`. Swapped-argument version of
-`Int.mul_fdiv_self_le`. -/
-theorem Int.fdiv_mul_le_self {x k : Int} (h : 0 < k) : x.fdiv k * k ≤ x := by
-  rw [Int.mul_comm]
-  exact Int.mul_fdiv_self_le h
-
 /-- `y ≤ x.fdiv k ↔ y * k ≤ x` when `0 < k`. -/
 theorem Int.le_fdiv_iff_mul_le {x y k : Int} (hk : 0 < k) :
     y ≤ x.fdiv k ↔ y * k ≤ x := by

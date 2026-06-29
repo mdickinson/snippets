@@ -166,8 +166,7 @@ public theorem key_isqrt_lemma {n M a : Int}
     have key3 : 4 * M^2 * a^2 + 4 * M * a * q ≤ 4 * M^2 * a^2 + n := by
       -- 4Maq ≤ n (floor div); add 4M²a² to both sides
       have hqm : 4 * M * a * q ≤ n := by
-        rw [Int.mul_comm (4 * M * a) q]
-        exact Int.fdiv_mul_le_self hMa_pos
+        exact Int.mul_fdiv_self_le hMa_pos
       exact Int.add_le_add_left hqm (4 * M^2 * a^2)
     have hsq := square_squeeze key1 key2 key3
     -- d_large: n < 4M²a² + 4M² + 8M²a  (rearranged from n_upper)
