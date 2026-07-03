@@ -94,10 +94,10 @@ theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
   rw [Int.toNat_natCast] at hc
   rw [hasSizeCondition_natCast_iff, show 4 = 2 ^ 2 from rfl]
   simp only [← Nat.pow_mul]
-  have hms : 0 < m.size := Nat.size_pos_of_pos (by omega)
+  have hms : 0 < m.size := Nat.size_pos.mpr (by omega)
   constructor
-  · apply Nat.le_of_not_lt; rw [←Nat.size_spec]; omega
-  · rw [←Nat.size_spec]; omega
+  · apply Nat.le_of_not_lt; rw [←Nat.size_le]; omega
+  · rw [←Nat.size_le]; omega
 
 /-! ## Initial size condition -/
 
@@ -118,7 +118,7 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
   have hm_pos : 0 < m := by exact_mod_cast hpos
   rw [Int.toNat_natCast] at hc
-  have hms : 0 < m.size := Nat.size_pos_of_pos (by omega)
+  have hms : 0 < m.size := Nat.size_pos.mpr hm_pos
   have hk_le : 2 * (c - d) < m.size := by omega
   -- Push the Int shift down to the Nat shift, then read off positivity and the level in `Nat.log2`.
   rw [← Int.natCast_shiftRight]

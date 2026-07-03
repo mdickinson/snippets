@@ -115,7 +115,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
-        have hsize : 0 < n.toNat.size := Nat.size_pos_of_pos (by omega)
+        have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
         rw [Except.ok_bind, Int.bitLength_eq hn,
           show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
           ha_eq]

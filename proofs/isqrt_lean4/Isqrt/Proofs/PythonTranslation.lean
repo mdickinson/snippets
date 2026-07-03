@@ -56,6 +56,6 @@ public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.to
   · rw [if_neg (by omega)]; norm_cast
     apply Nat.le_antisymm
     · apply Nat.succ_le_of_lt
-      rw [Nat.log2_lt (by omega), ←Nat.size_spec]; omega
-    · rw [Nat.size_spec, ←Nat.log2_lt (by omega)]; omega
+      rw [Nat.log2_lt (by omega), ←Nat.size_le]; omega
+    · rw [Nat.size_le, ←Nat.log2_lt (by omega)]; omega
   · rw [if_pos (by omega), toNat_zero, Nat.size_zero, cast_ofNat_Int]

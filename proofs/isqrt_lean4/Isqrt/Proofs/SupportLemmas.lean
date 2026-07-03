@@ -34,7 +34,7 @@ theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <
 def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
 
 /-- Defining property of Nat.size: n.size <= k iff n < 2^k. -/
-theorem Nat.size_spec {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
+theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
   unfold Nat.size
   rcases Nat.eq_zero_or_pos n with rfl | hn
   · rw [if_pos rfl]
@@ -45,29 +45,25 @@ theorem Nat.size_spec {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
     apply Nat.log2_lt (Nat.ne_zero_of_lt hn)
 
 /-- Defining property, with inequalities inverted. -/
-theorem Nat.size_spec' {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
-  have := Nat.size_spec (n := n) (k := k); omega
+theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
+  have := Nat.size_le (n := n) (k := k); omega
 
 /-- The size of `0` is `0`. -/
 theorem Nat.size_zero : Nat.size 0 = 0 := by
-  exact Nat.eq_zero_of_le_zero (Nat.size_spec.mpr (by omega))
+  exact Nat.eq_zero_of_le_zero (Nat.size_le.mpr (by omega))
 
-/-- If `n.size` is positive then `n` is positive. -/
-theorem Nat.pos_of_size_pos {n : Nat} : 0 < n.size -> 0 < n := by
-  rw [Nat.size_spec']; omega
-
-/-- If `n` is positive then `n.size` is positive. -/
-theorem Nat.size_pos_of_pos {n : Nat} : 0 < n -> 0 < n.size := by
-  rw [Nat.size_spec']; omega
+/-- `n.size` is positive iff `n` is positive. -/
+theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
+  rw [Nat.lt_size]; omega
 
 /-- Right shifting a natural number by its size yields zero. -/
-theorem Nat.self_shiftRight_size {n : Nat} : n >>> n.size = 0 := by
+theorem Nat.shiftRight_size_self {n : Nat} : n >>> n.size = 0 := by
   rw [Nat.shiftRight_eq_div_pow, Nat.div_eq_zero_iff_lt (Nat.pow_pos (by decide))]
-  rw [←Nat.size_spec]; omega
+  rw [←Nat.size_le]; omega
 
 /-- Right shifting a natural number by less than its size gives something positive. -/
 theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
-  rw [Nat.size_spec'] at hk
+  rw [Nat.lt_size] at hk
   rw [Nat.shiftRight_eq_div_pow, Nat.div_pos_iff]
   grind only [Nat.pow_pos]
 
@@ -75,13 +71,13 @@ theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
 theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
   rw [Nat.shiftRight_eq_div_pow]
   apply Nat.le_antisymm
-  · rw [Nat.size_spec]
+  · rw [Nat.size_le]
     apply Nat.div_lt_of_lt_mul
-    rw [←Nat.pow_add, ←Nat.size_spec]
+    rw [←Nat.pow_add, ←Nat.size_le]
     omega
-  · rw [Nat.sub_le_iff_le_add, Nat.size_spec, Nat.pow_add]
+  · rw [Nat.sub_le_iff_le_add, Nat.size_le, Nat.pow_add]
     apply Nat.lt_mul_of_div_lt _ (Nat.pow_pos (by decide))
-    rw [← Nat.size_spec]
+    rw [← Nat.size_le]
     omega
 
 /-- `Except.ok a >>= f = f a` (definitional). -/
