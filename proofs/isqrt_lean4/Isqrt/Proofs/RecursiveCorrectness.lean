@@ -39,14 +39,10 @@ theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
   let kk : Int := (↑c - 1 : Int) / 2
   have hkk_def : kk = (↑c - 1 : Int) / 2 := rfl
   have kk_nn : 0 ≤ kk := Int.ediv_nonneg (by omega) (by omega)
-  have hkk : kk.toNat = (c - 1) / 2 := by
-    subst kk
-    rw [Int.toNat_ediv_pred_two (by omega)]
-    omega
+  have hkk : kk.toNat = (c - 1) / 2 := by subst kk; omega
   have h2k2 : (2 * kk + 2).toNat = 2 * kk.toNat + 2 := by omega
   have hk2 : (kk + 2).toNat = kk.toNat + 2 := by omega
-  have hcdiv : (↑c : Int) / 2 = ↑(c / 2) := by
-    rw [show ((2 : Int)) = ((2 : Nat) : Int) from rfl, ← Int.natCast_ediv]
+  have hcdiv : (↑c : Int) / 2 = ↑(c / 2) := by omega
   -- Match the subcall's shift amount `(2*kk+2).toNat` to `h_sub`'s `2⌊(c-1)/2⌋+2`.
   rw [← hkk] at h_sub
   -- Thread the `.ok` branches; the body comes out already in the lift's shift form.
@@ -119,11 +115,10 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
-        rw [Except.ok_bind]
-        rw [Int.bitLength_eq hn]
-        have hsize : 0 < n.toNat.size := by exact Nat.size_pos_of_pos (by omega)
-        rw [Int.toNat_ediv_pred_two hsize]
-        rw [ha_eq]
+        have hsize : 0 < n.toNat.size := Nat.size_pos_of_pos (by omega)
+        rw [Except.ok_bind, Int.bitLength_eq hn,
+          show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
+          ha_eq]
         rfl
       exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

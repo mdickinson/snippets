@@ -28,12 +28,6 @@ theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h
   exact_mod_cast Nat.le_shiftLeft
 
-/-! ## Int ↔ Nat bridging -/
-
-/-- `⌊(c - 1) / 2⌋ = (c - 1) / 2` for `0 < c` -/
-theorem Int.toNat_ediv_pred_two {c : Nat} (hc : 0 < c) :
-    (((c : Int) - 1) / 2) =  ((c - 1) / 2 : Nat) := by omega
-
 /-! ## Nat.size -/
 
 /-- Minimum number of bits required to represent a natural number. -/

@@ -117,14 +117,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
     simp only [hmotive] at hx ⊢
     obtain ⟨ha_pos, hx_snd, hx_near⟩ := hx
     -- Nat depths at this level (`c >> i`) and its child (`c >> (i+1) = ⌊(c >> i)/2⌋`).
-    have hc_pos : 0 < c := by
-      apply Nat.pos_of_size_pos
-      rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
-      omega
-    have hdN_pos : 0 < c >>> i := by
-      apply Nat.shiftRight_pos
-      rw [Int.bitLength_eq (by omega), Int.toNat_natCast] at hi
-      exact hi
+    rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
+    have hc_pos : 0 < c := Nat.pos_of_size_pos (by omega)
+    have hdN_pos : 0 < c >>> i := Nat.shiftRight_pos hi
     have hdN_le : c >>> i ≤ c := hhi i
     have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
     have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
@@ -194,15 +189,13 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
-        rw [Except.ok_bind]
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1) / 2) n)
           (range ((n.bitLength - 1) / 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
-        have hsize : 0 < n.toNat.size := by exact Nat.size_pos_of_pos (by omega)
-        rw [key]
-        rw [Int.bitLength_eq hn]
-        rw [Int.toNat_ediv_pred_two hsize]
-        rw [hy_eq]
+        have hsize : 0 < n.toNat.size := Nat.size_pos_of_pos (by omega)
+        rw [Except.ok_bind, key, Int.bitLength_eq hn,
+          show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
+          hy_eq]
         rfl
       exact ⟨_, hred, hy_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

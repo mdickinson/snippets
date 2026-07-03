@@ -118,7 +118,7 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
   have hm_pos : 0 < m := by exact_mod_cast hpos
   rw [Int.toNat_natCast] at hc
-  have hms : 0 < m.size := by exact Nat.size_pos_of_pos (by omega)
+  have hms : 0 < m.size := Nat.size_pos_of_pos (by omega)
   have hk_le : 2 * (c - d) < m.size := by omega
   -- Push the Int shift down to the Nat shift, then read off positivity and the level in `Nat.log2`.
   rw [← Int.natCast_shiftRight]
