@@ -1,11 +1,10 @@
 /-
-Supporting lemmas for the isqrt proof that are *not* about our Python primitives — the kind of
-general `Int` / `Nat` facts Mathlib would supply, reproduced here for the Mathlib-free build.
+This module contains:
 
-The proofs divide only by positive divisors, so they reason in Euclidean division `· / ·`
-(`Int.ediv`) throughout — the form core's library is richest in (ordering, nesting, casts). What
-remains here are the bridges core does not give directly: the shift↔division and Int↔Nat seams the
-proofs cross, plus the stray `Nat.log2` facts they need.
+- Supporting lemmas: general results about `Int` and `Nat` that aren't available in
+  the core library.
+- `Nat.size`, its defining properties, and some basic results about it and its
+  relationship to `Nat.shiftRight`.
 -/
 
 module
@@ -14,10 +13,7 @@ public section
 
 /-! ## Shift ↔ division -/
 
-/-- The arithmetic right shift is division by a power of two: `n >>> k = ⌊n / 2^k⌋`. Core's
-`Int.shiftRight_eq_div_pow` gives this with a `Nat`-cast divisor `↑(2^k)`; `norm_cast` lines that up
-with the `(2 : Int)^k` the `SizedProblem` operations divide by. The bridge that lets `SizedProblem`'s
-shift-form operations meet the division-based size-condition and key-lemma theory below them. -/
+/-- Right shift for an int matches division by a power of two. -/
 theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   rw [Int.shiftRight_eq_div_pow]
   norm_cast
@@ -34,46 +30,68 @@ theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <
 
 /-! ## Int ↔ Nat bridging -/
 
-/-- `⌊(c - 1) / 2⌋.toNat = (c - 1) / 2` for `0 < c`: halving the integer `↑c - 1` and taking
-`toNat` agrees with `Nat` division of the predecessor. The Int↔Nat bridge the size-condition proofs
-use for the recursion's `k = (c - 1) // 2`. The `0 < c` hypothesis keeps `↑c - 1` (Int) in step with
-`c - 1` (truncating Nat subtraction). -/
+/-- `⌊(c - 1) / 2⌋ = (c - 1) / 2` for `0 < c` -/
 theorem Int.toNat_ediv_pred_two {c : Nat} (hc : 0 < c) :
-    ((↑c - 1 : Int) / 2).toNat = (c - 1) / 2 := by
-  rw [show ((↑c : Int) - 1) = ((c - 1 : Nat) : Int) from by omega,
-      show ((2 : Int)) = ((2 : Nat) : Int) from rfl,
-      ← Int.natCast_ediv, Int.toNat_natCast]
+    (((c : Int) - 1) / 2) =  ((c - 1) / 2 : Nat) := by omega
 
-/-! ## Nat.log2 under right shifts -/
+/-! ## Nat.size -/
 
-/-- A positive `n` stays positive after a right shift by at most its bit length: `0 < n >>> k`
-when `k ≤ n.log2` (equivalently `2^k ≤ n`). -/
-theorem Nat.shiftRight_pos {n k : Nat} (hn : 0 < n) (hk : k ≤ n.log2) : 0 < n >>> k := by
-  rw [Nat.shiftRight_eq_div_pow]
-  exact Nat.div_pos ((Nat.le_log2 (Nat.ne_of_gt hn)).mp hk) (Nat.pow_pos (by decide))
+/-- Minimum number of bits required to represent a natural number. -/
+def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
 
-/-- Right-shifting drops exactly `k` from the base-2 log: `(n >>> k).log2 = n.log2 - k`, for all
-`n` and `k` (the `log2`/right-shift analogue of Mathlib's `Nat.log_div_base_pow`). The arithmetic
-core of the size condition's descent (`size_condition_at_depth`): shifting right by `k` lowers `n`'s
-bit length by exactly `k` (and to `0` once `k` exceeds it, where both sides vanish). -/
-theorem Nat.log2_shiftRight (n k : Nat) : (n >>> k).log2 = n.log2 - k := by
-  rw [Nat.shiftRight_eq_div_pow]
+/-- Defining property of Nat.size: n.size <= k iff n < 2^k. -/
+theorem Nat.size_spec {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
+  unfold Nat.size
   rcases Nat.eq_zero_or_pos n with rfl | hn
-  · simp
-  · have hnne : n ≠ 0 := by omega
-    rcases Nat.lt_or_ge n.log2 k with hk | hk
-    · -- `k` past the bit length: `n < 2^k`, so `n / 2^k = 0` and `n.log2 - k = 0`.
-      rw [Nat.div_eq_of_lt ((Nat.log2_lt hnne).mp hk), show n.log2 - k = 0 from by omega]; simp
-    · -- `k ≤ n.log2`: `2^k` still fits, so the bit length drops by exactly `k`.
-      have h2k : 0 < 2 ^ k := Nat.pow_pos (by decide)
-      have hlo : 2 ^ k ≤ n := (Nat.le_log2 hnne).mp hk
-      have hdiv_pos : 0 < n / 2 ^ k := Nat.div_pos hlo h2k
-      rw [Nat.log2_eq_iff (by omega)]
-      refine ⟨?_, ?_⟩
-      · rw [Nat.le_div_iff_mul_le h2k, ← Nat.pow_add, Nat.sub_add_cancel hk]
-        exact Nat.log2_self_le hnne
-      · rw [Nat.div_lt_iff_lt_mul h2k, ← Nat.pow_add,
-            show n.log2 - k + 1 + k = n.log2 + 1 from by omega]
-        exact Nat.lt_log2_self
+  · rw [if_pos rfl]
+    constructor
+    · intro; exact Nat.pow_pos (by decide)
+    · intro; exact zero_le _
+  · rw [if_neg (Nat.ne_of_gt hn)]
+    apply Nat.log2_lt (Nat.ne_zero_of_lt hn)
+
+/-- Defining property, with inequalities inverted. -/
+theorem Nat.size_spec' {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
+  have := Nat.size_spec (n := n) (k := k); omega
+
+/-- The size of `0` is `0`. -/
+theorem Nat.size_zero : Nat.size 0 = 0 := by
+  exact Nat.eq_zero_of_le_zero (Nat.size_spec.mpr (by omega))
+
+/-- If `n.size` is positive then `n` is positive. -/
+theorem Nat.pos_of_size_pos {n : Nat} : 0 < n.size -> 0 < n := by
+  rw [Nat.size_spec']; omega
+
+/-- If `n` is positive then `n.size` is positive. -/
+theorem Nat.size_pos_of_pos {n : Nat} : 0 < n -> 0 < n.size := by
+  rw [Nat.size_spec']; omega
+
+/-- Right shifting a natural number by its size yields zero. -/
+theorem Nat.self_shiftRight_size {n : Nat} : n >>> n.size = 0 := by
+  rw [Nat.shiftRight_eq_div_pow, Nat.div_eq_zero_iff_lt (Nat.pow_pos (by decide))]
+  rw [←Nat.size_spec]; omega
+
+/-- Right shifting a natural number by less than its size gives something positive. -/
+theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
+  rw [Nat.size_spec'] at hk
+  rw [Nat.shiftRight_eq_div_pow, Nat.div_pos_iff]
+  grind only [Nat.pow_pos]
+
+/-- Shifting right reduces the size by the shift amount. -/
+theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
+  rw [Nat.shiftRight_eq_div_pow]
+  apply Nat.le_antisymm
+  · rw [Nat.size_spec]
+    apply Nat.div_lt_of_lt_mul
+    rw [←Nat.pow_add, ←Nat.size_spec]
+    omega
+  · rw [Nat.sub_le_iff_le_add, Nat.size_spec, Nat.pow_add]
+    apply Nat.lt_mul_of_div_lt _ (Nat.pow_pos (by decide))
+    rw [← Nat.size_spec]
+    omega
+
+/-- `Except.ok a >>= f = f a` (definitional). -/
+theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
+    (Except.ok a >>= f) = f a := rfl
 
 end

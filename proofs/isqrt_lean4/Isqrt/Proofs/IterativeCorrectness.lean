@@ -93,8 +93,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `c >> bit_length(c) = 0`: shifting past all of `c`'s bits.
-  have hz : c >>> (↑c : Int).bitLength.toNat = 0 :=
-    Nat.shiftRight_eq_zero c _ (Int.lt_two_pow_toNat_bitLength c)
+  have hz : c >>> (↑c : Int).bitLength.toNat = 0 := by
+    rw [Int.bitLength_eq (Int.natCast_nonneg c), Int.toNat_natCast, Int.toNat_natCast]
+    exact Nat.self_shiftRight_size
   let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     0 < r.fst ∧ r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
   have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
@@ -116,9 +117,14 @@ private theorem monadicLoop_near (p : SizedProblem) :
     simp only [hmotive] at hx ⊢
     obtain ⟨ha_pos, hx_snd, hx_near⟩ := hx
     -- Nat depths at this level (`c >> i`) and its child (`c >> (i+1) = ⌊(c >> i)/2⌋`).
-    have hc_pos : 0 < c := Int.toNat_bitLength_pos_iff.mp (by omega)
-    have hdN_pos : 0 < c >>> i :=
-      Nat.shiftRight_pos hc_pos (by rw [← Int.toNat_bitLength_sub_one hc_pos]; omega)
+    have hc_pos : 0 < c := by
+      apply Nat.pos_of_size_pos
+      rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
+      omega
+    have hdN_pos : 0 < c >>> i := by
+      apply Nat.shiftRight_pos
+      rw [Int.bitLength_eq (by omega), Int.toNat_natCast] at hi
+      exact hi
     have hdN_le : c >>> i ≤ c := hhi i
     have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
     have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
@@ -182,12 +188,8 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
-        monadicLoop_near
-          ⟨n, (((n.bitLength - 1) / 2).toNat),
-            (Int.toNat_ediv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
+        monadicLoop_near ⟨n, (n.toNat.size - 1) / 2, size_condition_initial hpos⟩
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
-      rw [show ((↑(((n.bitLength - 1) / 2).toNat)) : Int) = (n.bitLength - 1) / 2
-            from Int.toNat_of_nonneg (Int.ediv_bitLength_sub_one_nonneg hn0)] at hy_eq
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
@@ -196,7 +198,12 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1) / 2) n)
           (range ((n.bitLength - 1) / 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
-        rw [key, hy_eq]; rfl
+        have hsize : 0 < n.toNat.size := by exact Nat.size_pos_of_pos (by omega)
+        rw [key]
+        rw [Int.bitLength_eq hn]
+        rw [Int.toNat_ediv_pred_two hsize]
+        rw [hy_eq]
+        rfl
       exact ⟨_, hred, hy_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn

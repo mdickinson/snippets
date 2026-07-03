@@ -125,6 +125,33 @@ The two places `SizedProblem`'s shift vocabulary meets `key_isqrt_lemma`'s `M`/`
 correctness proofs route through these, so the shift↔multiplicative crossing lives here, not smeared
 across the proofs. -/
 
+/-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
+For `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
+— a left shift of `a` by `k`, plus the divided-down remainder — equals
+`Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
+correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
+recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
+(`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
+move is factoring `2^(k+2)` as `4·2^k = 4M`. (Euclidean nesting `⌊⌊ν/y⌋/a⌋ = ⌊ν/(ya)⌋` needs only
+`0 ≤ y`, so — unlike the floor-division form — no constraint on `a`.) -/
+private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
+    (hM : M = 2 ^ k) :
+    a * 2 ^ k + ν / 2 ^ (k + 2) / a
+      = M * a + ν / (4 * M * a) := by
+  subst hM
+  have h_pow : (2 : Int) ^ (k + 2) = 4 * 2 ^ k := by
+    rw [Int.pow_add]; grind only
+  rw [h_pow, Int.ediv_ediv_of_nonneg
+      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega)))]
+  grind only
+
+/-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
+scaler `M = 2^k`: `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
+`>> (2k+2)` as division by `4M²`. -/
+private theorem four_mul_two_pow_sq (k : Nat) :
+    (4 : Int) * (2 ^ k) ^ 2 = 2 ^ (2 * k + 2) := by
+  rw [Int.pow_add, ←Int.pow_mul]; grind only
+
 /-- The descended value `n >> (2·shift+2)` is the key lemma's `⌊n / 4M²⌋` (`M = scaler = 2^shift`):
 the right-shift by `2·shift+2` is division by `2^(2·shift+2) = 4M²` (`four_mul_two_pow_sq`). -/
 theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :

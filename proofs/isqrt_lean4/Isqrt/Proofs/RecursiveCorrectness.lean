@@ -39,7 +39,10 @@ theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
   let kk : Int := (↑c - 1 : Int) / 2
   have hkk_def : kk = (↑c - 1 : Int) / 2 := rfl
   have kk_nn : 0 ≤ kk := Int.ediv_nonneg (by omega) (by omega)
-  have hkk : kk.toNat = (c - 1) / 2 := Int.toNat_ediv_pred_two hc
+  have hkk : kk.toNat = (c - 1) / 2 := by
+    subst kk
+    rw [Int.toNat_ediv_pred_two (by omega)]
+    omega
   have h2k2 : (2 * kk + 2).toNat = 2 * kk.toNat + 2 := by omega
   have hk2 : (kk + 2).toNat = kk.toNat + 2 := by omega
   have hcdiv : (↑c : Int) / 2 = ↑(c / 2) := by
@@ -106,18 +109,21 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; decide
     · -- 0 < n: the recursion runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
+
       obtain ⟨a, ha_eq, a_near⟩ :=
         nsqrtRecursive_correctness
-          ⟨n, (((n.bitLength - 1) / 2).toNat),
-            (Int.toNat_ediv_bitLength_sub_one hpos).symm ▸ size_condition_initial hpos⟩
+          ⟨n, (n.toNat.size - 1) / 2, size_condition_initial hpos⟩
+
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
-      rw [show ((↑(((n.bitLength - 1) / 2).toNat)) : Int) = (n.bitLength - 1) / 2
-            from Int.toNat_of_nonneg (Int.ediv_bitLength_sub_one_nonneg hn0)] at ha_eq
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
-        rw [Except.ok_bind, ha_eq]
+        rw [Except.ok_bind]
+        rw [Int.bitLength_eq hn]
+        have hsize : 0 < n.toNat.size := by exact Nat.size_pos_of_pos (by omega)
+        rw [Int.toNat_ediv_pred_two hsize]
+        rw [ha_eq]
         rfl
       exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

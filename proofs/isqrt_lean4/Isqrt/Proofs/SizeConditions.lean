@@ -9,8 +9,7 @@ the shift/bit-length language its operations speak while the key-lemma side read
 
 These lemmas establish:
 - `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
-  the algorithm's seed `(n.bit_length() - 1) // 2` equals that level via the bridge
-  `Int.toNat_ediv_bitLength_sub_one` in `PythonTranslation`,
+  the algorithm's seed `(n.bit_length() - 1) // 2` equals that level
 - `isSizedAt` descends: right-shifting by `2(c-d)` lowers the level to `d`
   (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
   (`size_condition_step`),
@@ -25,7 +24,7 @@ bound.
 module
 
 public import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.SupportLemmas
+public import Isqrt.Proofs.SupportLemmas
 
 public section
 
@@ -78,7 +77,7 @@ private theorem hasSizeCondition_natCast_iff {n c : Nat} :
 carries, so its instances are built in the shift/bit-length language the operations speak rather
 than in the power bound `hasSizeCondition`. The two are equivalent (`hasSizeCondition_of_isSizedAt`). -/
 @[expose] def isSizedAt (n : Int) (c : Nat) : Prop :=
-  0 < n ∧ c = n.toNat.log2 / 2
+  0 < n ∧ c = (n.toNat.size - 1) / 2
 
 /-- `isSizedAt` forces `0 < n` (by definition). -/
 theorem isSizedAt.pos {n : Int} {c : Nat} (h : isSizedAt n c) : 0 < n := h.1
@@ -95,19 +94,16 @@ theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
   rw [Int.toNat_natCast] at hc
   rw [hasSizeCondition_natCast_iff, show 4 = 2 ^ 2 from rfl]
   simp only [← Nat.pow_mul]
-  exact ⟨by rw [← Nat.le_log2 (by omega)]; omega, by rw [← Nat.log2_lt (by omega)]; omega⟩
+  have hms : 0 < m.size := Nat.size_pos_of_pos (by omega)
+  constructor
+  · apply Nat.le_of_not_lt; rw [←Nat.size_spec]; omega
+  · rw [←Nat.size_spec]; omega
 
 /-! ## Initial size condition -/
 
-/-- Initial size condition: `n`'s own level `⌊log₂ n / 2⌋` satisfies `isSizedAt n` by definition
-(`isSizedAt` carries exactly this level, so the proof is `rfl`). The algorithm computes this level
-as `(n.bit_length() - 1) // 2`; that seed is reconciled with the level by the bridge
-`Int.toNat_ediv_bitLength_sub_one` (in `PythonTranslation`), and the correctness proofs
-combine the two. -/
-theorem size_condition_initial {n : Int} (hn : 0 < n) : isSizedAt n (n.toNat.log2 / 2) :=
-  ⟨hn, rfl⟩
-
-
+/-- Initial size condition. -/
+theorem size_condition_initial {n : Int} (hn : 0 < n) :
+    isSizedAt n ((n.toNat.size - 1) / 2) := ⟨hn, rfl⟩
 
 /-! ## Descent of the size condition -/
 
@@ -122,12 +118,14 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hpos)
   have hm_pos : 0 < m := by exact_mod_cast hpos
   rw [Int.toNat_natCast] at hc
-  have hk_le : 2 * (c - d) ≤ m.log2 := by omega
+  have hms : 0 < m.size := by exact Nat.size_pos_of_pos (by omega)
+  have hk_le : 2 * (c - d) < m.size := by omega
   -- Push the Int shift down to the Nat shift, then read off positivity and the level in `Nat.log2`.
   rw [← Int.natCast_shiftRight]
   refine ⟨?_, ?_⟩
-  · exact_mod_cast Nat.shiftRight_pos hm_pos hk_le
-  · rw [Int.toNat_natCast, Nat.log2_shiftRight]; omega
+  · exact_mod_cast Nat.shiftRight_pos hk_le
+  · rw [Int.toNat_natCast, Nat.size_shiftRight]
+    omega
 
 /-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2`
 — division by the step's `4M²` for `M = 2^⌊(c-1)/2⌋` — lands the level at `c/2`. The `d = c/2`
