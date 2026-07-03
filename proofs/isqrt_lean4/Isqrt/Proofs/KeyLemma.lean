@@ -1,7 +1,7 @@
 /-
 The isqrt correctness proof's pure-integer mathematics: near-square-root theory and the
 Newton-step key lemma. It is all general `Int` arithmetic — the bit-level encoding the
-algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.PythonTranslation`.
+algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.SizedProblem`.
 
 The **near square root** predicate, `isNearSquareRoot` (`(a - 1)² < n < (a + 1)²`; for
 positive `n`, `a` is `⌊√n⌋` or `⌈√n⌉`), is defined in `Isqrt.Definitions.Specification`
@@ -19,17 +19,14 @@ public import Isqrt.Definitions.Specification
 
 /-! ## Positivity -/
 
-/-- A near square root is positive: `(a-1)² < n < (a+1)²` forces `(a-1)² < (a+1)²`,
-i.e. `4a > 0`. -/
+/-- A near square root is positive. -/
 public theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := by
   obtain ⟨h_lo, h_hi⟩ := h
   grind only
 
 /-! ## From near square root to integer square root -/
 
-/-- The algorithm's final return adjustment: a near square root `a` is either
-`⌊√n⌋` or `⌈√n⌉`, and subtracting one exactly when `a` overshoots (`n < a * a`)
-yields the integer square root. Both correctness proofs close with this step. -/
+/-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
 public theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquareRoot n a) :
     isIntegerSquareRoot n (if n < a * a then a - 1 else a) := by
   obtain ⟨h_lo, h_hi⟩ := h
@@ -115,8 +112,7 @@ theorem n_lower {n M a : Int} (hM : 0 < M)
 
 /-! ## Suitable scalers -/
 
-/-- `M` is a *suitable scaler* for `n`: it is positive and `4M⁴ ≤ n`. That bound is the
-sense in which `M` is "small enough" — equivalently `M² ≤ ⌊n / 4M²⌋`. -/
+/-- `M` is a *suitable scaler* for `n`: `0 < M` and `4M⁴ ≤ n`. -/
 @[expose] public def isSuitableScaler (n M : Int) : Prop := 0 < M ∧ 4 * M^4 ≤ n
 
 /-! ## The key lemma -/

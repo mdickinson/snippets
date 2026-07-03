@@ -1,24 +1,10 @@
 /-
-The `SizedProblem` algebra: the problem instance both correctness proofs operate on, and the
-operations they are phrased in — all in the algorithm's native language of shifts and bit lengths.
-
-A `SizedProblem` bundles a value `n`, a recursion level `c`, and the size invariant `isSizedAt n c`
-(`0 < n ∧ c = ⌊log₂ n / 2⌋`, the bit-length form). `descend` is one reduction step
-`(n, c) ↦ (n >>> (2·shift+2), ⌊c/2⌋)`; `newtonLift` lifts a near square root of the descended
-problem back to one for the original, as `(a << shift) + ⌊(n >> shift+2) / a⌋`.
-`isNearSquareRoot_newtonLift` is the single mathematical step both proofs share — there the shift
-form crosses to `key_isqrt_lemma`'s multiplicative `Ma + ⌊n / 4Ma⌋`.
-
-The two proofs walk the same chain of sized problems by these operations. The recursion solves
-`p.descend` and lifts. The iterative loop climbs the chain `p.subAt d` of depth-`d` subproblems
-(`subAt 0` the base, `subAt p.c = p` the whole problem); `descend_subAt` makes each loop step the
-reverse of a single `descend`, and `subAt_body_eq` decodes the loop body to a `newtonLift`.
-
-`shift = shifter p = ⌊(c-1)/2⌋` is the shared shift amount; `scaler = 2^shift = M` is the
-multiplicative scaler the key lemma reads. The size-condition theory (`size_condition_step`,
-`size_condition_at_depth`, the power-bound bridge behind `hsc`) comes from `SizeConditions`; the
-shift↔division value bridge (`Int.shiftRight_eq_ediv`) from `SupportLemmas`; the `4M²`/`4Ma` scaler
-identity (`key_isqrt_body_eq`) from `PythonTranslation`.
+The `SizedProblem` algebra: the instance both correctness proofs operate on (a value `n`, a level
+`c`, and the invariant `isSizedAt n c`), and the operations they run — `descend` (one reduction
+step), `newtonLift` (lift a near square root back up), and `subAt` (the depth-`d` subproblem the
+loop climbs). All are phrased in the algorithm's shift/bit-length language; the crossings to the
+key lemma's multiplicative `Ma + ⌊n / 4Ma⌋` form live at the bottom, and
+`isNearSquareRoot_newtonLift` is the single mathematical step both proofs share.
 -/
 
 module
@@ -32,10 +18,7 @@ import Isqrt.Proofs.SupportLemmas
 public section
 
 /-- A *sized problem*: a value `n`, a recursion level `c`, and the size invariant `isSizedAt n c`
-(`0 < n ∧ c = ⌊log₂ n / 2⌋`) relating them. The unit the correctness recursion operates on, and the
-vocabulary `descend` / `newtonLift` are stated in. The invariant is carried in its bit-length form
-so instances are built in the same shift/bit-length language; the power bound `4^c ≤ n < 4^(c+1)`
-the key lemma wants is the derived `hsc`. -/
+relating them. -/
 @[ext] structure SizedProblem where
   /-- The value whose near square root is sought (at this recursion level). -/
   n : Int
@@ -46,52 +29,33 @@ the key lemma wants is the derived `hsc`. -/
 
 namespace SizedProblem
 
-/-- The power bound `4^c ≤ n < 4^(c+1)`, derived from the bit-length field `hsize`
-(`hasSizeCondition_of_isSizedAt`). The form the key lemma consumes; exposed as `.hsc` so the
-correctness proofs and `isNearSquareRoot_newtonLift` read the power bound directly off a problem. -/
+/-- The power bound `hasSizeCondition p.n p.c`, derived from the bit-length field `hsize`. -/
 theorem hsc (p : SizedProblem) : hasSizeCondition p.n p.c :=
   hasSizeCondition_of_isSizedAt p.hsize
 
-/-- The step shift amount `shift = ⌊(c-1)/2⌋`: `descend` right-shifts by `2·shift+2`, `newtonLift`
-left-shifts `a` by `shift`. Total: at `c = 0` the `Nat` subtraction `c - 1` truncates to `0`,
-giving shift `0` — harmless, since every fact that gives it meaning takes `0 < c`. -/
+/-- The step shift amount `⌊(c-1)/2⌋`. -/
 @[expose] def shifter (p : SizedProblem) : Nat := (p.c - 1) / 2
 
-/-- The step scaler `M = 2^shift`, the multiplicative form of the shift the key lemma reads:
-`newtonLift`'s `a << shift` is `Ma` and its `n >> shift+2` divides by `4M`. Never `0`, and every
-fact that gives it meaning takes `0 < c`. `descend` and `newtonLift` read their shift from
-`shifter`, so they agree by definition. -/
+/-- The step scaler `M = 2^shifter`, the multiplicative form of the shift the key lemma reads. -/
 @[expose] def scaler (p : SizedProblem) : Int := 2 ^ p.shifter
 
-/-- One reduction step: `(n, c) ↦ (n >>> (2·shift+2), ⌊c/2⌋)`, carrying the size invariant down to
-the child (`size_condition_step`). The right-shift by `2·shift+2` is the algorithm's division by
-the step's `4M²`; `hc : 0 < p.c` feeds only the child's invariant, so the value field reduces
-without it. -/
+/-- One reduction step: `(n, c) ↦ (n >>> (2·shifter+2), ⌊c/2⌋)`, carrying the invariant to the
+child. -/
 @[expose] def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
   ⟨p.n >>> (2 * p.shifter + 2), p.c >>> 1, size_condition_step hc p.hsize⟩
 
-/-- The Newton combine: lift a value `a` for the descended problem back to one for `p`, as
-`(a << shift) + ⌊(n >> shift+2) / a⌋` — a left shift of `a` (the `Ma` term) plus the divided-down
-remainder. Paired with `descend` through the shared `shifter`; `isNearSquareRoot_newtonLift` is the
-fact that it carries a near square root to a near square root, crossing to the key lemma's
-`Ma + ⌊n / 4Ma⌋` there. -/
+/-- The Newton combine lifting a value `a` for the descended problem back to `p`:
+`(a <<< shifter) + ⌊(n >>> shifter+2) / a⌋`. -/
 @[expose] def newtonLift (p : SizedProblem) (a : Int) : Int :=
   (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
 
-/-- The depth-`d` subproblem of `p` as a sized problem: the value `p.n >>> 2(c-d)` (right-shift by
-the depth-`d` shift) paired with level `d` and the inherited size invariant
-(`size_condition_at_depth`), for `d ≤ p.c`. This is the vocabulary the iterative loop's invariant
-is phrased in — the loop walks the chain `p.subAt 0` (the base) up to `p.subAt p.c = p` (the whole
-problem). -/
+/-- The depth-`d` subproblem (`d ≤ p.c`): value `p.n >>> 2(c-d)` at level `d`, with the inherited
+invariant. -/
 @[expose] def subAt (p : SizedProblem) (d : Nat) (hhi : d ≤ p.c) : SizedProblem :=
   ⟨p.n >>> (2 * (p.c - d)), d, size_condition_at_depth hhi p.hsize⟩
 
-/-- Descending the depth-`d` subproblem gives the depth-`⌊d/2⌋` subproblem:
-`descend (p.subAt d) = p.subAt ⌊d/2⌋`. The value field is the shift identity that composing the
-subproblem's shift `2(c-d)` with the step's `2·⌊(d-1)/2⌋+2` lands on the depth-`⌊d/2⌋` shift
-`2(c - ⌊d/2⌋)` — pure shift-amount bookkeeping (`omega`) once the two right-shifts collapse; the
-level field is `rfl`. This is what makes one loop iteration the reverse of a single `descend`, so
-the loop and the recursion walk the same chain. -/
+/-- Descending the depth-`d` subproblem gives the depth-`⌊d/2⌋` one:
+`descend (p.subAt d) = p.subAt ⌊d/2⌋`. -/
 theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0 < d) :
     (p.subAt d hhi).descend hd_pos
       = p.subAt (d >>> 1) (Nat.le_trans (Nat.shiftRight_le d 1) hhi) := by
@@ -101,12 +65,8 @@ theorem descend_subAt {p : SizedProblem} {d : Nat} (hhi : d ≤ p.c) (hd_pos : 0
         show 2 * (p.c - d) + (2 * ((d - 1) / 2) + 2) = 2 * (p.c - d / 2) from by omega]
   · rfl
 
-/-- The iterative loop body, decoded, is the Newton lift of the depth-`d` subproblem `p.subAt d`.
-With the threaded child shift `e = ⌊d/2⌋` (`0 < d`), the body value
-`(a << d-e-1) + ⌊(p.n >> 2c-e-d+1) / a⌋` equals `(p.subAt d).newtonLift a`. Both sides are shifts:
-composing the lift's two right-shifts (`Int.shiftRight_add`), the flat shift `2c-e-d+1` and the
-split shift `2(c-d) + (⌊(d-1)/2⌋+2)` agree by `omega`, as do the left-shift amounts `d-e-1` and
-`⌊(d-1)/2⌋`. -/
+/-- The decoded loop body is the Newton lift of the depth-`d` subproblem: with child shift
+`e = ⌊d/2⌋`, `(a <<< d-e-1) + ⌊(p.n >>> 2c-e-d+1) / a⌋ = (p.subAt d).newtonLift a`. -/
 theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
     (he : e = d >>> 1) (hd_pos : 0 < d) :
     a <<< (d - e - 1) + (p.n >>> (2 * p.c - e - d + 1)) / a
@@ -119,21 +79,9 @@ theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
       show d - e - 1 = (d - 1) / 2 from by omega,
       show 2 * p.c - e - d + 1 = 2 * (p.c - d) + ((d - 1) / 2 + 2) from by omega]
 
-/-! ### Crossings to the key lemma's multiplicative form
+/-! ### Crossings to the key lemma's multiplicative form -/
 
-The two places `SizedProblem`'s shift vocabulary meets `key_isqrt_lemma`'s `M`/`4M²`/`4Ma`. Both
-correctness proofs route through these, so the shift↔multiplicative crossing lives here, not smeared
-across the proofs. -/
-
-/-- Bridge from the algorithm's body to `key_isqrt_lemma`'s combining expression.
-For `M = 2^k`, the body value `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋`
-— a left shift of `a` by `k`, plus the divided-down remainder — equals
-`Ma + ⌊ν / 4Ma⌋`, the quantity `key_isqrt_lemma` proves is a near square root. Both
-correctness proofs apply it to bridge their loop/recursion body to the key lemma: the
-recursive proof (`Isqrt.Proofs.RecursiveCorrectness`) with `ν = n`, the iterative proof
-(`Isqrt.Proofs.IterativeCorrectness`) with `ν` the depth-shifted `n`. The single algebraic
-move is factoring `2^(k+2)` as `4·2^k = 4M`. (Euclidean nesting `⌊⌊ν/y⌋/a⌋ = ⌊ν/(ya)⌋` needs only
-`0 ≤ y`, so — unlike the floor-division form — no constraint on `a`.) -/
+/-- For `M = 2^k`, `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋ = Ma + ⌊ν / 4Ma⌋`. -/
 private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
     (hM : M = 2 ^ k) :
     a * 2 ^ k + ν / 2 ^ (k + 2) / a
@@ -145,24 +93,19 @@ private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
       (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega)))]
   grind only
 
-/-- The Python right-shift exponent `2k+2` realises the key lemma's `4M²` denominator for the
-scaler `M = 2^k`: `4·(2^k)² = 2^(2k+2)`. Lets both correctness proofs read a
-`>> (2k+2)` as division by `4M²`. -/
+/-- `4·(2^k)² = 2^(2k+2)`. -/
 private theorem four_mul_two_pow_sq (k : Nat) :
     (4 : Int) * (2 ^ k) ^ 2 = 2 ^ (2 * k + 2) := by
   rw [Int.pow_add, ←Int.pow_mul]; grind only
 
-/-- The descended value `n >> (2·shift+2)` is the key lemma's `⌊n / 4M²⌋` (`M = scaler = 2^shift`):
-the right-shift by `2·shift+2` is division by `2^(2·shift+2) = 4M²` (`four_mul_two_pow_sq`). -/
+/-- The descended value in multiplicative form: `(p.descend hc).n = p.n / (4·scaler²)`. -/
 theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
     (p.descend hc).n = p.n / (4 * p.scaler ^ 2) := by
   show p.n >>> (2 * p.shifter + 2) = p.n / (4 * p.scaler ^ 2)
   rw [Int.shiftRight_eq_ediv,
     show (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) from four_mul_two_pow_sq p.shifter]
 
-/-- `newtonLift` in the key lemma's multiplicative form:
-`(a << shift) + ⌊(n >> shift+2) / a⌋ = Ma + ⌊n / 4Ma⌋` (`M = scaler = 2^shift`). The left shift is
-`Ma` and the inner right-shift divides by `4M` (`key_isqrt_body_eq`). -/
+/-- `newtonLift` in multiplicative form: `p.newtonLift a = scaler·a + p.n / (4·scaler·a)`. -/
 theorem newtonLift_eq (p : SizedProblem) {a : Int} :
     p.newtonLift a = p.scaler * a + p.n / (4 * p.scaler * a) := by
   show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
@@ -172,11 +115,7 @@ theorem newtonLift_eq (p : SizedProblem) {a : Int} :
 
 end SizedProblem
 
-/-- The Newton refinement step on `SizedProblem`s: a near square root of the descended problem lifts
-to one of `p`. This is `key_isqrt_lemma` repackaged — the single mathematical step the correctness
-proofs share (the recursion applies it at the top, the loop at each revealed level). The shift form
-of `newtonLift` crosses to the key lemma's multiplicative `Ma + ⌊n / 4Ma⌋` here, through
-`key_isqrt_body_eq`. -/
+/-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
 theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
   have hscaler : isSuitableScaler p.n p.scaler :=

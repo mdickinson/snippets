@@ -1,24 +1,9 @@
 /-
-Size-condition lemmas for the isqrt correctness proof.
-
-`SizedProblem` carries `isSizedAt n c` — `0 < n ∧ c = ⌊log₂ n / 2⌋`, the bit-length form of
-"`n` sits at level `c`", matching the algorithm's seed `c = (n.bit_length() - 1) // 2`. The key
-lemma instead wants the power bound `hasSizeCondition n c` (`4^c ≤ n < 4^(c+1)`);
-`hasSizeCondition_of_isSizedAt` bridges the two once, so `SizedProblem` builds its instances in
-the shift/bit-length language its operations speak while the key-lemma side reads the power bound.
-
-These lemmas establish:
-- `n`'s level `c = ⌊log₂ n / 2⌋` satisfies `isSizedAt n c` by definition (`size_condition_initial`);
-  the algorithm's seed `(n.bit_length() - 1) // 2` equals that level
-- `isSizedAt` descends: right-shifting by `2(c-d)` lowers the level to `d`
-  (`size_condition_at_depth`), of which the recursive step `c ↦ c/2` is the `d = c/2` case
-  (`size_condition_step`),
-- `isSizedAt n c → hasSizeCondition n c` (`hasSizeCondition_of_isSizedAt`), and from the power
-  bound `4·M⁴ ≤ n` for `M = 2^((c-1)/2)` (`M_bound_from_size` → `isSuitableScaler_of_hasSizeCondition`).
-
-The `Nat.log2` shift facts this file leans on (`Nat.log2_shiftRight`, `Nat.shiftRight_pos`) live
-in `SupportLemmas`; this file adds the Int-level `isSizedAt` theory and the bridge to the power
-bound.
+The size condition and its descent. `SizedProblem` carries the bit-length form `isSizedAt n c`
+(`0 < n ∧ c = (n.toNat.size - 1)/2`); the key lemma wants the power bound `hasSizeCondition n c`
+(`4^c ≤ n < 4^(c+1)`). `hasSizeCondition_of_isSizedAt` bridges them, `size_condition_at_depth` /
+`size_condition_step` descend the level, and `isSuitableScaler_of_hasSizeCondition` /
+`isNearSquareRoot_one_of_hasSizeCondition` feed the key lemma's step and base cases.
 -/
 
 module
@@ -42,13 +27,9 @@ private theorem M_bound_from_size_nat {c n : Nat} (hc : 0 < c) (h_lo : 4 ^ c ≤
     _ = 4 ^ c := by rw [show (4 : Nat) = 2^2 from rfl, ← Nat.pow_mul]
     _ ≤ n := h_lo
 
-/-! ## The power bound `hasSizeCondition`
+/-! ## The power bound `hasSizeCondition` -/
 
-`hasSizeCondition n c` means `4^c ≤ n < 4^(c+1)`, the form `key_isqrt_lemma` consumes.
-`SizedProblem` carries the bit-length `isSizedAt` (below) and exposes this as the derived `.hsc`. -/
-
-/-- The power bound: `4^c ≤ n < 4^(c+1)`. The level `c` is a `Nat`, so both exponents are naturals
-directly and `0 ≤ c` holds by construction; only the value `n` stays an `Int`. -/
+/-- The power bound: `4^c ≤ n < 4^(c+1)`. -/
 @[expose] def hasSizeCondition (n : Int) (c : Nat) : Prop :=
   (4 : Int) ^ c ≤ n ∧ n < (4 : Int) ^ (c + 1)
 
@@ -62,9 +43,7 @@ theorem hasSizeCondition.pos {n : Int} {c : Nat} (h : hasSizeCondition n c) : 0 
 private theorem hasSizeCondition.nonneg {n : Int} {c : Nat} (h : hasSizeCondition n c) : 0 ≤ n :=
   Int.le_of_lt h.pos
 
-/-- For a `Nat`-cast value the power bound is exactly its `Nat`-level form. The single Int↔Nat
-bridge — now only on the value `n` — the Int-level corollaries below funnel through, sparing each
-its own `exact_mod_cast` unpacking. -/
+/-- For a `Nat`-cast value, the power bound is its `Nat`-level form. -/
 private theorem hasSizeCondition_natCast_iff {n c : Nat} :
     hasSizeCondition (↑n) c ↔ 4 ^ c ≤ n ∧ n < 4 ^ (c + 1) := by
   unfold hasSizeCondition
@@ -72,21 +51,15 @@ private theorem hasSizeCondition_natCast_iff {n c : Nat} :
 
 /-! ## The bit-length size condition `isSizedAt` -/
 
-/-- The size condition in bit-length form: `n` is positive and `c` is its level `⌊log₂ n / 2⌋`
-(equivalently `⌊(n.bit_length() - 1) / 2⌋`, the algorithm's seed). This is what `SizedProblem`
-carries, so its instances are built in the shift/bit-length language the operations speak rather
-than in the power bound `hasSizeCondition`. The two are equivalent (`hasSizeCondition_of_isSizedAt`). -/
+/-- The bit-length form of the size condition: `0 < n` and `c = (n.toNat.size - 1)/2`, the
+algorithm's seed. -/
 @[expose] def isSizedAt (n : Int) (c : Nat) : Prop :=
   0 < n ∧ c = (n.toNat.size - 1) / 2
 
 /-- `isSizedAt` forces `0 < n` (by definition). -/
 theorem isSizedAt.pos {n : Int} {c : Nat} (h : isSizedAt n c) : 0 < n := h.1
 
-/-- The bridge from the bit-length size condition to the power bound: `isSizedAt n c` gives
-`4^c ≤ n < 4^(c+1)`. The single place the two forms cross — `SizedProblem.hsc` is this applied to
-the structure's `hsize` field. With `c = ⌊log₂ n / 2⌋`, the two bounds `4^c ≤ n` and `n < 4^(c+1)`
-are `2^(2c) ≤ n` and `n < 2^(2(c+1))`, which `Nat.le_log2` / `Nat.log2_lt` turn into facts about
-`log₂ n` that `omega` discharges. -/
+/-- The bit-length size condition implies the power bound: `isSizedAt n c → hasSizeCondition n c`. -/
 theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
     hasSizeCondition n c := by
   obtain ⟨hpos, hc⟩ := h
@@ -101,17 +74,14 @@ theorem hasSizeCondition_of_isSizedAt {n : Int} {c : Nat} (h : isSizedAt n c) :
 
 /-! ## Initial size condition -/
 
-/-- Initial size condition. -/
+/-- `n` sits at its own level: `isSizedAt n ((n.toNat.size - 1)/2)`. -/
 theorem size_condition_initial {n : Int} (hn : 0 < n) :
     isSizedAt n ((n.toNat.size - 1) / 2) := ⟨hn, rfl⟩
 
 /-! ## Descent of the size condition -/
 
-/-- Size condition at any depth `d ≤ c`: given `isSizedAt n c`, right-shifting by `2(c-d)` lowers
-the level to `d`. The bit-length core: shifting right by `2(c-d)` drops `2(c-d)` bits, so `log₂`
-falls by `2(c-d)` and the level `⌊log₂/2⌋` falls by `c-d` to `d` (`Nat.log2_shiftRight`, the
-shifted value staying positive by `Nat.shiftRight_pos`). The construction proof behind
-`SizedProblem.subAt`. -/
+/-- Descent to any depth `d ≤ c`: right-shifting `isSizedAt n c` by `2(c-d)` gives
+`isSizedAt (n >>> 2(c-d)) d`. -/
 theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isSizedAt n c) :
     isSizedAt (n >>> (2 * (c - d))) d := by
   obtain ⟨hpos, hc⟩ := h
@@ -120,17 +90,15 @@ theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isS
   rw [Int.toNat_natCast] at hc
   have hms : 0 < m.size := Nat.size_pos.mpr hm_pos
   have hk_le : 2 * (c - d) < m.size := by omega
-  -- Push the Int shift down to the Nat shift, then read off positivity and the level in `Nat.log2`.
+  -- Push the Int shift down to the Nat shift, then read off positivity and the level.
   rw [← Int.natCast_shiftRight]
   refine ⟨?_, ?_⟩
   · exact_mod_cast Nat.shiftRight_pos hk_le
   · rw [Int.toNat_natCast, Nat.size_shiftRight]
     omega
 
-/-- Size condition preserved by the recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2`
-— division by the step's `4M²` for `M = 2^⌊(c-1)/2⌋` — lands the level at `c/2`. The `d = c/2`
-case of `size_condition_at_depth`, since the step shift `2⌊(c-1)/2⌋+2` equals the depth-`c/2`
-shift `2(c - c/2)` — an identity `omega` discharges. -/
+/-- The recursive step `c ↦ ⌊c/2⌋`: right-shifting by `2⌊(c-1)/2⌋+2` lands the level at `c/2` (the
+`d = ⌊c/2⌋` case of `size_condition_at_depth`). -/
 theorem size_condition_step {n : Int} {c : Nat} (hc : 0 < c) (h : isSizedAt n c) :
     isSizedAt (n >>> (2 * ((c - 1) / 2) + 2)) (c / 2) := by
   rw [show 2 * ((c - 1) / 2) + 2 = 2 * (c - c / 2) from by omega]
@@ -145,18 +113,14 @@ theorem M_bound_from_size {n : Int} {c : Nat} (hc : 0 < c) (h : hasSizeCondition
   obtain ⟨h_lo_nat, _⟩ := hasSizeCondition_natCast_iff.mp h
   exact_mod_cast M_bound_from_size_nat hc h_lo_nat
 
-/-- A suitable scaler from the power bound: for `0 < c` with `4^c ≤ n < 4^(c+1)`, the step's
-scaler `M = 2^⌊(c-1)/2⌋` is suitable for `n` — positivity is immediate, and the `4M⁴ ≤ n` bound
-is `M_bound_from_size`. This is the form the key lemma consumes. -/
+/-- From the power bound, the step's scaler `M = 2^⌊(c-1)/2⌋` is suitable for `n` (needs `0 < c`). -/
 theorem isSuitableScaler_of_hasSizeCondition {n M : Int} {c : Nat}
     (hM : M = 2 ^ ((c - 1) / 2)) (hc : 0 < c) (h : hasSizeCondition n c) :
     isSuitableScaler n M := by
   subst hM
   exact ⟨Int.pow_pos (by omega), M_bound_from_size hc h⟩
 
-/-- Base case of the recursion: at `c = 0` the power bound `1 ≤ n < 4` makes `1` a near
-square root of `n`. The counterpart to the step-case bridge
-`isSuitableScaler_of_hasSizeCondition`. -/
+/-- Base case: at `c = 0` the power bound `1 ≤ n < 4` makes `1` a near square root of `n`. -/
 theorem isNearSquareRoot_one_of_hasSizeCondition {n : Int} (h : hasSizeCondition n 0) :
     isNearSquareRoot n 1 := by
   obtain ⟨h_lo, h_hi⟩ := h

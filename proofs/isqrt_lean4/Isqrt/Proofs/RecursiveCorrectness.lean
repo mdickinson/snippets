@@ -1,12 +1,10 @@
 /-
 Correctness of the recursive monadic integer square root `isqrtRecursive`.
 
-The proof keeps the mechanics out of the mathematics: `nsqrtRecursive_base` and
-`nsqrtRecursive_succ` reduce each recursion step to its returned value — discharging the
-`.ok`-ness of every Python `//`, `>>`, `<<` and the shift↔`4M²` translation — so that
-`nsqrtRecursive_correctness` reads as the mathematical argument alone. The top-level
-`isCorrectIsqrt_isqrtRecursive` wraps it in the `isCorrectIsqrt` contract, like the iterative
-`isCorrectIsqrt_isqrtIterative`.
+`nsqrtRecursive_base` and `nsqrtRecursive_succ` reduce each recursion step to its returned value
+(discharging the `.ok`-ness of every Python operation), so `nsqrtRecursive_correctness` reads as the
+mathematical argument alone; `isCorrectIsqrt_isqrtRecursive` wraps it in the `isCorrectIsqrt`
+contract.
 -/
 
 module
@@ -25,11 +23,9 @@ theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :
     nsqrtRecursive n c = .ok 1 := by
   unfold nsqrtRecursive; rw [if_pos hc]; rfl
 
-/-- One unfolding of the recursion at `0 < c`, in `SizedProblem`'s shift form: a successful subcall
-on the descended value `n >> (2⌊(c-1)/2⌋+2)` returning `0 < a` makes every Python operation take its
-`.ok` branch, and the step returns the lift `(a << ⌊(c-1)/2⌋) + ⌊(n >> ⌊(c-1)/2⌋+2) / a⌋`. Stays in
-shift vocabulary throughout — its `h_sub` value matches `(p.descend hc).n` and its result matches
-`p.newtonLift a` definitionally, so `nsqrtRecursive_correctness` hands it the IH with no bridge. -/
+/-- One unfolding at `0 < c`, in `SizedProblem`'s shift form: a successful subcall on the descended
+value returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the
+Newton lift. -/
 theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
     (h_sub : nsqrtRecursive (n >>> (2 * ((c - 1) / 2) + 2)) ↑(c / 2) = .ok a) :
     nsqrtRecursive n ↑c
@@ -57,16 +53,9 @@ theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
     rfl
   rw [hred, hkk]
 
-/-- The recursive auxiliary returns a near square root of `p.n` and **never raises**, for any
-`SizedProblem p`.
-
-The argument is one `SizedProblem` — the value, its recursion level, and the size invariant
-bundled — so the recursion threads a single descending problem. Each case supplies the goal's two
-facts, the value the function returns and that it is a near square root. The base case `p.c ≤ 0`
-forces `p.c = 0` (the invariant gives `0 ≤ p.c`), where `1` is a near square root
-(`nsqrtRecursive_base`, `isNearSquareRoot_one_of_hasSizeCondition`); the step solves the descended
-problem `p.descend` and lifts its near square root back with `p.newtonLift`
-(`isNearSquareRoot_newtonLift`, `nsqrtRecursive_succ`). -/
+/-- The recursive auxiliary returns a near square root of `p.n` and never raises, for any
+`SizedProblem p`: the base case (`p.c = 0`) returns `1`; the step solves `p.descend` and lifts it
+back with `p.newtonLift`. -/
 theorem nsqrtRecursive_correctness (p : SizedProblem) :
     ∃ a, nsqrtRecursive p.n ↑p.c = .ok a ∧ isNearSquareRoot p.n a := by
   by_cases hc : p.c = 0
@@ -83,16 +72,8 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
 termination_by p.c
 decreasing_by simp only [SizedProblem.descend]; omega
 
-/-- Correctness of the recursive monadic integer square root `isqrtRecursive`.
-
-For nonnegative `n` it returns a value `a = ⌊√n⌋` (`isIntegerSquareRoot n a`); for
-negative `n` it raises exactly the `ValueError` CPython does. The returns proof
-reduces the `do`-block to the `nsqrtRecursive` call characterised by `nsqrtRecursive_correctness`
-— establishing en route that none of the `Except` operations ever takes its error
-branch for `n ≥ 0` — and closes the `n ≥ 1` case with the final `a-1`/`a`
-adjustment (`isNearSquareRoot.toIntegerSquareRoot`), which the recursive source's
-`a - 1 if n < a * a else a` already matches verbatim. The contract `isCorrectIsqrt`
-is the same one the iterative `isCorrectIsqrt_isqrtIterative` establishes. -/
+/-- Correctness of `isqrtRecursive`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
+raises the same `ValueError` as CPython. -/
 public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.

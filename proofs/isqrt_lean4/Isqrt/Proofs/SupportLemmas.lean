@@ -1,10 +1,6 @@
 /-
-This module contains:
-
-- Supporting lemmas: general results about `Int` and `Nat` that aren't available in
-  the core library.
-- `Nat.size`, its defining properties, and some basic results about it and its
-  relationship to `Nat.shiftRight`.
+General `Int` / `Nat` facts missing from the core library, plus `Nat.size` (bit length) and
+its basic properties.
 -/
 
 module
@@ -20,10 +16,7 @@ theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
 
 /-! ## Shift inequalities -/
 
-/-- A nonneg integer is at most its left shift: `n ≤ n <<< s`. The left-shift companion to core's
-`Int.le_shiftRight_of_nonneg` (`0 ≤ n → 0 ≤ n >>> s`); core has the right-shift facts but not this
-one. For nonneg `n` it reduces to the `Nat` fact `Nat.le_shiftLeft` by pushing the cast through the
-shift (`natCast_shiftLeft`). -/
+/-- A nonnegative integer is at most its left shift: `n ≤ n <<< s`. -/
 theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <<< s := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h
   exact_mod_cast Nat.le_shiftLeft
@@ -33,7 +26,7 @@ theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <
 /-- Minimum number of bits required to represent a natural number. -/
 def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
 
-/-- Defining property of Nat.size: n.size <= k iff n < 2^k. -/
+/-- Defining property of `Nat.size`: `n.size ≤ k ↔ n < 2^k`. -/
 theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
   unfold Nat.size
   rcases Nat.eq_zero_or_pos n with rfl | hn

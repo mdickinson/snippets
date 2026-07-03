@@ -1,3 +1,12 @@
+/-
+Correctness of the iterative monadic integer square root `isqrtIterative`.
+
+`monadicLoop_near` characterises the loop as a `foldlM` and runs a position-indexed invariant that
+carries the running approximation up the chain of subproblems, sharing the Newton step
+(`isNearSquareRoot_newtonLift`) with the recursive proof; `isCorrectIsqrt_isqrtIterative` wraps it
+in the `isCorrectIsqrt` contract.
+-/
+
 module
 
 public import Isqrt.Definitions.IsqrtIterative
@@ -11,10 +20,8 @@ import Isqrt.Proofs.SupportLemmas
 
 public section
 
-/-- One iteration of the monadic loop, as a standalone `Except`-returning step on the
-`MProd` state `⟨a, d⟩` (running approximation `a`, previous shift `d`). This is the loop
-body of `isqrtIterative` lifted out: it reads `e = d` (the previous shift), recomputes
-`d = c >> s`, and returns the new `⟨a, d⟩`. Each `←` is an operation that could raise. -/
+/-- One loop iteration as a standalone `Except`-returning step on the state `⟨a, d⟩` (running
+approximation `a`, previous shift `d`). -/
 private def stepM (c n : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd Int Int) := do
   let dNew ← pyRshift c s
   let lsh ← pyLshift r.fst (dNew - r.snd - 1)
@@ -22,20 +29,15 @@ private def stepM (c n : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd In
   let q ← pyFloordiv rsh r.fst
   pure ⟨lsh + q, dNew⟩
 
-/-- A `forIn` whose body always yields the result of a monadic step `g` is a `foldlM`
-over the same list, specialised to the "always yield" shape the `do` block produces —
-this is what lets the proof replace the loop's `forIn` with a `foldlM` it can induct on. -/
+/-- A `forIn` whose body always yields the result of a monadic step `g` equals `foldlM g` over the
+same list. -/
 private theorem forIn_yield_bind_eq_foldlM {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
     (g : β → α → m β) (L : List α) (init : β) :
     forIn L init (fun a b => g b a >>= fun b' => pure (ForInStep.yield b')) = L.foldlM g init := by
   simp
 
-/-- Indexed invariant rule for a left `foldlM` over `(List.range L).reverse` in `Except`.
-Each step must additionally witness that `g x s` takes its `.ok` branch, so the rule
-threads `.ok`-ness through the whole fold alongside the invariant.
-Reading `motive i x` as "`x` is a valid `.ok` state with `i` iterations still to run",
-the seed lands at `i = L`, the result at `i = 0`, and the conclusion packages both the
-`.ok`-ness of the whole fold and the final invariant. -/
+/-- Indexed invariant rule for a left `foldlM` over `(List.range L).reverse` in `Except`: each step
+threads `.ok`-ness alongside the invariant `motive` (index `i` = iterations still to run). -/
 private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A → Prop)
     (g : A → Nat → PyExcept A) :
     ∀ (L : Nat) (init : A), motive L init →
@@ -53,8 +55,8 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
     rw [hy1_eq, Except.ok_bind]
     exact ih y1 hy1_mot (fun s hs x hmot => hstep s (Nat.lt_succ_of_lt hs) x hmot)
 
-/-- `stepM`'s `.ok` value, given the loop body's three preconditions discharged: nonneg
-shift count `s`, positive running `a = r.fst`, and the two derived shift-amount bounds. -/
+/-- `stepM`'s `.ok` value, given nonneg shift `s`, positive `r.fst`, and the two shift-amount
+bounds. -/
 private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
     (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
@@ -67,12 +69,8 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     pyFloordiv_eq_ok ha_pos]
   rfl
 
-/-- The monadic loop's `foldlM` is `.ok`, and its running approximation is a positive
-near square root of `p.n`. A position-indexed `foldlM` invariant whose motive carries the
-running `a > 0`, the threaded shift `d = c >> s`, and the near-√ invariant
-`isNearSquareRoot (chain s).n a`, where `chain s = p.subAt (c >> s)` is the depth-`c >> s`
-subproblem. The problem is bundled as a `SizedProblem`, so `0 ≤ c` and `0 < n` come from the
-invariant. -/
+/-- The loop's `foldlM` is `.ok`, and its running approximation is a positive near square root of
+`p.n`, via a position-indexed invariant over the subproblem chain `chain s = p.subAt (c >>> s)`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM ↑p.c p.n) ⟨1, 0⟩ = .ok y
@@ -161,14 +159,8 @@ private theorem monadicLoop_near (p : SizedProblem) :
     rw [Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
   rwa [hchain0] at hy_near'
 
-/-- Correctness of the monadic integer square root `isqrtIterative`.
-
-For `n < 0` it raises exactly the `ValueError` CPython does; otherwise it returns `.ok v`
-with `v = ⌊√n⌋` (`isIntegerSquareRoot n v`). The proof reduces the `do`-block to the
-`foldlM` characterised by `monadicLoop_near` — establishing en route that none of the
-`Except` operations ever take their error branch for `n ≥ 0` — and closes the `n ≥ 1`
-case with the same final `a-1`/`a` adjustment (`isNearSquareRoot.toIntegerSquareRoot`) as
-the recursive and iterative proofs. -/
+/-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
+raises the same `ValueError` as CPython. -/
 theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
