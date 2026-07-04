@@ -125,6 +125,6 @@ theorem isNearSquareRoot_one_of_hasSizeCondition {n : Int} (h : hasSizeCondition
     isNearSquareRoot n 1 := by
   obtain ⟨h_lo, h_hi⟩ := h
   simp only [Nat.zero_add, Int.pow_zero, Int.pow_one] at h_lo h_hi
-  exact ⟨by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
+  exact ⟨Int.one_pos, by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
 
 end

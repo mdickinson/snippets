@@ -3,10 +3,10 @@ The isqrt correctness proof's pure-integer mathematics: near-square-root theory 
 Newton-step key lemma. It is all general `Int` arithmetic — the bit-level encoding the
 algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.SizedProblem`.
 
-The **near square root** predicate `isNearSquareRoot` (`(a-1)² < n < (a+1)²`; for positive `n`,
-`a` is `⌊√n⌋` or `⌈√n⌉`) is defined in `Isqrt.Definitions.Specification`. The key combining
-step, `key_isqrt_lemma`, lifts a near square root of a quotient of `n` to a near square root of
-`n` — one Newton (Heron) iteration:
+The **near square root** predicate `isNearSquareRoot n a` asserts `0 < a` and
+`(a-1)² < n < (a+1)²`; for positive `n`, `a` is then `⌊√n⌋` or `⌈√n⌉`. The key combining step,
+`key_isqrt_lemma`, lifts a near square root of a quotient of `n` to a near square root of `n` —
+one Newton (Heron) iteration:
 
     given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near square root of
     `⌊n/4M²⌋`, then `Ma + ⌊n/4Ma⌋` is a near square root of `n`.
@@ -36,13 +36,6 @@ The left side of (3) is `(4Ma(Ma+q-1))²`, so chaining (3) into (1) gives
 module
 
 public import Isqrt.Definitions.Specification
-
-/-! ## Positivity -/
-
-/-- A near square root is positive. -/
-public theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 < a := by
-  obtain ⟨h_lo, h_hi⟩ := h
-  grind only
 
 /-! ## Algebraic helpers -/
 
@@ -103,8 +96,7 @@ public theorem key_isqrt_lemma {n M a : Int}
     (h_near : isNearSquareRoot (n / (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n / (4 * M * a)) := by
   obtain ⟨hM, hM4⟩ := hM_scaler
-  have ha : 0 < a := h_near.pos
-  obtain ⟨ha_lo, ha_hi⟩ := h_near
+  obtain ⟨ha, ha_lo, ha_hi⟩ := h_near
   -- `isNearSquareRoot` is multiplicative; recover the `^2` shape the algebra uses.
   rw [show (a - 1) * (a - 1) = (a - 1) ^ 2 from by grind only] at ha_lo
   rw [show (a + 1) * (a + 1) = (a + 1) ^ 2 from by grind only] at ha_hi
@@ -151,4 +143,4 @@ public theorem key_isqrt_lemma {n M a : Int}
     have hfinal : (M * a + q - 1)^2 * (4 * M * a)^2 < n * (4 * M * a)^2 := by grind only
     exact Int.lt_of_mul_lt_mul_right hfinal (Int.sq_nonneg _)
   -- Convert the `^2`-form bounds back to the multiplicative `isNearSquareRoot`.
-  exact ⟨by grind only, by grind only⟩
+  exact ⟨by omega, by grind only, by grind only⟩

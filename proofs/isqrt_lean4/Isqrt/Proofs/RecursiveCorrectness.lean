@@ -13,7 +13,6 @@ public import Isqrt.Definitions.IsqrtRecursive
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.SizeConditions
-import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.NearSquareRoot
@@ -68,7 +67,7 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
     -- `(p.descend).n` and `p.newtonLift a` are the shift forms `nsqrtRecursive_succ` speaks, so the
     -- IH `ha_eq` and the returned value land definitionally — no shift↔multiplicative bridge here.
-    exact ⟨p.newtonLift a, nsqrtRecursive_succ hc_pos a_near.pos ha_eq,
+    exact ⟨p.newtonLift a, nsqrtRecursive_succ hc_pos a_near.1 ha_eq,
       isNearSquareRoot_newtonLift hc_pos a_near⟩
 termination_by p.c
 decreasing_by simp only [SizedProblem.descend]; omega
