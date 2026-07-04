@@ -425,7 +425,7 @@ where `returns`, `raises` and `isIntegerSquareRoot` are defined by:
 ```lean
 def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
 def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error e
-def isIntegerSquareRoot (n a : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
+def isIntegerSquareRoot (n a : Int) : Prop := 0 ≤ a ∧ a * a ≤ n ∧ n < (a + 1) * (a + 1)
 ```
 
 In other words, `isCorrectIsqrt` represents the statement that, for a given

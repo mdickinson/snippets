@@ -118,16 +118,13 @@ private theorem subAt_body_eq (p : SizedProblem) (i : Nat) (a : Int) (hd_pos : 0
           = 2 * (p.c - p.c >>> i) + ((p.c >>> i - 1) / 2 + 2)
         from by have := Nat.shiftRight_le p.c i; omega]
 
-/-- One `stepM` at position `i` in `SizedProblem` shift form — the iterative analogue of
-`nsqrtRecursive_succ`. From a state `r` at the child depth (`r.snd = ↑(c ≫ i+1)`) with positive
-approximation `r.fst`, and the depth `c ≫ i` positive, the step succeeds and returns the iteration-`i`
-subproblem's Newton lift, at the new depth `↑(c ≫ i)`. Absorbs the `.ok`-threading and the
-shift-amount decoding, leaving the caller only the mathematical Newton lift. -/
+/-- One `stepM` at position `i` succeeds and returns the iteration-`i` subproblem's Newton lift —
+the iterative analogue of `nsqrtRecursive_succ`. -/
 private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
     (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
     stepM p.n (↑p.c) r (Int.ofNat i)
       = .ok ⟨(subAt p i).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
-  -- Decode the loop's Int shift `↑c ≫ i` to the Nat `↑(c ≫ i)`, and record the child halving.
+  -- Decode the loop's Int shift `↑c >>> i` to the Nat `↑(c >>> i)`, and record the child halving.
   have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
   have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by
     rw [hsi]; exact (Int.natCast_shiftRight p.c i).symm

@@ -1,7 +1,6 @@
 /-
 The isqrt correctness proof's pure-integer mathematics: near-square-root theory and the
-Newton-step key lemma. It is all general `Int` arithmetic — the bit-level encoding the
-algorithm divides by (shifts, powers of two) lives in `Isqrt.Proofs.SizedProblem`.
+Newton-step key lemma.
 
 The **near square root** predicate `isNearSquareRoot n a` asserts `0 < a` and
 `(a-1)² < n < (a+1)²`; for positive `n`, `a` is then `⌊√n⌋` or `⌈√n⌉`. The key combining step,
