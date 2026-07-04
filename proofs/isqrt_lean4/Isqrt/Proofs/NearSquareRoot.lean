@@ -19,6 +19,10 @@ import Isqrt.Proofs.SupportLemmas
 
 /-! ## Scaler crossings: the power-of-two scaler in multiplicative form -/
 
+/-- The scaler `M = 2^shifter`: the multiplicative form of a `SizedProblem`'s step shift, linking its
+shift/bit-length world to the `isSuitableScaler` notion the key lemma reads. -/
+private def scaler (p : SizedProblem) : Int := 2 ^ p.shifter
+
 /-- For `M = 2^k`, `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋ = Ma + ⌊ν / 4Ma⌋`. -/
 private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
     (hM : M = 2 ^ k) :
@@ -33,18 +37,18 @@ private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
 
 /-- The descended value in multiplicative form: `(p.descend hc).n = p.n / (4·scaler²)`. -/
 private theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
-    (p.descend hc).n = p.n / (4 * p.scaler ^ 2) := by
-  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * p.scaler ^ 2)
-  have hpow : (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) := by
+    (p.descend hc).n = p.n / (4 * scaler p ^ 2) := by
+  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * scaler p ^ 2)
+  have hpow : (4 : Int) * scaler p ^ 2 = 2 ^ (2 * p.shifter + 2) := by
     show (4 : Int) * (2 ^ p.shifter) ^ 2 = 2 ^ (2 * p.shifter + 2)
     rw [Int.pow_add, ← Int.pow_mul]; grind only
   rw [Int.shiftRight_eq_ediv, hpow]
 
 /-- `newtonLift` in multiplicative form: `p.newtonLift a = scaler·a + p.n / (4·scaler·a)`. -/
 private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
-    p.newtonLift a = p.scaler * a + p.n / (4 * p.scaler * a) := by
+    p.newtonLift a = scaler p * a + p.n / (4 * scaler p * a) := by
   show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
-      = p.scaler * a + p.n / (4 * p.scaler * a)
+      = scaler p * a + p.n / (4 * scaler p * a)
   rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
   exact key_isqrt_body_eq rfl
 
@@ -53,7 +57,7 @@ private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
 public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
-  have hscaler : isSuitableScaler p.n p.scaler :=
+  have hscaler : isSuitableScaler p.n (scaler p) :=
     isSuitableScaler_of_hasSizeCondition rfl hc p.hsc
   rw [descend_n_eq p hc] at h
   rw [newtonLift_eq p]

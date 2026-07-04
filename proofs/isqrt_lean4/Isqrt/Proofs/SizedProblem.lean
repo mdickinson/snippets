@@ -32,9 +32,6 @@ theorem hsc (p : SizedProblem) : hasSizeCondition p.n p.c :=
 /-- The step shift amount `⌊(c-1)/2⌋`. -/
 @[expose] def shifter (p : SizedProblem) : Nat := (p.c - 1) / 2
 
-/-- The step scaler `M = 2^shifter`, the multiplicative form of the shift the key lemma reads. -/
-@[expose] def scaler (p : SizedProblem) : Int := 2 ^ p.shifter
-
 /-- One reduction step: `(n, c) ↦ (n >>> (2·shifter+2), ⌊c/2⌋)`, carrying the invariant to the
 child. -/
 @[expose] def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
