@@ -59,15 +59,14 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
     ∃ a, nsqrtRecursive p.n ↑p.c = .ok a ∧ isNearSquareRoot p.n a := by
   by_cases hc : p.c = 0
   · -- base: at `p.c = 0`, `1` is a near square root.
-    exact ⟨1, nsqrtRecursive_base p.n (by omega),
-      isNearSquareRoot_one_of_isSizedAt (hc ▸ p.hsize)⟩
+    exact ⟨1, nsqrtRecursive_base p.n (by omega), isNearSquareRoot_one p hc⟩
   · -- step: solve the descended problem, lift its near square root back.
     have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
     -- `(p.descend).n` and `p.newtonLift a` are the shift forms `nsqrtRecursive_succ` speaks, so the
     -- IH `ha_eq` and the returned value land definitionally — no shift↔multiplicative bridge here.
     exact ⟨p.newtonLift a, nsqrtRecursive_succ hc_pos a_near.1 ha_eq,
-      isNearSquareRoot_newtonLift hc_pos a_near⟩
+      isNearSquareRoot_newtonLift p hc_pos a_near⟩
 termination_by p.c
 decreasing_by simp only [SizedProblem.descend]; omega
 

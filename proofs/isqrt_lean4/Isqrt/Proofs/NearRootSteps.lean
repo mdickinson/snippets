@@ -1,23 +1,18 @@
 /-
-The lifting lemma in the algorithm's bit-oriented form, plus the closing correction step — the
-near-square-root machinery both top-level correctness proofs share.
-
-`key_isqrt_lemma` (in `Isqrt.Proofs.KeyLemma`) lifts a near square root across a *general* suitable
-scaler `M`; the algorithms use the *specific* power-of-two scaler `2^shifter` carried by a
-`SizedProblem`. The scaler crossings `descend_n_eq`/`newtonLift_eq` recast the shift-form
-`descend`/`newtonLift` in the multiplicative `Ma + ⌊n / 4Ma⌋` form, and `isNearSquareRoot_newtonLift`
-feeds them to the key lemma to give the concrete lift both proofs run.
-`isIntegerSquareRoot_of_isNearSquareRoot` is the closing step: a near square root of `n`, corrected
-by a single comparison, is the integer square root of `n`.
+The near-square-root steps both correctness proofs assemble: the base case `isNearSquareRoot_one`
+(level zero ⇒ `1`), the Newton step `isNearSquareRoot_newtonLift`, and the closing correction
+`isIntegerSquareRoot_of_isNearSquareRoot`. The step recasts the shift-form `descend`/`newtonLift`
+into the multiplicative form the general key lemma reads.
 -/
 
 module
 
+public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SupportLemmas
 
-/-! ## Scaler crossings: the power-of-two scaler in multiplicative form -/
+/-! ## The power-of-two scaler -/
 
 /-- The scaler `M = 2^shifter`: the multiplicative form of a `SizedProblem`'s step shift, linking its
 shift/bit-length world to the `isSuitableScaler` notion the key lemma reads. -/
@@ -52,8 +47,6 @@ private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
   rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
   exact key_isqrt_body_eq rfl
 
-/-! ## Lifting: the key lemma at the algorithm's power-of-two scaler -/
-
 /-- The scaler `2^shifter` is suitable for `p.n`: `4·scaler⁴ = 2^(4·shifter+2) ≤ p.n`, the exponent
 below `p.n.size`. -/
 private theorem isSuitableScaler_scaler (p : SizedProblem) (hc : 0 < p.c) :
@@ -68,14 +61,21 @@ private theorem isSuitableScaler_scaler (p : SizedProblem) (hc : 0 < p.c) :
       = 2 ^ (4 * ((p.c - 1) / 2) + 2) := by rw [Int.pow_add, ← Int.pow_mul]; grind only
     _ ≤ p.n := hbound'
 
+/-! ## Base case, Newton lift, correction -/
+
+/-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
+public theorem isNearSquareRoot_one (p : SizedProblem) (hc : p.c = 0) :
+    isNearSquareRoot p.n 1 := by
+  obtain ⟨hpos, hc_eq⟩ := p.hsize
+  have hlt : p.n.toNat < 4 := by simpa using Nat.size_le.mp (show p.n.toNat.size ≤ 2 by omega)
+  exact ⟨Int.one_pos, by show (1 - 1) * (1 - 1) < p.n; omega, by show p.n < (1 + 1) * (1 + 1); omega⟩
+
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
-public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
+public theorem isNearSquareRoot_newtonLift (p : SizedProblem) (hc : 0 < p.c) {a : Int}
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
   rw [descend_n_eq p hc] at h
   rw [newtonLift_eq p]
   exact key_isqrt_lemma (isSuitableScaler_scaler p hc) h
-
-/-! ## Correction: near square root to integer square root -/
 
 /-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
 public theorem isIntegerSquareRoot_of_isNearSquareRoot {a n : Int} (h : isNearSquareRoot n a) :

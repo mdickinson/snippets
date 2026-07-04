@@ -6,7 +6,6 @@ the `SizedProblem` structure carrying it, with the shift-form operations `descen
 
 module
 
-public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SupportLemmas
 import Isqrt.Proofs.PythonTranslation
 
@@ -46,14 +45,6 @@ theorem size_condition_step {n : Int} {c : Nat} (hc : 0 < c) (h : isSizedAt n c)
     isSizedAt (n >>> (2 * ((c - 1) / 2) + 2)) (c / 2) := by
   rw [show 2 * ((c - 1) / 2) + 2 = 2 * (c - c / 2) from by omega]
   exact size_condition_at_depth (Nat.div_le_self c 2) h
-
-/-- Base case: at `c = 0` the size condition forces `n.size ≤ 2`, i.e. `n < 4`, so `1` is a near
-square root of `n`. -/
-theorem isNearSquareRoot_one_of_isSizedAt {n : Int} (h : isSizedAt n 0) :
-    isNearSquareRoot n 1 := by
-  obtain ⟨hpos, hc⟩ := h
-  have hlt : n.toNat < 4 := by simpa using Nat.size_le.mp (show n.toNat.size ≤ 2 by omega)
-  exact ⟨Int.one_pos, by show (1 - 1) * (1 - 1) < n; omega, by show n < (1 + 1) * (1 + 1); omega⟩
 
 /-! ## The sized problem -/
 
