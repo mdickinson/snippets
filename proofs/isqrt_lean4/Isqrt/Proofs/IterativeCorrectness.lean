@@ -69,6 +69,36 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     pyFloordiv_eq_ok ha_pos]
   rfl
 
+/-- One `stepM` at position `i` in `SizedProblem` shift form — the iterative analogue of
+`nsqrtRecursive_succ`. From a state `r` at the child depth (`r.snd = ↑(c ≫ i+1)`) with positive
+approximation `r.fst`, and the depth `c ≫ i` positive, the step succeeds and returns the depth-`c ≫ i`
+subproblem's Newton lift, at the new depth `↑(c ≫ i)`. Absorbs the `.ok`-threading and the
+shift-amount decoding, leaving the caller only the mathematical Newton lift. -/
+private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
+    (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
+    stepM (↑p.c) p.n r (Int.ofNat i)
+      = .ok ⟨(p.subAt (p.c >>> i) (Nat.shiftRight_le p.c i)).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
+  -- Decode the loop's Int shift `↑c ≫ i` to the Nat `↑(c ≫ i)`, and record the child halving.
+  have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
+  have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by
+    rw [hsi]; exact (Int.natCast_shiftRight p.c i).symm
+  have heN_halve : p.c >>> (i + 1) = p.c >>> i / 2 := Nat.shiftRight_succ p.c i
+  have hd_le : p.c >>> i ≤ p.c := Nat.shiftRight_le p.c i
+  have he_le : p.c >>> (i + 1) ≤ p.c := Nat.shiftRight_le p.c (i + 1)
+  -- Every Python op takes its `.ok` branch: the two shift amounts are nonnegative, `r.fst` positive.
+  have hK : 0 ≤ (↑p.c : Int) >>> (Int.ofNat i).toNat - r.snd - 1 := by
+    rw [hd_new, hsnd, heN_halve]; omega
+  have hJ : 0 ≤ 2 * (↑p.c : Int) - r.snd - (↑p.c : Int) >>> (Int.ofNat i).toNat + 1 := by
+    rw [hd_new, hsnd]; omega
+  rw [stepM_eq_ok r (Int.ofNat i) (Int.natCast_nonneg i) ha hK hJ, hsnd]
+  -- Decode the two shift amounts to `Nat`, then recognise the body as the subproblem's Newton lift.
+  have he1 : ((↑p.c : Int) >>> (Int.ofNat i).toNat - ↑(p.c >>> (i + 1)) - 1).toNat
+      = p.c >>> i - p.c >>> (i + 1) - 1 := by rw [hd_new]; omega
+  have he2 : (2 * (↑p.c : Int) - ↑(p.c >>> (i + 1)) - (↑p.c : Int) >>> (Int.ofNat i).toNat + 1).toNat
+      = 2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1 := by rw [hd_new]; omega
+  rw [he1, he2, hd_new,
+    SizedProblem.subAt_body_eq (p := p) (Nat.shiftRight_le p.c i) heN_halve hd_pos]
+
 /-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of
 `p.n`, via a position-indexed invariant over the subproblem chain `chain s = p.subAt (c >>> s)`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
@@ -77,8 +107,6 @@ private theorem monadicLoop_near (p : SizedProblem) :
       ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨n, c, hsize⟩ := p
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
-  have hcast : ∀ s : Nat, (↑c : Int) >>> s = ↑(c >>> s) := fun s =>
-    (Int.natCast_shiftRight c s).symm
   have hhi : ∀ s : Nat, c >>> s ≤ c := fun s => Nat.shiftRight_le c s
   let chain : Nat → SizedProblem := fun s =>
     (⟨n, c, hsize⟩ : SizedProblem).subAt (c >>> s) (hhi s)
@@ -105,44 +133,24 @@ private theorem monadicLoop_near (p : SizedProblem) :
     rw [hz]
     exact isNearSquareRoot_one_of_hasSizeCondition
       (hasSizeCondition_of_isSizedAt (size_condition_at_depth (Nat.zero_le c) hsize))
-  -- Step: one shared Newton lift (`isNearSquareRoot_newtonLift`, the same lemma the recursion uses),
-  -- once `descend_subAt` identifies `chain (i+1)` with `descend (chain i)` and the `.ok`-ness of
-  -- `stepM` and the Python-shift → subproblem encoding are discharged.
+  -- Step: `stepM_subAt` runs one mechanical step to the depth-`c≫i` subproblem's Newton lift; its
+  -- near-√-ness is the shared lift `isNearSquareRoot_newtonLift`, exactly as the recursion does.
   have hstep : ∀ s, s < (↑c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM (↑c) n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
     obtain ⟨hx_snd, hx_near⟩ := hx
-    -- Nat depths at this level (`c >> i`) and its child (`c >> (i+1) = ⌊(c >> i)/2⌋`).
     rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
     have hdN_pos : 0 < c >>> i := Nat.shiftRight_pos hi
-    have hdN_le : c >>> i ≤ c := hhi i
     have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
-    have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
-    -- The loop's Int shift `c >> i` is `↑(c >> i)`; the threaded `x.snd` is `↑(c >> (i+1))`.
-    have hd_new : (↑c : Int) >>> (Int.ofNat i).toNat = ↑(c >>> i) := by
-      rw [hsi]; exact hcast i
-    -- the IH gives a near-√ of `chain (i+1) = descend (chain i)` (`descend_subAt`, child `⌊(c≫i)/2⌋`)
+    -- The IH gives a near-√ of `chain (i+1) = descend (chain i)` (child depth `⌊(c≫i)/2⌋`).
     have h_child : isNearSquareRoot ((chain i).descend hdN_pos).n x.fst := by
       rw [SizedProblem.descend_subAt]
       show isNearSquareRoot (n >>> (2 * (c - c >>> i / 2))) x.fst
       rw [← heN_halve]
       exact hx_near
-    -- assemble: `stepM` succeeds, and its new state is a near-√ at depth `c >> i`
-    refine ⟨_, stepM_eq_ok x (Int.ofNat i) (Int.natCast_nonneg i) hx_near.1 ?_ ?_, ?_, ?_⟩
-    · rw [hd_new, hx_snd]; omega
-    · rw [hd_new, hx_snd]; omega
-    · -- new `d = ↑(c >> i)`
-      rw [hd_new]
-    · -- near-√ at the new depth: the loop body is the Newton lift of `chain i`, shared with recursion
-      rw [hd_new, hx_snd]
-      have he1 : (↑(c >>> i) - ↑(c >>> (i + 1)) - 1 : Int).toNat
-          = c >>> i - c >>> (i + 1) - 1 := by omega
-      have he2 : (2 * (↑c : Int) - ↑(c >>> (i + 1)) - ↑(c >>> i) + 1).toNat
-          = 2 * c - c >>> (i + 1) - c >>> i + 1 := by omega
-      rw [he1, he2,
-        SizedProblem.subAt_body_eq (p := ⟨n, c, hsize⟩) (hhi i) heN_halve hdN_pos]
-      exact isNearSquareRoot_newtonLift hdN_pos h_child
+    exact ⟨_, stepM_subAt ⟨n, c, hsize⟩ x hdN_pos hx_near.1 hx_snd,
+      rfl, isNearSquareRoot_newtonLift hdN_pos h_child⟩
   obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM (↑c) n x (Int.ofNat s))
       (↑c : Int).bitLength.toNat ⟨1, 0⟩ hseed hstep
