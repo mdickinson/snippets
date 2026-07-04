@@ -1,6 +1,6 @@
 /-
 General `Int` / `Nat` facts missing from the core library, plus `Nat.size` (bit length) and
-its basic properties.
+its basic properties, and a small `Except`-monad helper.
 -/
 
 module
@@ -13,13 +13,6 @@ public section
 theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   rw [Int.shiftRight_eq_div_pow]
   norm_cast
-
-/-! ## Shift inequalities -/
-
-/-- A nonnegative integer is at most its left shift: `n ≤ n <<< s`. -/
-theorem Int.le_shiftLeft_of_nonneg {n : Int} {s : Nat} (h : 0 ≤ n) : n ≤ n <<< s := by
-  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h
-  exact_mod_cast Nat.le_shiftLeft
 
 /-! ## Nat.size -/
 

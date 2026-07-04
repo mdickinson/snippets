@@ -80,7 +80,7 @@ theorem shifter_eq (p : SizedProblem) : p.shifter = (p.c - 1) / 2 := (rfl)
 /-- One reduction step: `(n, c) ↦ (n >>> (2·shifter+2), ⌊c/2⌋)`, carrying the invariant to the
 child. -/
 def descend (p : SizedProblem) (hc : 0 < p.c) : SizedProblem :=
-  ⟨p.n >>> (2 * p.shifter + 2), p.c >>> 1, size_condition_step hc p.hsize⟩
+  ⟨p.n >>> (2 * p.shifter + 2), p.c / 2, size_condition_step hc p.hsize⟩
 
 /-- The descended value in shift form. -/
 theorem descend_n (p : SizedProblem) (hc : 0 < p.c) :
