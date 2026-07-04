@@ -86,8 +86,8 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
 
       obtain ⟨a, ha_eq, a_near⟩ :=
-        nsqrtRecursive_correctness
-          ⟨n, (n.toNat.size - 1) / 2, size_condition_initial hpos⟩
+        nsqrtRecursive_correctness (.ofPos hpos)
+      simp only [SizedProblem.ofPos] at ha_eq
 
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by

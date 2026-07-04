@@ -18,10 +18,6 @@ algorithm's seed. -/
 @[expose] def isSizedAt (n : Int) (c : Nat) :=
   0 < n ∧ c = (n.toNat.size - 1) / 2
 
-/-- `n` sits at its own level: `isSizedAt n ((n.toNat.size - 1)/2)`. -/
-theorem size_condition_initial {n : Int} (hn : 0 < n) :
-    isSizedAt n ((n.toNat.size - 1) / 2) := ⟨hn, rfl⟩
-
 /-- Descent to any depth `d ≤ c`: right-shifting `isSizedAt n c` by `2(c-d)` gives
 `isSizedAt (n >>> 2(c-d)) d`. -/
 theorem size_condition_at_depth {n : Int} {c d : Nat} (hd_hi : d ≤ c) (h : isSizedAt n c) :
@@ -59,6 +55,10 @@ relating them. -/
   hsize : isSizedAt n c
 
 namespace SizedProblem
+
+/-- The seed problem for a positive `n`: the value `n` at its own level `(n.toNat.size - 1)/2`. -/
+@[expose] def ofPos {n : Int} (hn : 0 < n) : SizedProblem :=
+  ⟨n, (n.toNat.size - 1) / 2, hn, rfl⟩
 
 /-- The step shift amount `⌊(c-1)/2⌋`. -/
 @[expose] def shifter (p : SizedProblem) : Nat := (p.c - 1) / 2
