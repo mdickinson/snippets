@@ -10,6 +10,7 @@ depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 
 module
 
+import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.SupportLemmas
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.KeyLemma

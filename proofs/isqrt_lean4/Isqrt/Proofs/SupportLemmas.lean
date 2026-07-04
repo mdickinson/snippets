@@ -1,9 +1,11 @@
 /-
-General `Int` / `Nat` facts missing from the core library, plus `Nat.size` (bit length) and
-its basic properties, and a small `Except`-monad helper.
+General `Int` / `Nat` facts missing from the core library, plus basic properties of `Nat.size`
+(bit length), and a small `Except`-monad helper.
 -/
 
 module
+
+public import Isqrt.Proofs.NatSize
 
 public section
 
@@ -15,20 +17,6 @@ theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   norm_cast
 
 /-! ## Nat.size -/
-
-/-- Minimum number of bits required to represent a natural number. -/
-def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
-
-/-- Defining property of `Nat.size`: `n.size ≤ k ↔ n < 2^k`. -/
-theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
-  unfold Nat.size
-  rcases Nat.eq_zero_or_pos n with rfl | hn
-  · rw [if_pos rfl]
-    constructor
-    · intro; exact Nat.pow_pos (by decide)
-    · intro; exact zero_le _
-  · rw [if_neg (Nat.ne_of_gt hn)]
-    apply Nat.log2_lt (Nat.ne_zero_of_lt hn)
 
 /-- Defining property, with inequalities inverted. -/
 theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
