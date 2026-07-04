@@ -19,7 +19,7 @@ shift/bit-length world to the `isSuitableScaler` notion the key lemma reads. -/
 private def scaler (p : SizedProblem) : Int := 2 ^ p.shifter
 
 /-- For `M = 2^k`, `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋ = Ma + ⌊ν / 4Ma⌋`. -/
-private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
+private theorem key_isqrt_body_eq {ν M a : Int} {k : Nat}
     (hM : M = 2 ^ k) :
     a * 2 ^ k + ν / 2 ^ (k + 2) / a
       = M * a + ν / (4 * M * a) := by
@@ -78,7 +78,7 @@ public theorem isNearSquareRoot_newtonLift (p : SizedProblem) (hc : 0 < p.c) {a 
   exact key_isqrt_lemma (isSuitableScaler_scaler p hc) h
 
 /-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
-public theorem isIntegerSquareRoot_of_isNearSquareRoot {a n : Int} (h : isNearSquareRoot n a) :
+public theorem isIntegerSquareRoot_of_isNearSquareRoot {n a : Int} (h : isNearSquareRoot n a) :
     isIntegerSquareRoot n (if n < a * a then a - 1 else a) := by
   obtain ⟨ha_pos, h_lo, h_hi⟩ := h
   by_cases h_lt : n < a * a

@@ -21,7 +21,7 @@ public section
 
 /-- One loop iteration as a standalone `Except`-returning step on the state `⟨a, d⟩` (running
 approximation `a`, previous shift `d`). -/
-private def stepM (c n : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd Int Int) := do
+private def stepM (n c : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd Int Int) := do
   let dNew ← pyRshift c s
   let lsh ← pyLshift r.fst (dNew - r.snd - 1)
   let rsh ← pyRshift n (2 * c - r.snd - dNew + 1)
@@ -56,11 +56,11 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
 
 /-- `stepM`'s `.ok` value, given nonneg shift `s`, positive `r.fst`, and the two shift-amount
 bounds. -/
-private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
+private theorem stepM_eq_ok {n c : Int} (r : MProd Int Int) (s : Int)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
     (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
     (hJ : 0 ≤ 2 * c - r.snd - c >>> s.toNat + 1) :
-    stepM c n r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
+    stepM n c r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
         + (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) / r.fst,
       c >>> s.toNat⟩ := by
   simp only [stepM, pyRshift_eq_ok hs_nn, Except.ok_bind,
@@ -75,7 +75,7 @@ subproblem's Newton lift, at the new depth `↑(c ≫ i)`. Absorbs the `.ok`-thr
 shift-amount decoding, leaving the caller only the mathematical Newton lift. -/
 private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
     (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
-    stepM (↑p.c) p.n r (Int.ofNat i)
+    stepM p.n (↑p.c) r (Int.ofNat i)
       = .ok ⟨(p.subAt (p.c >>> i) (Nat.shiftRight_le p.c i)).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
   -- Decode the loop's Int shift `↑c ≫ i` to the Nat `↑(c ≫ i)`, and record the child halving.
   have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
@@ -102,7 +102,7 @@ private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
 `p.n`, via a position-indexed invariant over the subproblem chain `chain s = p.subAt (c >>> s)`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
-      (range (↑p.c : Int).bitLength).reverse.foldlM (stepM ↑p.c p.n) ⟨1, 0⟩ = .ok y
+      (range (↑p.c : Int).bitLength).reverse.foldlM (stepM p.n ↑p.c) ⟨1, 0⟩ = .ok y
       ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨n, c, hsize⟩ := p
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
@@ -132,7 +132,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
   -- Step: `stepM_subAt` runs one mechanical step to the depth-`c≫i` subproblem's Newton lift; its
   -- near-√-ness is the shared lift `isNearSquareRoot_newtonLift`, exactly as the recursion does.
   have hstep : ∀ s, s < (↑c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →
-      ∃ y, stepM (↑c) n x (Int.ofNat s) = .ok y ∧ motive s y := by
+      ∃ y, stepM n (↑c) x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
     obtain ⟨hx_snd, hx_near⟩ := hx
@@ -148,7 +148,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
     exact ⟨_, stepM_subAt ⟨n, c, hsize⟩ x hdN_pos hx_near.1 hx_snd,
       rfl, isNearSquareRoot_newtonLift (chain i) hdN_pos h_child⟩
   obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
-    foldlM_reverseRange_invariant motive (fun x s => stepM (↑c) n x (Int.ofNat s))
+    foldlM_reverseRange_invariant motive (fun x s => stepM n (↑c) x (Int.ofNat s))
       (↑c : Int).bitLength.toNat ⟨1, 0⟩ hseed hstep
   -- Result at `s = 0`: `chain 0` is the whole problem — `c >> 0 = c` and `n >> 0 = n`.
   refine ⟨y, hy_eq, ?_⟩
@@ -179,7 +179,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
           pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
-        have key := forIn_yield_bind_eq_foldlM (stepM ((n.bitLength - 1) / 2) n)
+        have key := forIn_yield_bind_eq_foldlM (stepM n ((n.bitLength - 1) / 2))
           (range ((n.bitLength - 1) / 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
