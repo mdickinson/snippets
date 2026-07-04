@@ -85,7 +85,7 @@ theorem n_lower {n M a : Int} (hM : 0 < M)
 /-! ## Suitable scalers -/
 
 /-- `M` is a *suitable scaler* for `n`: `0 < M` and `4M⁴ ≤ n`. -/
-@[expose] public def isSuitableScaler (n M : Int) : Prop := 0 < M ∧ 4 * M^4 ≤ n
+@[expose] public def isSuitableScaler (n M : Int) := 0 < M ∧ 4 * M^4 ≤ n
 
 /-! ## The key lemma -/
 

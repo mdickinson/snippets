@@ -30,7 +30,7 @@ private theorem M_bound_from_size_nat {c n : Nat} (hc : 0 < c) (h_lo : 4 ^ c ≤
 /-! ## The power bound `hasSizeCondition` -/
 
 /-- The power bound: `4^c ≤ n < 4^(c+1)`. -/
-@[expose] def hasSizeCondition (n : Int) (c : Nat) : Prop :=
+@[expose] def hasSizeCondition (n : Int) (c : Nat) :=
   (4 : Int) ^ c ≤ n ∧ n < (4 : Int) ^ (c + 1)
 
 /-- The power bound forces `0 < n` (since `1 ≤ 4^c ≤ n`). -/
@@ -53,7 +53,7 @@ private theorem hasSizeCondition_natCast_iff {n c : Nat} :
 
 /-- The bit-length form of the size condition: `0 < n` and `c = (n.toNat.size - 1)/2`, the
 algorithm's seed. -/
-@[expose] def isSizedAt (n : Int) (c : Nat) : Prop :=
+@[expose] def isSizedAt (n : Int) (c : Nat) :=
   0 < n ∧ c = (n.toNat.size - 1) / 2
 
 /-- `isSizedAt` forces `0 < n` (by definition). -/

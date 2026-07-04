@@ -9,23 +9,23 @@ public import Isqrt.Definitions.Exceptions
 @[expose] public section
 
 /-- Statement that a possibly-exception-raising computation returns a value. -/
-def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
+def returns {α : Type} (x : PyExcept α) (a : α) := x = .ok a
 
 /-- Statement that a possibly-exception-raising computation raises an exception. -/
-def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error e
+def raises {α : Type} (x : PyExcept α) (e : PyException) := x = .error e
 
 /-- What it means for an integer `a` to be an integer square root of `n`. -/
-def isIntegerSquareRoot (n a : Int) : Prop := a * a ≤ n ∧ n < (a + 1) * (a + 1)
+def isIntegerSquareRoot (n a : Int) := a * a ≤ n ∧ n < (a + 1) * (a + 1)
 
 /-- What it means for a positive integer `a` to be a *near square root* of `n`. -/
-def isNearSquareRoot (n a : Int) : Prop := 0 < a ∧ (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
+def isNearSquareRoot (n a : Int) := 0 < a ∧ (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
 
 /--
 Statement that a function `isqrt` has the correct behaviour: returns an integer
 square root for all nonnegative inputs, and raises a valueError with the expected
 message for all negative inputs.
 -/
-def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
+def isCorrectIsqrt (isqrt : Int → PyExcept Int) :=
   (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
   ∧
   (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
