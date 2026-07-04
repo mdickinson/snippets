@@ -2,8 +2,7 @@
 The `SizedProblem` algebra: the instance both correctness proofs operate on (a value `n`, a level
 `c`, and the invariant `isSizedAt n c`), and the operations they run — `descend` (one reduction
 step), `newtonLift` (lift a near square root back up), and `subAt` (the depth-`d` subproblem the
-loop climbs). All are phrased in the algorithm's shift/bit-length language; the crossings to the
-key lemma's multiplicative `Ma + ⌊n / 4Ma⌋` form live at the bottom.
+loop climbs). All are phrased in the algorithm's shift/bit-length language.
 -/
 
 module
@@ -11,7 +10,6 @@ module
 public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonTranslation
-import Isqrt.Proofs.SupportLemmas
 
 public section
 
@@ -76,40 +74,6 @@ theorem subAt_body_eq {p : SizedProblem} {d e : Nat} {a : Int} (hhi : d ≤ p.c)
   rw [← Int.shiftRight_add,
       show d - e - 1 = (d - 1) / 2 from by omega,
       show 2 * p.c - e - d + 1 = 2 * (p.c - d) + ((d - 1) / 2 + 2) from by omega]
-
-/-! ### Crossings to the key lemma's multiplicative form -/
-
-/-- For `M = 2^k`, `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋ = Ma + ⌊ν / 4Ma⌋`. -/
-private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
-    (hM : M = 2 ^ k) :
-    a * 2 ^ k + ν / 2 ^ (k + 2) / a
-      = M * a + ν / (4 * M * a) := by
-  subst hM
-  have h_pow : (2 : Int) ^ (k + 2) = 4 * 2 ^ k := by
-    rw [Int.pow_add]; grind only
-  rw [h_pow, Int.ediv_ediv_of_nonneg
-      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega)))]
-  grind only
-
-/-- `4·(2^k)² = 2^(2k+2)`. -/
-private theorem four_mul_two_pow_sq (k : Nat) :
-    (4 : Int) * (2 ^ k) ^ 2 = 2 ^ (2 * k + 2) := by
-  rw [Int.pow_add, ←Int.pow_mul]; grind only
-
-/-- The descended value in multiplicative form: `(p.descend hc).n = p.n / (4·scaler²)`. -/
-theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
-    (p.descend hc).n = p.n / (4 * p.scaler ^ 2) := by
-  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * p.scaler ^ 2)
-  rw [Int.shiftRight_eq_ediv,
-    show (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) from four_mul_two_pow_sq p.shifter]
-
-/-- `newtonLift` in multiplicative form: `p.newtonLift a = scaler·a + p.n / (4·scaler·a)`. -/
-theorem newtonLift_eq (p : SizedProblem) {a : Int} :
-    p.newtonLift a = p.scaler * a + p.n / (4 * p.scaler * a) := by
-  show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
-      = p.scaler * a + p.n / (4 * p.scaler * a)
-  rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
-  exact key_isqrt_body_eq rfl
 
 end SizedProblem
 

@@ -4,15 +4,49 @@ near-square-root machinery both top-level correctness proofs share.
 
 `key_isqrt_lemma` (in `Isqrt.Proofs.KeyLemma`) lifts a near square root across a *general* suitable
 scaler `M`; the algorithms use the *specific* power-of-two scaler `2^shifter` carried by a
-`SizedProblem`. `isNearSquareRoot_newtonLift` specialises the key lemma to that scaler, giving the
-concrete lift both proofs run. `isIntegerSquareRoot_of_isNearSquareRoot` is the closing step: a near
-square root of `n`, corrected by a single comparison, is the integer square root of `n`.
+`SizedProblem`. The scaler crossings `descend_n_eq`/`newtonLift_eq` recast the shift-form
+`descend`/`newtonLift` in the multiplicative `Ma + ⌊n / 4Ma⌋` form, and `isNearSquareRoot_newtonLift`
+feeds them to the key lemma to give the concrete lift both proofs run.
+`isIntegerSquareRoot_of_isNearSquareRoot` is the closing step: a near square root of `n`, corrected
+by a single comparison, is the integer square root of `n`.
 -/
 
 module
 
 public import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.KeyLemma
+import Isqrt.Proofs.SupportLemmas
+
+/-! ## Scaler crossings: the power-of-two scaler in multiplicative form -/
+
+/-- For `M = 2^k`, `a·2^k + ⌊⌊ν / 2^(k+2)⌋ / a⌋ = Ma + ⌊ν / 4Ma⌋`. -/
+private theorem key_isqrt_body_eq {ν a M : Int} {k : Nat}
+    (hM : M = 2 ^ k) :
+    a * 2 ^ k + ν / 2 ^ (k + 2) / a
+      = M * a + ν / (4 * M * a) := by
+  subst hM
+  have h_pow : (2 : Int) ^ (k + 2) = 4 * 2 ^ k := by
+    rw [Int.pow_add]; grind only
+  rw [h_pow, Int.ediv_ediv_of_nonneg
+      (Int.mul_nonneg (by omega) (Int.pow_nonneg (by omega)))]
+  grind only
+
+/-- The descended value in multiplicative form: `(p.descend hc).n = p.n / (4·scaler²)`. -/
+private theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
+    (p.descend hc).n = p.n / (4 * p.scaler ^ 2) := by
+  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * p.scaler ^ 2)
+  have hpow : (4 : Int) * p.scaler ^ 2 = 2 ^ (2 * p.shifter + 2) := by
+    show (4 : Int) * (2 ^ p.shifter) ^ 2 = 2 ^ (2 * p.shifter + 2)
+    rw [Int.pow_add, ← Int.pow_mul]; grind only
+  rw [Int.shiftRight_eq_ediv, hpow]
+
+/-- `newtonLift` in multiplicative form: `p.newtonLift a = scaler·a + p.n / (4·scaler·a)`. -/
+private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
+    p.newtonLift a = p.scaler * a + p.n / (4 * p.scaler * a) := by
+  show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
+      = p.scaler * a + p.n / (4 * p.scaler * a)
+  rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
+  exact key_isqrt_body_eq rfl
 
 /-! ## Lifting: the key lemma at the algorithm's power-of-two scaler -/
 
@@ -21,8 +55,8 @@ public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a 
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
   have hscaler : isSuitableScaler p.n p.scaler :=
     isSuitableScaler_of_hasSizeCondition rfl hc p.hsc
-  rw [p.descend_n_eq hc] at h
-  rw [p.newtonLift_eq]
+  rw [descend_n_eq p hc] at h
+  rw [newtonLift_eq p]
   exact key_isqrt_lemma hscaler h
 
 /-! ## Correction: near square root to integer square root -/
