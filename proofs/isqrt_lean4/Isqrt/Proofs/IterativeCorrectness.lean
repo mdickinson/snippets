@@ -69,14 +69,13 @@ private theorem stepM_eq_ok {c n : Int} (r : MProd Int Int) (s : Int)
     pyFloordiv_eq_ok ha_pos]
   rfl
 
-/-- The loop's `foldlM` is `.ok`, and its running approximation is a positive near square root of
+/-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of
 `p.n`, via a position-indexed invariant over the subproblem chain `chain s = p.subAt (c >>> s)`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM ↑p.c p.n) ⟨1, 0⟩ = .ok y
-      ∧ 0 < y.fst ∧ isNearSquareRoot p.n y.fst := by
+      ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨n, c, hsize⟩ := p
-  have hn : 0 < n := hsize.pos
   -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
   have hcast : ∀ s : Nat, (↑c : Int) >>> s = ↑(c >>> s) := fun s =>
     (Int.natCast_shiftRight c s).symm
@@ -95,13 +94,13 @@ private theorem monadicLoop_near (p : SizedProblem) :
     rw [Int.bitLength_eq (Int.natCast_nonneg c), Int.toNat_natCast, Int.toNat_natCast]
     exact Nat.shiftRight_size_self
   let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
-    0 < r.fst ∧ r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
+    r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
   have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
-    0 < r.fst ∧ r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst := rfl
+    r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst := rfl
   -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `chain L` (value `n >> 2c ∈ [1, 4)`) has
   -- near-√ `1`.
   have hseed : motive (↑c : Int).bitLength.toNat ⟨1, 0⟩ := by
-    refine ⟨Int.one_pos, by rw [hz]; rfl, ?_⟩
+    refine ⟨by rw [hz]; rfl, ?_⟩
     show isNearSquareRoot (n >>> (2 * (c - c >>> (↑c : Int).bitLength.toNat))) 1
     rw [hz]
     exact isNearSquareRoot_one_of_hasSizeCondition
@@ -113,7 +112,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
       ∃ y, stepM (↑c) n x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
     simp only [hmotive] at hx ⊢
-    obtain ⟨ha_pos, hx_snd, hx_near⟩ := hx
+    obtain ⟨hx_snd, hx_near⟩ := hx
     -- Nat depths at this level (`c >> i`) and its child (`c >> (i+1) = ⌊(c >> i)/2⌋`).
     rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
     have hdN_pos : 0 < c >>> i := Nat.shiftRight_pos hi
@@ -130,13 +129,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
       rw [← heN_halve]
       exact hx_near
     -- assemble: `stepM` succeeds, and its new state is a near-√ at depth `c >> i`
-    refine ⟨_, stepM_eq_ok x (Int.ofNat i) (Int.natCast_nonneg i) ha_pos ?_ ?_, ?_, ?_, ?_⟩
+    refine ⟨_, stepM_eq_ok x (Int.ofNat i) (Int.natCast_nonneg i) hx_near.1 ?_ ?_, ?_, ?_⟩
     · rw [hd_new, hx_snd]; omega
     · rw [hd_new, hx_snd]; omega
-    · -- positivity: `0 < a` survives the left shift; the divided-down remainder is `≥ 0`
-      exact Int.add_pos_of_pos_of_nonneg
-        (Int.lt_of_lt_of_le ha_pos (Int.le_shiftLeft_of_nonneg (Int.le_of_lt ha_pos)))
-        (Int.ediv_nonneg (Int.le_shiftRight_of_nonneg (Int.le_of_lt hn)) (Int.le_of_lt ha_pos))
     · -- new `d = ↑(c >> i)`
       rw [hd_new]
     · -- near-√ at the new depth: the loop body is the Newton lift of `chain i`, shared with recursion
@@ -148,11 +143,11 @@ private theorem monadicLoop_near (p : SizedProblem) :
       rw [he1, he2,
         SizedProblem.subAt_body_eq (p := ⟨n, c, hsize⟩) (hhi i) heN_halve hdN_pos]
       exact isNearSquareRoot_newtonLift hdN_pos h_child
-  obtain ⟨y, hy_eq, hy_pos, _hy_d, hy_near⟩ :=
+  obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM (↑c) n x (Int.ofNat s))
       (↑c : Int).bitLength.toNat ⟨1, 0⟩ hseed hstep
   -- Result at `s = 0`: `chain 0` is the whole problem — `c >> 0 = c` and `n >> 0 = n`.
-  refine ⟨y, hy_eq, hy_pos, ?_⟩
+  refine ⟨y, hy_eq, ?_⟩
   have hy_near' : isNearSquareRoot (chain 0).n y.fst := hy_near
   have hchain0 : (chain 0).n = n := by
     show n >>> (2 * (c - c >>> 0)) = n
@@ -173,7 +168,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; decide
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
-      obtain ⟨y, hy_eq, _hy_pos, hy_near⟩ :=
+      obtain ⟨y, hy_eq, hy_near⟩ :=
         monadicLoop_near ⟨n, (n.toNat.size - 1) / 2, size_condition_initial hpos⟩
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
