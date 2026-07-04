@@ -174,7 +174,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, hy_near⟩ :=
         monadicLoop_near (.ofPos hpos)
-      simp only [SizedProblem.ofPos] at hy_eq
+      simp only [SizedProblem.ofPos_n, SizedProblem.ofPos_c] at hy_eq hy_near
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative

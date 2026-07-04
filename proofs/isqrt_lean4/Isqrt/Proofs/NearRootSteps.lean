@@ -31,20 +31,18 @@ private theorem key_isqrt_body_eq {ν M a : Int} {k : Nat}
   grind only
 
 /-- The descended value in multiplicative form: `(p.descend hc).n = p.n / (4·scaler²)`. -/
-private theorem descend_n_eq (p : SizedProblem) (hc : 0 < p.c) :
+private theorem descend_n_mul (p : SizedProblem) (hc : 0 < p.c) :
     (p.descend hc).n = p.n / (4 * scaler p ^ 2) := by
-  show p.n >>> (2 * p.shifter + 2) = p.n / (4 * scaler p ^ 2)
+  rw [SizedProblem.descend_n]
   have hpow : (4 : Int) * scaler p ^ 2 = 2 ^ (2 * p.shifter + 2) := by
     show (4 : Int) * (2 ^ p.shifter) ^ 2 = 2 ^ (2 * p.shifter + 2)
     rw [Int.pow_add, ← Int.pow_mul]; grind only
   rw [Int.shiftRight_eq_ediv, hpow]
 
 /-- `newtonLift` in multiplicative form: `p.newtonLift a = scaler·a + p.n / (4·scaler·a)`. -/
-private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
+private theorem newtonLift_mul (p : SizedProblem) {a : Int} :
     p.newtonLift a = scaler p * a + p.n / (4 * scaler p * a) := by
-  show (a <<< p.shifter) + (p.n >>> (p.shifter + 2)) / a
-      = scaler p * a + p.n / (4 * scaler p * a)
-  rw [Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
+  rw [SizedProblem.newtonLift_eq, Int.shiftLeft_eq, Int.shiftRight_eq_ediv]
   exact key_isqrt_body_eq rfl
 
 /-- The scaler `2^shifter` is suitable for `p.n`: `4·scaler⁴ = 2^(4·shifter+2) ≤ p.n`, the exponent
@@ -52,6 +50,7 @@ below `p.n.size`. -/
 private theorem isSuitableScaler_scaler (p : SizedProblem) (hc : 0 < p.c) :
     isSuitableScaler p.n (scaler p) := by
   obtain ⟨hpos, hc_eq⟩ := p.hsize
+  simp only [scaler, SizedProblem.shifter_eq]
   show 0 < (2 : Int) ^ ((p.c - 1) / 2) ∧ 4 * ((2 : Int) ^ ((p.c - 1) / 2)) ^ 4 ≤ p.n
   refine ⟨Int.pow_pos (by decide), ?_⟩
   have hbound : (2 : Nat) ^ (4 * ((p.c - 1) / 2) + 2) ≤ p.n.toNat := Nat.lt_size.mp (by omega)
@@ -73,8 +72,8 @@ public theorem isNearSquareRoot_one (p : SizedProblem) (hc : p.c = 0) :
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
 public theorem isNearSquareRoot_newtonLift (p : SizedProblem) (hc : 0 < p.c) {a : Int}
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
-  rw [descend_n_eq p hc] at h
-  rw [newtonLift_eq p]
+  rw [descend_n_mul p hc] at h
+  rw [newtonLift_mul p]
   exact key_isqrt_lemma (isSuitableScaler_scaler p hc) h
 
 /-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/

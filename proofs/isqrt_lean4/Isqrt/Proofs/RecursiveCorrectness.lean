@@ -22,10 +22,10 @@ theorem nsqrtRecursive_base (n : Int) {c : Int} (hc : c ≤ 0) :
     nsqrtRecursive n c = .ok 1 := by
   unfold nsqrtRecursive; rw [if_pos hc]; rfl
 
-/-- One unfolding at `0 < c`, in `SizedProblem`'s shift form: a successful subcall on the descended
-value returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the
-Newton lift. -/
-theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
+/-- One unfolding at `0 < c`, in raw shift form: a successful subcall on the descended value
+returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the Newton
+lift. -/
+private theorem nsqrtRecursive_succ_shift {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
     (h_sub : nsqrtRecursive (n >>> (2 * ((c - 1) / 2) + 2)) ↑(c / 2) = .ok a) :
     nsqrtRecursive n ↑c
       = .ok (a <<< ((c - 1) / 2) + (n >>> ((c - 1) / 2 + 2)) / a) := by
@@ -52,6 +52,15 @@ theorem nsqrtRecursive_succ {n a : Int} {c : Nat} (hc : 0 < c) (ha : 0 < a)
     rfl
   rw [hred, hkk]
 
+/-- The recursive step in `SizedProblem` terms: a solved descendant lifts back to `p` via
+`newtonLift`. -/
+theorem nsqrtRecursive_succ (p : SizedProblem) {a : Int} (hc : 0 < p.c) (ha : 0 < a)
+    (h_sub : nsqrtRecursive (p.descend hc).n ↑(p.descend hc).c = .ok a) :
+    nsqrtRecursive p.n ↑p.c = .ok (p.newtonLift a) := by
+  rw [p.descend_n hc, p.descend_c hc, p.shifter_eq] at h_sub
+  rw [p.newtonLift_eq, p.shifter_eq]
+  exact nsqrtRecursive_succ_shift hc ha h_sub
+
 /-- The recursive auxiliary returns a near square root of `p.n` and never raises, for any
 `SizedProblem p`: the base case (`p.c = 0`) returns `1`; the step solves `p.descend` and lifts it
 back with `p.newtonLift`. -/
@@ -63,12 +72,10 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
   · -- step: solve the descended problem, lift its near square root back.
     have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)
-    -- `(p.descend).n` and `p.newtonLift a` are the shift forms `nsqrtRecursive_succ` speaks, so the
-    -- IH `ha_eq` and the returned value land definitionally — no shift↔multiplicative bridge here.
-    exact ⟨p.newtonLift a, nsqrtRecursive_succ hc_pos a_near.1 ha_eq,
+    exact ⟨p.newtonLift a, nsqrtRecursive_succ p hc_pos a_near.1 ha_eq,
       isNearSquareRoot_newtonLift p hc_pos a_near⟩
 termination_by p.c
-decreasing_by simp only [SizedProblem.descend]; omega
+decreasing_by exact p.descend_lt hc_pos
 
 /-- Correctness of `isqrtRecursive`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
@@ -87,7 +94,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
 
       obtain ⟨a, ha_eq, a_near⟩ :=
         nsqrtRecursive_correctness (.ofPos hpos)
-      simp only [SizedProblem.ofPos] at ha_eq
+      simp only [SizedProblem.ofPos_n, SizedProblem.ofPos_c] at ha_eq a_near
 
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
