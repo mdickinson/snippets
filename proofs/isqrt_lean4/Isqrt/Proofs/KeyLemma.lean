@@ -121,9 +121,12 @@ public theorem key_isqrt_lemma {n M a : Int}
     exact Int.lt_of_lt_of_le hq_ub hle
   -- ===== Lower bound: (Ma + q - 1)² < n =====
   have lower : (M * a + q - 1)^2 < n := by
-    -- (1)  16M²a²n − (4M²a²+n−4M²)² factors as the product of the (L) and (U) gaps, so is > 0.
-    have hnewton : (4 * M^2 * a^2 + n - 4 * M^2)^2 < 16 * M^2 * a^2 * n := by
-      grind only [Int.mul_pos (Int.sub_pos.mpr hL) (Int.sub_pos.mpr hU)]
+    -- (1)  16M²a²n − (4M²a²+n−4M²)² is exactly the (L)-gap times the (U)-gap, hence positive.
+    have hfactor : 16 * M^2 * a^2 * n - (4 * M^2 * a^2 + n - 4 * M^2)^2
+        = (n - 4 * M^2 * (a - 1)^2) * (4 * M^2 * (a + 1)^2 - n) := by grind only
+    have hgap : 0 < (n - 4 * M^2 * (a - 1)^2) * (4 * M^2 * (a + 1)^2 - n) :=
+      Int.mul_pos (Int.sub_pos.mpr hL) (Int.sub_pos.mpr hU)
+    have hnewton : (4 * M^2 * a^2 + n - 4 * M^2)^2 < 16 * M^2 * a^2 * n := by omega
     -- (2)  the chain 4M² ≤ 4Ma ≤ 4M²a²+4Maq ≤ 4M²a²+n, via `h4M2` (`M ≤ a`) and `h4Maq` (floor).
     have h4M2 : 4 * M^2 ≤ 4 * M * a := by
       grind only [Int.mul_nonneg (by omega : 0 ≤ 4 * M) (by omega : 0 ≤ a - M)]
