@@ -15,7 +15,7 @@ import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
-import Isqrt.Proofs.NearSquareRoot
+import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.SupportLemmas
 
 public section
