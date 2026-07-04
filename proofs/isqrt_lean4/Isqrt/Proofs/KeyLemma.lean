@@ -58,8 +58,7 @@ theorem M_le_a {n M a : Int}
     M ≤ a := by
   have hdenom : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have h1 : M^2 ≤ n / (4 * M^2) := by
-    rw [Int.le_ediv_iff_mul_le hdenom, show M^2 * (4 * M^2) = 4 * M^4 from by grind only]
-    exact hM4
+    rw [Int.le_ediv_iff_mul_le hdenom]; grind only
   have h2 : M^2 < (a + 1)^2 := Int.lt_of_le_of_lt h1 ha_hi
   have : M < a + 1 := lt_of_sq_lt_sq (by omega) h2
   omega
@@ -105,15 +104,15 @@ public theorem key_isqrt_lemma {n M a : Int}
   have hL : 4 * M^2 * (a - 1)^2 < n := n_lower hM ha_lo
   have hM_le_a : M ≤ a := M_le_a hM ha hM4 ha_hi
   let q := n / (4 * M * a)
-  have hMa_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
+  have h4Ma_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
   have hMa_one : 1 ≤ M * a := by have := Int.mul_pos hM ha; omega
   have h4M4_nonneg : 0 ≤ 4 * M^4 :=
     Int.mul_nonneg (by decide) (Int.pow_nonneg (Int.le_of_lt hM))
   have hn_nonneg : 0 ≤ n := Int.le_trans h4M4_nonneg hM4
-  have hq_nonneg : 0 ≤ q := Int.ediv_nonneg hn_nonneg (Int.le_of_lt hMa_pos)
+  have hq_nonneg : 0 ≤ q := Int.ediv_nonneg hn_nonneg (Int.le_of_lt h4Ma_pos)
   -- ===== Upper bound: n < 4Ma(q+1) ≤ (Ma+q+1)² =====
   have upper : n < (M * a + q + 1)^2 := by
-    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_ediv_add_one_mul_self n hMa_pos
+    have hq_ub : n < (q + 1) * (4 * M * a) := Int.lt_ediv_add_one_mul_self n h4Ma_pos
     have hle : (q + 1) * (4 * M * a) ≤ (M * a + q + 1)^2 := by
       have := four_mul_le_add_sq (M * a) (q + 1)
       grind only
@@ -129,11 +128,11 @@ public theorem key_isqrt_lemma {n M a : Int}
     -- (2)  the chain 4M² ≤ 4Ma ≤ 4M²a²+4Maq ≤ 4M²a²+n, via `h4M2` (`M ≤ a`) and `h4Maq` (floor).
     have h4M2 : 4 * M^2 ≤ 4 * M * a := by
       grind only [Int.mul_nonneg (by omega : 0 ≤ 4 * M) (by omega : 0 ≤ a - M)]
-    have h4Maq : 4 * M * a * q ≤ n := Int.mul_ediv_self_le (Int.ne_of_gt hMa_pos)
+    have h4Maq : 4 * M * a * q ≤ n := Int.mul_ediv_self_le (Int.ne_of_gt h4Ma_pos)
     -- The inner gap of (2) is `V = 4Ma(Ma+q−1) = 4M²a²+4Maq−4Ma`, with `0 ≤ V` (as `1 ≤ Ma`)
     -- and `V ≤ 4M²a²+n−4M²` (the outer gap); squaring these bounds is step (3), `hsq`.
     have hVnonneg : 0 ≤ 4 * M * a * (M * a + q - 1) :=
-      Int.mul_nonneg (Int.le_of_lt hMa_pos) (by omega)
+      Int.mul_nonneg (Int.le_of_lt h4Ma_pos) (by omega)
     have hVY : 4 * M * a * (M * a + q - 1) ≤ 4 * M^2 * a^2 + n - 4 * M^2 := by
       grind only
     -- (3)

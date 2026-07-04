@@ -71,8 +71,7 @@ private theorem stepM_eq_ok {n c : Int} (r : MProd Int Int) (s : Int)
 /-! ## The subproblem chain -/
 
 /-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
-`c >>> i`, carrying the inherited size invariant. The chain top is the whole problem and `descend`
-steps it. -/
+`c >>> i`, carrying the inherited size invariant. -/
 private def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
   ⟨p.n >>> (2 * (p.c - p.c >>> i)), p.c >>> i,
     size_condition_at_depth (Nat.shiftRight_le p.c i) p.hsize⟩
@@ -144,8 +143,7 @@ private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
       = 2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1 := by rw [hd_new]; omega
   rw [he1, he2, hd_new, subAt_body_eq p i r.fst hd_pos]
 
-/-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of
-`p.n`, via a position-indexed invariant over the subproblem chain `chain s = subAt p s`. -/
+/-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of `p.n`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM p.n ↑p.c) ⟨1, 0⟩ = .ok y
@@ -166,8 +164,6 @@ private theorem monadicLoop_near (p : SizedProblem) :
     exact Nat.shiftRight_size_self
   let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
     r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
-  have hmotive : motive = fun (s : Nat) (r : MProd Int Int) =>
-    r.snd = ↑(c >>> s) ∧ isNearSquareRoot (chain s).n r.fst := rfl
   -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `chain L` (value `n >> 2c ∈ [1, 4)`) has
   -- near-√ `1`.
   have hseed : motive (↑c : Int).bitLength.toNat ⟨1, 0⟩ := by
@@ -178,7 +174,6 @@ private theorem monadicLoop_near (p : SizedProblem) :
   have hstep : ∀ s, s < (↑c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM n (↑c) x (Int.ofNat s) = .ok y ∧ motive s y := by
     intro i hi x hx
-    simp only [hmotive] at hx ⊢
     obtain ⟨hx_snd, hx_near⟩ := hx
     rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
     have hdN_pos : 0 < c >>> i := Nat.shiftRight_pos hi
