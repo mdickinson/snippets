@@ -4,13 +4,11 @@
 
 module
 
-public section
-
 /-- Minimum number of bits required to represent a natural number. -/
-def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
+public def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
 
 /-- Defining property of `Nat.size`: `n.size ≤ k ↔ n < 2^k`. -/
-theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
+public theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
   unfold Nat.size
   rcases Nat.eq_zero_or_pos n with rfl | hn
   · rw [if_pos rfl]
@@ -19,5 +17,3 @@ theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
     · intro; exact zero_le _
   · rw [if_neg (Nat.ne_of_gt hn)]
     apply Nat.log2_lt (Nat.ne_zero_of_lt hn)
-
-end
