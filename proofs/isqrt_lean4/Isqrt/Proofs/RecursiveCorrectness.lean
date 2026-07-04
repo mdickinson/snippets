@@ -61,7 +61,7 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
   by_cases hc : p.c = 0
   · -- base: at `p.c = 0`, `1` is a near square root.
     exact ⟨1, nsqrtRecursive_base p.n (by omega),
-      isNearSquareRoot_one_of_hasSizeCondition (hc ▸ p.hsc)⟩
+      isNearSquareRoot_one_of_isSizedAt (hc ▸ p.hsize)⟩
   · -- step: solve the descended problem, lift its near square root back.
     have hc_pos : 0 < p.c := Nat.pos_of_ne_zero hc
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hc_pos)

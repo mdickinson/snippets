@@ -131,8 +131,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
     refine ⟨by rw [hz]; rfl, ?_⟩
     show isNearSquareRoot (n >>> (2 * (c - c >>> (↑c : Int).bitLength.toNat))) 1
     rw [hz]
-    exact isNearSquareRoot_one_of_hasSizeCondition
-      (hasSizeCondition_of_isSizedAt (size_condition_at_depth (Nat.zero_le c) hsize))
+    exact isNearSquareRoot_one_of_isSizedAt (size_condition_at_depth (Nat.zero_le c) hsize)
   -- Step: `stepM_subAt` runs one mechanical step to the depth-`c≫i` subproblem's Newton lift; its
   -- near-√-ness is the shared lift `isNearSquareRoot_newtonLift`, exactly as the recursion does.
   have hstep : ∀ s, s < (↑c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →

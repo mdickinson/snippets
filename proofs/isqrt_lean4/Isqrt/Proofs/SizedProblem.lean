@@ -25,10 +25,6 @@ relating them. -/
 
 namespace SizedProblem
 
-/-- The power bound `hasSizeCondition p.n p.c`, derived from the bit-length field `hsize`. -/
-theorem hsc (p : SizedProblem) : hasSizeCondition p.n p.c :=
-  hasSizeCondition_of_isSizedAt p.hsize
-
 /-- The step shift amount `⌊(c-1)/2⌋`. -/
 @[expose] def shifter (p : SizedProblem) : Nat := (p.c - 1) / 2
 

@@ -54,14 +54,26 @@ private theorem newtonLift_eq (p : SizedProblem) {a : Int} :
 
 /-! ## Lifting: the key lemma at the algorithm's power-of-two scaler -/
 
+/-- The scaler `2^shifter` is suitable for `p.n`: `4·scaler⁴ = 2^(4·shifter+2) ≤ p.n`, the exponent
+below `p.n.size`. -/
+private theorem isSuitableScaler_scaler (p : SizedProblem) (hc : 0 < p.c) :
+    isSuitableScaler p.n (scaler p) := by
+  obtain ⟨hpos, hc_eq⟩ := p.hsize
+  show 0 < (2 : Int) ^ ((p.c - 1) / 2) ∧ 4 * ((2 : Int) ^ ((p.c - 1) / 2)) ^ 4 ≤ p.n
+  refine ⟨Int.pow_pos (by decide), ?_⟩
+  have hbound : (2 : Nat) ^ (4 * ((p.c - 1) / 2) + 2) ≤ p.n.toNat := Nat.lt_size.mp (by omega)
+  have hbound' : (2 : Int) ^ (4 * ((p.c - 1) / 2) + 2) ≤ p.n := by
+    rw [← Int.toNat_of_nonneg (Int.le_of_lt hpos)]; exact_mod_cast hbound
+  calc 4 * ((2 : Int) ^ ((p.c - 1) / 2)) ^ 4
+      = 2 ^ (4 * ((p.c - 1) / 2) + 2) := by rw [Int.pow_add, ← Int.pow_mul]; grind only
+    _ ≤ p.n := hbound'
+
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
 public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
-  have hscaler : isSuitableScaler p.n (scaler p) :=
-    isSuitableScaler_of_hasSizeCondition rfl hc p.hsc
   rw [descend_n_eq p hc] at h
   rw [newtonLift_eq p]
-  exact key_isqrt_lemma hscaler h
+  exact key_isqrt_lemma (isSuitableScaler_scaler p hc) h
 
 /-! ## Correction: near square root to integer square root -/
 
