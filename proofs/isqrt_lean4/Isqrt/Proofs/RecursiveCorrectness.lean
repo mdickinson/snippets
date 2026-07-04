@@ -12,7 +12,6 @@ module
 public import Isqrt.Definitions.IsqrtRecursive
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
-import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.NearRootSteps

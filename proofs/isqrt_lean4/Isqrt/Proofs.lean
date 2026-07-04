@@ -12,7 +12,6 @@ module
 
 import Isqrt.Proofs.SupportLemmas
 import Isqrt.Proofs.PythonTranslation
-import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.NearRootSteps
