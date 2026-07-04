@@ -68,15 +68,65 @@ private theorem stepM_eq_ok {n c : Int} (r : MProd Int Int) (s : Int)
     pyFloordiv_eq_ok ha_pos]
   rfl
 
+/-! ## The subproblem chain -/
+
+/-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
+`c >>> i`, carrying the inherited size invariant. The chain top is the whole problem and `descend`
+steps it. -/
+private def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
+  ⟨p.n >>> (2 * (p.c - p.c >>> i)), p.c >>> i,
+    size_condition_at_depth (Nat.shiftRight_le p.c i) p.hsize⟩
+
+/-- The iteration-`i` subproblem's value in shift form. -/
+private theorem subAt_n (p : SizedProblem) (i : Nat) :
+    (subAt p i).n = p.n >>> (2 * (p.c - p.c >>> i)) := rfl
+
+/-- The iteration-`i` subproblem's level is `c >>> i`. -/
+private theorem subAt_c (p : SizedProblem) (i : Nat) : (subAt p i).c = p.c >>> i := rfl
+
+/-- Chain top: iteration `0` is the whole problem. -/
+private theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
+  apply SizedProblem.ext
+  · show p.n >>> (2 * (p.c - p.c >>> 0)) = p.n
+    rw [Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
+  · show p.c >>> 0 = p.c
+    rw [Nat.shiftRight_zero]
+
+/-- Chain step: descending iteration `i` gives iteration `i+1`. -/
+private theorem descend_subAt (p : SizedProblem) (i : Nat) (hpos : 0 < (subAt p i).c) :
+    (subAt p i).descend hpos = subAt p (i + 1) := by
+  apply SizedProblem.ext
+  · rw [SizedProblem.descend_n, SizedProblem.shifter_eq]
+    show (p.n >>> (2 * (p.c - p.c >>> i))) >>> (2 * ((p.c >>> i - 1) / 2) + 2)
+        = p.n >>> (2 * (p.c - p.c >>> (i + 1)))
+    rw [← Int.shiftRight_add, Nat.shiftRight_succ,
+        show 2 * (p.c - p.c >>> i) + (2 * ((p.c >>> i - 1) / 2) + 2) = 2 * (p.c - p.c >>> i / 2)
+          from by have := Nat.shiftRight_le p.c i; have : 0 < p.c >>> i := hpos; omega]
+  · rw [SizedProblem.descend_c]
+    show p.c >>> i / 2 = p.c >>> (i + 1)
+    rw [Nat.shiftRight_succ]
+
+/-- The decoded loop body at position `i` is the iteration-`i` subproblem's Newton lift. -/
+private theorem subAt_body_eq (p : SizedProblem) (i : Nat) (a : Int) (hd_pos : 0 < p.c >>> i) :
+    a <<< (p.c >>> i - p.c >>> (i + 1) - 1)
+        + (p.n >>> (2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1)) / a
+      = (subAt p i).newtonLift a := by
+  rw [SizedProblem.newtonLift_eq, SizedProblem.shifter_eq, subAt_c, subAt_n, ← Int.shiftRight_add,
+      Nat.shiftRight_succ,
+      show p.c >>> i - p.c >>> i / 2 - 1 = (p.c >>> i - 1) / 2 from by omega,
+      show 2 * p.c - p.c >>> i / 2 - p.c >>> i + 1
+          = 2 * (p.c - p.c >>> i) + ((p.c >>> i - 1) / 2 + 2)
+        from by have := Nat.shiftRight_le p.c i; omega]
+
 /-- One `stepM` at position `i` in `SizedProblem` shift form — the iterative analogue of
 `nsqrtRecursive_succ`. From a state `r` at the child depth (`r.snd = ↑(c ≫ i+1)`) with positive
-approximation `r.fst`, and the depth `c ≫ i` positive, the step succeeds and returns the depth-`c ≫ i`
+approximation `r.fst`, and the depth `c ≫ i` positive, the step succeeds and returns the iteration-`i`
 subproblem's Newton lift, at the new depth `↑(c ≫ i)`. Absorbs the `.ok`-threading and the
 shift-amount decoding, leaving the caller only the mathematical Newton lift. -/
 private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
     (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
     stepM p.n (↑p.c) r (Int.ofNat i)
-      = .ok ⟨(p.subAt (p.c >>> i) (Nat.shiftRight_le p.c i)).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
+      = .ok ⟨(subAt p i).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
   -- Decode the loop's Int shift `↑c ≫ i` to the Nat `↑(c ≫ i)`, and record the child halving.
   have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
   have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by
@@ -95,20 +145,17 @@ private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
       = p.c >>> i - p.c >>> (i + 1) - 1 := by rw [hd_new]; omega
   have he2 : (2 * (↑p.c : Int) - ↑(p.c >>> (i + 1)) - (↑p.c : Int) >>> (Int.ofNat i).toNat + 1).toNat
       = 2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1 := by rw [hd_new]; omega
-  rw [he1, he2, hd_new,
-    SizedProblem.subAt_body_eq (p := p) (Nat.shiftRight_le p.c i) heN_halve hd_pos]
+  rw [he1, he2, hd_new, subAt_body_eq p i r.fst hd_pos]
 
 /-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of
-`p.n`, via a position-indexed invariant over the subproblem chain `chain s = p.subAt (c >>> s)`. -/
+`p.n`, via a position-indexed invariant over the subproblem chain `chain s = subAt p s`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
     ∃ y : MProd Int Int,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM p.n ↑p.c) ⟨1, 0⟩ = .ok y
       ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨n, c, hsize⟩ := p
-  -- The loop runs on `↑c : Int`; its depth at position `s` is the `Nat` `c >> s`, cast back.
-  have hhi : ∀ s : Nat, c >>> s ≤ c := fun s => Nat.shiftRight_le c s
-  let chain : Nat → SizedProblem := fun s =>
-    (⟨n, c, hsize⟩ : SizedProblem).subAt (c >>> s) (hhi s)
+  -- The chain of subproblems descending from the whole problem; `chain s` sits at level `c >>> s`.
+  let chain : Nat → SizedProblem := subAt ⟨n, c, hsize⟩
   -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
   have hlist : (range (↑c : Int).bitLength).reverse
       = (List.range (↑c : Int).bitLength.toNat).reverse.map Int.ofNat := by
@@ -129,7 +176,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
   have hseed : motive (↑c : Int).bitLength.toNat ⟨1, 0⟩ := by
     refine ⟨by rw [hz]; rfl, ?_⟩
     exact isNearSquareRoot_one (chain _) hz
-  -- Step: `stepM_subAt` runs one mechanical step to the depth-`c≫i` subproblem's Newton lift; its
+  -- Step: `stepM_subAt` runs one mechanical step to the iteration-`i` subproblem's Newton lift; its
   -- near-√-ness is the shared lift `isNearSquareRoot_newtonLift`, exactly as the recursion does.
   have hstep : ∀ s, s < (↑c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →
       ∃ y, stepM n (↑c) x (Int.ofNat s) = .ok y ∧ motive s y := by
@@ -138,25 +185,20 @@ private theorem monadicLoop_near (p : SizedProblem) :
     obtain ⟨hx_snd, hx_near⟩ := hx
     rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
     have hdN_pos : 0 < c >>> i := Nat.shiftRight_pos hi
-    have heN_halve : c >>> (i + 1) = c >>> i / 2 := Nat.shiftRight_succ c i
-    -- The IH gives a near-√ of `chain (i+1) = descend (chain i)` (child depth `⌊(c≫i)/2⌋`).
+    -- The IH gives a near-√ of `chain (i+1) = descend (chain i)`.
     have h_child : isNearSquareRoot ((chain i).descend hdN_pos).n x.fst := by
-      rw [SizedProblem.descend_subAt]
-      show isNearSquareRoot (n >>> (2 * (c - c >>> i / 2))) x.fst
-      rw [← heN_halve]
-      exact hx_near
+      rw [descend_subAt]; exact hx_near
     exact ⟨_, stepM_subAt ⟨n, c, hsize⟩ x hdN_pos hx_near.1 hx_snd,
       rfl, isNearSquareRoot_newtonLift (chain i) hdN_pos h_child⟩
   obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM n (↑c) x (Int.ofNat s))
       (↑c : Int).bitLength.toNat ⟨1, 0⟩ hseed hstep
-  -- Result at `s = 0`: `chain 0` is the whole problem — `c >> 0 = c` and `n >> 0 = n`.
+  -- Result at `s = 0`: `chain 0` is the whole problem `p` (`subAt_zero`).
   refine ⟨y, hy_eq, ?_⟩
-  have hy_near' : isNearSquareRoot (chain 0).n y.fst := hy_near
   have hchain0 : (chain 0).n = n := by
-    show n >>> (2 * (c - c >>> 0)) = n
-    rw [Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
-  rwa [hchain0] at hy_near'
+    show (subAt ⟨n, c, hsize⟩ 0).n = n
+    rw [subAt_zero]
+  rwa [hchain0] at hy_near
 
 /-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
