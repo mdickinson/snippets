@@ -12,10 +12,10 @@ module
 public import Isqrt.Definitions.IsqrtIterative
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
-import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.NearSquareRoot
 import Isqrt.Proofs.SupportLemmas
 
 public section
@@ -188,7 +188,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
           show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
           hy_eq]
         rfl
-      exact ⟨_, hred, hy_near.toIntegerSquareRoot⟩
+      exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtIterative n) (.valueError "isqrt() argument must be nonnegative")

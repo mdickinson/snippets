@@ -44,18 +44,6 @@ public theorem isNearSquareRoot.pos {n a : Int} (h : isNearSquareRoot n a) : 0 <
   obtain ⟨h_lo, h_hi⟩ := h
   grind only
 
-/-! ## From near square root to integer square root -/
-
-/-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
-public theorem isNearSquareRoot.toIntegerSquareRoot {a n : Int} (h : isNearSquareRoot n a) :
-    isIntegerSquareRoot n (if n < a * a then a - 1 else a) := by
-  obtain ⟨h_lo, h_hi⟩ := h
-  by_cases h_lt : n < a * a
-  · simp only [h_lt, ↓reduceIte]
-    exact ⟨Int.le_of_lt h_lo, by grind only⟩
-  · simp only [h_lt, ↓reduceIte]
-    exact ⟨Int.not_lt.mp h_lt, h_hi⟩
-
 /-! ## Algebraic helpers -/
 
 /-- For integers, `x² < y²` with `0 ≤ y` gives `x < y`. -/

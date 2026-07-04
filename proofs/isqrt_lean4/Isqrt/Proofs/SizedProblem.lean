@@ -3,15 +3,13 @@ The `SizedProblem` algebra: the instance both correctness proofs operate on (a v
 `c`, and the invariant `isSizedAt n c`), and the operations they run — `descend` (one reduction
 step), `newtonLift` (lift a near square root back up), and `subAt` (the depth-`d` subproblem the
 loop climbs). All are phrased in the algorithm's shift/bit-length language; the crossings to the
-key lemma's multiplicative `Ma + ⌊n / 4Ma⌋` form live at the bottom, and
-`isNearSquareRoot_newtonLift` is the single mathematical step both proofs share.
+key lemma's multiplicative `Ma + ⌊n / 4Ma⌋` form live at the bottom.
 -/
 
 module
 
 public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizeConditions
-import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SupportLemmas
 
@@ -114,14 +112,5 @@ theorem newtonLift_eq (p : SizedProblem) {a : Int} :
   exact key_isqrt_body_eq rfl
 
 end SizedProblem
-
-/-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
-theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hc : 0 < p.c) {a : Int}
-    (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
-  have hscaler : isSuitableScaler p.n p.scaler :=
-    isSuitableScaler_of_hasSizeCondition rfl hc p.hsc
-  rw [p.descend_n_eq hc] at h
-  rw [p.newtonLift_eq]
-  exact key_isqrt_lemma hscaler h
 
 end

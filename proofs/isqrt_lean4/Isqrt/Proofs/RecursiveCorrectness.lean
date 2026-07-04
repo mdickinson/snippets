@@ -16,6 +16,7 @@ import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.NearSquareRoot
 import Isqrt.Proofs.SupportLemmas
 
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
@@ -101,7 +102,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
           show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
           ha_eq]
         rfl
-      exact ⟨_, hred, a_near.toIntegerSquareRoot⟩
+      exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot a_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtRecursive n) (.valueError "isqrt() argument must be nonnegative")

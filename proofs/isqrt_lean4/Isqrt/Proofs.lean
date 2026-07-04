@@ -15,5 +15,6 @@ import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizeConditions
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.NearSquareRoot
 import Isqrt.Proofs.RecursiveCorrectness
 import Isqrt.Proofs.IterativeCorrectness
