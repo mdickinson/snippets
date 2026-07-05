@@ -10,11 +10,11 @@ depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
 
 module
 
-import Isqrt.Proofs.NatSize
-import Isqrt.Proofs.SupportLemmas
-import Isqrt.Proofs.PythonTranslation
-import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.SizedProblem
-import Isqrt.Proofs.NearRootSteps
-import Isqrt.Proofs.RecursiveCorrectness
 import Isqrt.Proofs.IterativeCorrectness
+import Isqrt.Proofs.KeyLemma
+import Isqrt.Proofs.NatSize
+import Isqrt.Proofs.NearRootSteps
+import Isqrt.Proofs.PythonTranslation
+import Isqrt.Proofs.RecursiveCorrectness
+import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.SupportLemmas

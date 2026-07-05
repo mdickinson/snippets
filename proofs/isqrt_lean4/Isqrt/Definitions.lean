@@ -1,9 +1,9 @@
 module
 
 import Isqrt.Definitions.Exceptions
-import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Definitions.IsqrtIterative
 import Isqrt.Definitions.IsqrtRecursive
+import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Definitions.Specification
 
 /-!

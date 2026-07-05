@@ -12,10 +12,10 @@ module
 public import Isqrt.Definitions.IsqrtIterative
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Proofs.NatSize
+import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
-import Isqrt.Proofs.NearRootSteps
-import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.SupportLemmas
 
 public section
