@@ -7,6 +7,7 @@ with: the `_eq_ok` lemmas that discharge each operation's error branch and expos
 module
 
 public import Isqrt.Definitions.PythonPrimitives
+public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
 
 /-- For a positive divisor, `pyFloordiv a b` returns `.ok (a / b)`. -/

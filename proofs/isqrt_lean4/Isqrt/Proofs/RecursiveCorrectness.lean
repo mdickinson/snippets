@@ -15,6 +15,7 @@ import Isqrt.Definitions.PythonPrimitives
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.NearRootSteps
+import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.SupportLemmas
 
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/

@@ -6,6 +6,7 @@ both correctness proofs build on.
 
 module
 
+public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
 import Isqrt.Proofs.PythonTranslation
 

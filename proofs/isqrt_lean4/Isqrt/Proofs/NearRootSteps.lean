@@ -10,6 +10,7 @@ module
 public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.KeyLemma
+import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.SupportLemmas
 
 /-! ## The power-of-two scaler -/
