@@ -66,15 +66,11 @@ public theorem key_isqrt_lemma {n M a : Int}
     (hM_scaler : isSuitableScaler n M)
     (h_near : isNearSquareRoot (n / (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n / (4 * M * a)) := by
-  -- Unpack; rewrite squares as squares.
+  -- Unpack hypotheses.
   obtain ⟨hM, hM4⟩ := hM_scaler
   obtain ⟨ha, ha_lo, ha_hi⟩ := h_near
-  -- Assemble some positivity facts.
-  have h4M2_pos : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
-  have h4M4_pos : 0 < 4 * M^4 := Int.mul_pos (by decide) (Int.pow_pos hM)
-  have hMa_pos : 0 < M * a := Int.mul_pos hM ha
-  have hn_nonneg : 0 ≤ n := by grind only
   -- Bounds (L): `4M²(a-1)² < n` and (U): `n < 4M²(a+1)²`.
+  have h4M2_pos : 0 < 4 * M^2 := Int.mul_pos (by decide) (Int.pow_pos hM)
   have hL : 4 * M^2 * (a - 1)^2 < n := by
     grind only [Int.mul_le_of_le_ediv h4M2_pos (Int.add_one_le_of_lt ha_lo)]
   have hU : n < 4 * M^2 * (a + 1)^2 := by
@@ -86,11 +82,12 @@ public theorem key_isqrt_lemma {n M a : Int}
   -- Abbreviate n / 4Ma to q; q satisfies `4Maq ≤ n < 4Ma(q+1)`.
   let q := n / (4 * M * a)
   have h4Ma_pos : 0 < 4 * M * a := Int.mul_pos (Int.mul_pos (by decide) hM) ha
-  have hq_nonneg : 0 ≤ q := Int.ediv_nonneg hn_nonneg (Int.le_of_lt h4Ma_pos)
+  have hn_pos : 0 < n := Int.lt_of_lt_of_le (Int.mul_pos (by decide) (Int.pow_pos hM)) hM4
+  have hq_nonneg : 0 ≤ q := Int.ediv_nonneg (Int.le_of_lt hn_pos) (Int.le_of_lt h4Ma_pos)
   have hq_lb : 4 * M * a * q ≤ n := Int.mul_ediv_self_le (Int.ne_of_gt h4Ma_pos)
   have hq_ub : n < 4 * M * a * q + 4 * M * a := Int.lt_mul_ediv_self_add h4Ma_pos
   -- Positivity: 0 < Ma + q
-  have pos : 0 < M * a + q := by omega
+  have pos : 0 < M * a + q := by grind only
   -- Lower bound: (Ma + q - 1)² < n
   have lower : (M * a + q - 1) * (M * a + q - 1) < n := by
     -- (1)  16M²a²n − (4M²a²+n−4M²)² is exactly the (L)-gap times the (U)-gap, hence positive.

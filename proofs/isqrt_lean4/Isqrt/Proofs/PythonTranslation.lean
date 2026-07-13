@@ -38,8 +38,7 @@ public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.to
   rcases Int.lt_or_eq_of_le hm with hlt | rfl
   · rw [if_neg (by omega)]; norm_cast
     apply Nat.le_antisymm
-    · apply Nat.succ_le_of_lt
-      rw [Nat.log2_lt (by omega), ← Nat.size_le]; omega
+    · apply Nat.succ_le_of_lt; rw [Nat.log2_lt (by omega), ← Nat.size_le]; omega
     · rw [Nat.size_le, ← Nat.log2_lt (by omega)]; omega
   · rw [if_pos rfl]; norm_cast
     symm; rw [Nat.size_zero]; rfl

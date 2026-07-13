@@ -7,30 +7,28 @@ module
 
 public import Isqrt.Proofs.NatSize
 
-public section
-
 /-! ## Shift ↔ division -/
 
 /-- Right shift for an int matches division by a power of two. -/
-theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
+public theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   grind only [Int.shiftRight_eq_div_pow]
 
 /-! ## Nat.size -/
 
 /-- Defining property, with inequalities inverted. -/
-theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
+public theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
   grind only [Nat.size_le (n := n) (k := k)]
 
 /-- `n.size` is zero iff `n` is zero. -/
-theorem Nat.size_zero {n : Nat} : n.size = 0 ↔ n = 0 := by
+public theorem Nat.size_zero {n : Nat} : n.size = 0 ↔ n = 0 := by
   grind only [Nat.size_le (n := n) (k := 0)]
 
 /-- `n.size` is positive iff `n` is positive. -/
-theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
+public theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
   grind only [Nat.lt_size]
 
 /-- Shifting right reduces the size by the shift amount. -/
-theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
+public theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
   rw [Nat.shiftRight_eq_div_pow]
   apply Nat.le_antisymm
   · rw [Nat.size_le]
@@ -43,15 +41,15 @@ theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
     omega
 
 /-- Right shifting a natural number by its size yields zero. -/
-theorem Nat.shiftRight_size_self {n : Nat} : n >>> n.size = 0 := by
+public theorem Nat.shiftRight_size_self {n : Nat} : n >>> n.size = 0 := by
   rw [← Nat.size_zero, Nat.size_shiftRight]; grind only
 
 /-- Right shifting a natural number by less than its size gives something positive. -/
-theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
+public theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
   rw [← Nat.size_pos, Nat.size_shiftRight]; grind only
 
-/-- `Except.ok a >>= f = f a` (definitional). -/
-theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
-    (Except.ok a >>= f) = f a := rfl
+/-! ## Except.ok binding -/
 
-end
+/-- `Except.ok a >>= f = f a` (definitional). -/
+public theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
+    (Except.ok a >>= f) = f a := rfl
