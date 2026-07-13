@@ -75,7 +75,7 @@ public theorem isNearSquareRoot_newtonLift (p : SizedProblem) (hc : 0 < p.c) {a 
     (h : isNearSquareRoot (p.descend hc).n a) : isNearSquareRoot p.n (p.newtonLift a) := by
   rw [descend_n_mul p hc] at h
   rw [newtonLift_mul p]
-  exact key_isqrt_lemma (isSuitableScaler_scaler p hc) h
+  exact key_lemma (isSuitableScaler_scaler p hc) h
 
 /-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
 public theorem isIntegerSquareRoot_of_isNearSquareRoot {n a : Int} (h : isNearSquareRoot n a) :

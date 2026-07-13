@@ -41,7 +41,7 @@ public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
   rw [show (2 : Int)^(k + 2) = 4 * 2^k by grind only]
 
   /- Apply the key lemma with M := 2^k. -/
-  apply key_isqrt_lemma (M := 2^k)
+  apply key_lemma (M := 2^k)
 
   /- Show that 2^k is a suitable scaler for n. -/
   refine ⟨ Int.pow_pos (by decide), ?_ ⟩

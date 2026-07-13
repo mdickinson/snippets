@@ -4,13 +4,13 @@ Newton-step key lemma.
 
 The **near square root** predicate `isNearSquareRoot n a` asserts `0 < a` and
 `(a-1)² < n < (a+1)²`; for positive `n`, `a` is then `⌊√n⌋` or `⌈√n⌉`. The key combining step,
-`key_isqrt_lemma`, lifts a near square root of a quotient of `n` to a near square root of `n` —
+`key_lemma`, lifts a near square root of a quotient of `n` to a near square root of `n` —
 one Newton (Heron) iteration:
 
     given positive integers `n`, `M`, `a` with `4M⁴ ≤ n`, if `a` is a near square root of
     `⌊n/4M²⌋`, then `Ma + ⌊n/4Ma⌋` is a near square root of `n`.
 
-## Proof sketch for `key_isqrt_lemma`
+## Proof sketch for `key_lemma`
 
 Write `q = ⌊n/4Ma⌋`; the goal is `(Ma+q-1)² < n < (Ma+q+1)²`. It rests on four facts:
 
@@ -62,7 +62,7 @@ theorem four_mul_le_add_sq (x y : Int) : 4 * x * y ≤ (x + y) ^ 2 := by
 
 /-- If `M` is a suitable scaler for `n` and `a` is a near square root of `⌊n / 4M²⌋`, then
 `Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
-public theorem key_isqrt_lemma {n M a : Int}
+public theorem key_lemma {n M a : Int}
     (hM_scaler : isSuitableScaler n M)
     (h_near : isNearSquareRoot (n / (4 * M^2)) a) :
     isNearSquareRoot n (M * a + n / (4 * M * a)) := by
