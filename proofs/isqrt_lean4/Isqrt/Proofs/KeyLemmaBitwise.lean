@@ -44,8 +44,9 @@ public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
   apply key_lemma (M := 2^k)
 
   /- Show that 2^k is a suitable scaler for n. -/
-  refine ⟨ Int.pow_pos (by decide), ?_ ⟩
+  refine ⟨Int.pow_pos (by decide), ?_⟩
+  rw [show 4 * (2^k)^4 = (2 : Int)^(4*k+2) by rw [← Int.pow_mul]; grind only]
   rw [← Int.toNat_of_nonneg (by omega : 0 ≤ n)]; norm_cast
-  rw [show 4 = 2^2 by decide, ← Nat.pow_mul, ← Nat.pow_add, ← Nat.lt_size]
-  have : 2 < n.toNat.size := by rw [Nat.lt_size]; omega
+  rw [← Nat.lt_size]
+  have : 2 < n.toNat.size := Nat.lt_size.mpr (by omega)
   omega
