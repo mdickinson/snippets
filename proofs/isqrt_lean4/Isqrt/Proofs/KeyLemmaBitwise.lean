@@ -49,3 +49,8 @@ public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
   rw [← Int.lt_size]
   have : 2 < n.toNat.size := Int.lt_size.mpr (by omega)
   omega
+
+/-- Companion for the base case. -/
+public theorem isqrt_base_case {n : Int} (hn : 0 < n) (hn4 : n < 4) :
+    isNearSquareRoot n 1 := by
+  unfold isNearSquareRoot; omega

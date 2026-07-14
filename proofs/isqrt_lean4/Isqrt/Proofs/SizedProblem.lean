@@ -62,6 +62,9 @@ namespace SizedProblem
 -- propositional — bare `rfl` would force the operations to be exposed. See
 -- https://github.com/leanprover/lean4/issues/12803.
 
+/-- Positivity of n. -/
+theorem n_pos (p : SizedProblem) : 0 < p.n := p.hsize.left
+
 /-- The seed problem for a positive `n`: the value `n` at its own level `(n.toNat.size - 1)/2`. -/
 def ofPos {n : Int} (hn : 0 < n) : SizedProblem :=
   ⟨n, (n.toNat.size - 1) / 2, hn, rfl⟩
@@ -102,6 +105,16 @@ def newtonLift (p : SizedProblem) (a : Int) : Int :=
 /-- The Newton lift in shift form. -/
 theorem newtonLift_eq (p : SizedProblem) (a : Int) :
     p.newtonLift a = a <<< p.shifter + (p.n >>> (p.shifter + 2)) / a := (rfl)
+
+/-- The problem is reducible if and only if n is at least 4. -/
+theorem four_le_n (p : SizedProblem) : 0 < p.c ↔ 4 ≤ p.n := by
+  rw [show (4 : Int) = 2^2 by decide, ← Int.lt_size]
+  obtain ⟨_, hc⟩ := p.hsize; omega
+
+/-- The problem is irreducible if and only if n is less than 4. -/
+theorem n_lt_four (p : SizedProblem) : p.c = 0 ↔ p.n < 4 := by
+  rw [show (4 : Int) = 2^2 by decide, ← Int.size_le]
+  obtain ⟨_, hc⟩ := p.hsize; omega
 
 end SizedProblem
 
