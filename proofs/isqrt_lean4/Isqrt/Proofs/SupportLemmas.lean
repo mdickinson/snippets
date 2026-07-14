@@ -20,8 +20,11 @@ public theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
   grind only [Nat.size_le (n := n) (k := k)]
 
 /-- `n.size` is zero iff `n` is zero. -/
-public theorem Nat.size_zero {n : Nat} : n.size = 0 ↔ n = 0 := by
+public theorem Nat.size_eq_zero {n : Nat} : n.size = 0 ↔ n = 0 := by
   grind only [Nat.size_le (n := n) (k := 0)]
+
+/-- The size of zero is zero. -/
+public theorem Nat.size_zero : (0 : Nat).size = 0 := Nat.size_eq_zero.mpr rfl
 
 /-- `n.size` is positive iff `n` is positive. -/
 public theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
@@ -42,11 +45,19 @@ public theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k :=
 
 /-- Right shifting a natural number by its size yields zero. -/
 public theorem Nat.shiftRight_size_self {n : Nat} : n >>> n.size = 0 := by
-  rw [← Nat.size_zero, Nat.size_shiftRight]; grind only
+  rw [← Nat.size_eq_zero, Nat.size_shiftRight]; grind only
 
 /-- Right shifting a natural number by less than its size gives something positive. -/
 public theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
   rw [← Nat.size_pos, Nat.size_shiftRight]; grind only
+
+/-- Defining property of `Nat.size`, lifted to `Int` via `toNat`. -/
+public theorem Int.size_le {n : Int} {k : Nat} : n.toNat.size ≤ k ↔ n < 2 ^ k := by
+  grind only [Nat.size_le, Nat.size_zero]
+
+/-- The same, with inequalities inverted. -/
+public theorem Int.lt_size {n : Int} {k : Nat} : k < n.toNat.size ↔ 2 ^ k ≤ n := by
+  grind only [Int.size_le (n := n) (k := k)]
 
 /-! ## Except.ok binding -/
 
