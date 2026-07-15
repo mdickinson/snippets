@@ -42,3 +42,16 @@ public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.to
     · rw [Nat.size_le, ← Nat.log2_lt (by omega)]; omega
   · rw [if_pos rfl]; norm_cast
     exact Nat.size_zero.symm
+
+/- Monadic helpers -/
+public theorem pyFloordiv_ok_bind {a b : Int} (hb : 0 < b) (f : Int → PyExcept Int) :
+    (pyFloordiv a b >>= f) = f (a / b) := by
+  rw [pyFloordiv_eq_ok hb, Except.ok_bind]
+
+public theorem pyLshift_ok_bind {n k : Int} (hk : 0 ≤ k) (f : Int → PyExcept Int) :
+    (pyLshift n k >>= f) = f (n <<< k.toNat) := by
+  rw [pyLshift_eq_ok hk, Except.ok_bind]
+
+public theorem pyRshift_ok_bind {n k : Int} (hk : 0 ≤ k) (f : Int → PyExcept Int) :
+    (pyRshift n k >>= f) = f (n >>> k.toNat) := by
+  rw [pyRshift_eq_ok hk, Except.ok_bind]

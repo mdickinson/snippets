@@ -59,6 +59,21 @@ public theorem Int.size_le {n : Int} {k : Nat} : n.toNat.size ≤ k ↔ n < 2 ^ 
 public theorem Int.lt_size {n : Int} {k : Nat} : k < n.toNat.size ↔ 2 ^ k ≤ n := by
   grind only [Int.size_le (n := n) (k := k)]
 
+/-- Size of a right-shifted integer. -/
+public theorem Int.size_shiftRight {n : Int} {k : Nat} :
+    (n >>> k).toNat.size = n.toNat.size - k := by
+  rcases n with n | n
+  · simp only [ofNat_eq_natCast, toNat_natCast]
+    exact Nat.size_shiftRight
+  · simp only [negSucc_shiftRight, toNat_negSucc, Nat.size_zero]
+    omega
+
+/-- A right-shift of an integer by less than its size is positive. -/
+public theorem Int.shiftRight_pos {n : Int} {k : Nat} (hk : k < n.toNat.size) : 0 < n >>> k := by
+  rcases n with n | n
+  · rw [ofNat_eq_natCast]; norm_cast; grind only [Nat.shiftRight_pos]
+  · grind only [toNat_negSucc, Nat.size_zero]
+
 /-! ## Except.ok binding -/
 
 /-- `Except.ok a >>= f = f a` (definitional). -/
