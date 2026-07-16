@@ -125,17 +125,15 @@ private theorem subAt_body_eq (p : SizedProblem) (i : Nat) (a : Int) (hd_pos : 0
     a <<< (p.c >>> i - p.c >>> (i + 1) - 1)
         + (p.n >>> (2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1)) / a
       = (subAt p i).newtonLift a := by
-  simp only [SizedProblem.newtonLift_eq, subAt_n, ← Int.shiftRight_add, SizedProblem.k_eq]
-  rw [Int.size_shiftRight]
-  have : (p.n.toNat.size - 2 * (p.c - p.c >>> i) - 3) / 4 =
-      ((p.n.toNat.size - 1) / 2 - (p.c - p.c >>> i) - 1) / 2 := by omega
-  rw [this]
-  rw [← p.c_eq]
-  have : (p.c >>> i ≤ p.c) := Nat.shiftRight_le _ _
-  have : (p.c - (p.c - p.c >>> i)) = (p.c >>> i) := by omega
-  rw [this]
-  rw [Nat.shiftRight_succ]
-  grind only
+  -- Expand the lift via the shared `k = (c-1)/2` shape (as `nsqrtRecursive_succ` does), then
+  -- reconcile the two Nat shift amounts with the child level `c >>> (i+1) = c >>> i / 2`.
+  rw [SizedProblem.newtonLift_eq, (subAt p i).k_of_c, subAt_c, subAt_n, ← Int.shiftRight_add,
+    Nat.shiftRight_succ]
+  have hle : p.c >>> i ≤ p.c := Nat.shiftRight_le p.c i
+  have e1 : p.c >>> i - p.c >>> i / 2 - 1 = (p.c >>> i - 1) / 2 := by omega
+  have e2 : 2 * p.c - p.c >>> i / 2 - p.c >>> i + 1
+      = 2 * (p.c - p.c >>> i) + ((p.c >>> i - 1) / 2 + 2) := by omega
+  rw [e1, e2]
 
 /-- One `stepM` at position `i` succeeds and returns the iteration-`i` subproblem's Newton lift —
 the iterative analogue of `nsqrtRecursive_succ`. -/
