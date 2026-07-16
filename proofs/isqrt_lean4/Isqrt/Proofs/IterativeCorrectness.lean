@@ -71,7 +71,9 @@ private theorem stepM_eq_ok {n c : Int} (r : MProd Int Int) (s : Int)
 
 /-! ## The subproblem chain -/
 
-private theorem descend_n'' (p : SizedProblem) (hp : p.reducible) :
+/-- `descend`'s value in terms of the level `c`: it shifts `n` right by `2(c − ⌊c/2⌋)`, the form the
+subproblem chain descends by (equivalently `descend_n`'s `2k+2`). -/
+private theorem descend_n_of_c (p : SizedProblem) (hp : p.reducible) :
     (p.descend hp).n = p.n >>> (2 * (p.c - p.c / 2)) := by
   rw [SizedProblem.descend_n, SizedProblem.c_eq, SizedProblem.k_eq]
   have : 2 < p.n.toNat.size := Int.lt_size.mpr (p.four_le_n.mp hp)
@@ -112,7 +114,7 @@ private theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
 private theorem descend_subAt (p : SizedProblem) (i : Nat) (hp : (subAt p i).reducible) :
     (subAt p i).descend hp = subAt p (i + 1) := by
   apply SizedProblem.eq_of_n_eq
-  rw [descend_n'']
+  rw [descend_n_of_c]
   rw [subAt_c, subAt_n, subAt_n]
   rw [← Int.shiftRight_add, ← Nat.shiftRight_succ]
   congr 1
