@@ -20,14 +20,19 @@ import Isqrt.Proofs.SupportLemmas
 
 public section
 
-/-- One loop iteration as a standalone `Except`-returning step on the state `⟨a, d⟩` (running
-approximation `a`, previous shift `d`). -/
-private def stepM (n c : Int) (r : MProd Int Int) (s : Int) : PyExcept (MProd Int Int) := do
-  let dNew ← pyRshift c s
-  let lsh ← pyLshift r.fst (dNew - r.snd - 1)
-  let rsh ← pyRshift n (2 * c - r.snd - dNew + 1)
-  let q ← pyFloordiv rsh r.fst
-  pure ⟨lsh + q, dNew⟩
+/-- The mutable state defined before and updated within the for loop: (a, d). -/
+abbrev LoopState := MProd Int Int
+
+/-- The effect of one iteration of the for loop. -/
+private def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := do
+  let ⟨a_old, d_old⟩ := r
+  let e := d_old
+  let d ← pyRshift c s
+  let lsh ← pyLshift a_old (d - e - 1)
+  let rsh ← pyRshift n (2 * c - e - d + 1)
+  let q ← pyFloordiv rsh a_old
+  let a := lsh + q
+  pure ⟨a, d⟩
 
 /-- A `forIn` whose body always yields the result of a monadic step `g` equals `foldlM g` over the
 same list. -/
@@ -57,7 +62,7 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
 
 /-- `stepM`'s `.ok` value, given nonneg shift `s`, positive `r.fst`, and the two shift-amount
 bounds. -/
-private theorem stepM_eq_ok {n c : Int} (r : MProd Int Int) (s : Int)
+private theorem stepM_eq_ok {n c : Int} (r : LoopState) (s : Int)
     (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
     (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
     (hJ : 0 ≤ 2 * c - r.snd - c >>> s.toNat + 1) :
@@ -139,7 +144,7 @@ private theorem subAt_body_eq (p : SizedProblem) (i : Nat) (a : Int) (hd_pos : 0
 
 /-- One `stepM` at position `i` succeeds and returns the iteration-`i` subproblem's Newton lift —
 the iterative analogue of `nsqrtRecursive_succ`. -/
-private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
+private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : LoopState)
     (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
     stepM p.n (↑p.c) r (Int.ofNat i)
       = .ok ⟨(subAt p i).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
@@ -165,7 +170,7 @@ private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : MProd Int Int)
 
 /-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of `p.n`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
-    ∃ y : MProd Int Int,
+    ∃ y : LoopState,
       (range (↑p.c : Int).bitLength).reverse.foldlM (stepM p.n ↑p.c) ⟨1, 0⟩ = .ok y
       ∧ isNearSquareRoot p.n y.fst := by
   -- The chain of subproblems descending from the whole problem; `chain s` sits at level `c >>> s`.
@@ -181,7 +186,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
   have hz : p.c >>> (↑p.c : Int).bitLength.toNat = 0 := by
     rw [Int.bitLength_eq (Int.natCast_nonneg p.c), Int.toNat_natCast, Int.toNat_natCast]
     exact Nat.shiftRight_size_self
-  let motive : Nat → MProd Int Int → Prop := fun (s : Nat) (r : MProd Int Int) =>
+  let motive : Nat → LoopState → Prop := fun (s : Nat) (r : LoopState) =>
     r.snd = ↑(p.c >>> s) ∧ isNearSquareRoot (chain s).n r.fst
   -- Seed at `s = L`: `c >> L = 0`, so the base subproblem `chain L` (value `n >> 2c ∈ [1, 4)`) has
   -- near-√ `1`.
