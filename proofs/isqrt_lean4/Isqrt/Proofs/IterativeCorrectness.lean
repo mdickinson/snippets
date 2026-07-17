@@ -143,16 +143,13 @@ private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : LoopState)
     (hi : i < p.c.size)
     (ha : 0 < r.fst)
     (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
-    stepM p.n (↑p.c) r (Int.ofNat i)
+    stepM p.n (↑p.c) r ↑i
       = .ok ⟨(subAt p i).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
-  -- Decode the loop's Int shift `↑c >>> i` to the Nat `↑(c >>> i)`, and record the child halving.
-  have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by norm_cast
-  have : Int.ofNat i < (↑p.c : Int).toNat.size := by
-    simp only [Int.ofNat_eq_natCast, Int.toNat_natCast, Int.ofNat_lt]
-    exact hi
-  rw [stepM_eq_ok r (Int.ofNat i) (by omega) (Int.natCast_nonneg i) this ha hsnd]
-  rw [SizedProblem.newtonLift_eq]
-  rw [subAt_n, subAt_k]
+  -- The shift-cast bridge `↑c >>> (↑i).toNat = ↑(c >>> i)`, fed to the closing `omega`.
+  have hd_new : (↑p.c : Int) >>> (↑i : Int).toNat = ↑(p.c >>> i) := by norm_cast
+  have hlt : (↑i : Int) < (↑p.c : Int).toNat.size := by rw [Int.toNat_natCast]; omega
+  rw [stepM_eq_ok r ↑i (by omega) (Int.natCast_nonneg i) hlt ha hsnd]
+  rw [SizedProblem.newtonLift_eq, subAt_n, subAt_k]
   have : 0 < p.c >>> i := by rw [← Nat.size_pos, Nat.size_shiftRight]; omega
   congr <;> omega
 
@@ -165,9 +162,9 @@ private theorem monadicLoop_near (p : SizedProblem) :
   let chain : Nat → SizedProblem := subAt p
   -- Bridge the `range` list to `(List.range L).reverse` with Nat indices.
   have hlist : (range (↑p.c : Int).bitLength).reverse
-      = (List.range (↑p.c : Int).bitLength.toNat).reverse.map Int.ofNat := by
+      = (List.range (↑p.c : Int).bitLength.toNat).reverse.map Nat.cast := by
     rw [show range (↑p.c : Int).bitLength
-          = (List.range (↑p.c : Int).bitLength.toNat).map Int.ofNat from rfl,
+          = (List.range (↑p.c : Int).bitLength.toNat).map Nat.cast from rfl,
         ← List.map_reverse]
   rw [hlist, List.foldlM_map]
   -- `c >> bit_length(c) = 0`: shifting past all of `c`'s bits.
@@ -189,7 +186,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
   -- Step: `stepM_subAt` runs one mechanical step to the iteration-`i` subproblem's Newton lift; its
   -- near-√-ness is the shared lift `isNearSquareRoot_newtonLift`, exactly as the recursion does.
   have hstep : ∀ s, s < (↑p.c : Int).bitLength.toNat → ∀ x, motive (s + 1) x →
-      ∃ y, stepM p.n (↑p.c) x (Int.ofNat s) = .ok y ∧ motive s y := by
+      ∃ y, stepM p.n (↑p.c) x ↑s = .ok y ∧ motive s y := by
     intro i hi x hx
     obtain ⟨hx_snd, hx_near⟩ := hx
     rw [Int.bitLength_eq (by omega), Int.toNat_natCast, Int.toNat_natCast] at hi
@@ -202,7 +199,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
     exact ⟨_, stepM_subAt p x hi hx_near.1 hx_snd,
       rfl, isNearSquareRoot_newtonLift (chain i) hdp h_child⟩
   obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
-    foldlM_reverseRange_invariant motive (fun x s => stepM p.n (↑p.c) x (Int.ofNat s))
+    foldlM_reverseRange_invariant motive (fun x s => stepM p.n (↑p.c) x ↑s)
       (↑p.c : Int).bitLength.toNat ⟨1, 0⟩ hseed hstep
   -- Result at `s = 0`: `chain 0` is the whole problem `p` (`subAt_zero`).
   refine ⟨y, hy_eq, ?_⟩

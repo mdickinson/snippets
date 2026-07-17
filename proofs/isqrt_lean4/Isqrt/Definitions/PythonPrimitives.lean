@@ -25,7 +25,7 @@ def pyRshift (n k : Int) : PyExcept Int := do
   return n >>> k.toNat
 
 /-- Integers from 0 (inclusive) to n (exclusive); empty list if n is negative. -/
-def range (n : Int) : List Int := (List.range n.toNat).map Int.ofNat
+def range (n : Int) : List Int := (List.range n.toNat).map Nat.cast
 
 /-- Minimum number of bits needed to represent abs(n). -/
 def Int.bitLength (n : Int) : Int := if n = 0 then 0 else n.natAbs.log2 + 1
