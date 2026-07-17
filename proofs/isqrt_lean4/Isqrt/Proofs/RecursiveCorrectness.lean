@@ -85,7 +85,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the recursion runs and never raises.
       obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (.ofPos hpos)
-      simp only [SizedProblem.ofPos_n, SizedProblem.ofPos_c] at ha_eq a_near
+      simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at ha_eq a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
         rw [if_neg (by omega), pure_bind]

@@ -7,11 +7,14 @@ module
 
 public import Isqrt.Proofs.NatSize
 
-/-! ## Shift ↔ division -/
+/-! ## Int.shiftRight -/
 
 /-- Right shift for an int matches division by a power of two. -/
 public theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   grind only [Int.shiftRight_eq_div_pow]
+
+public theorem Int.shiftRight_succ (m : Int) (n : Nat) : m >>> (n + 1) = (m >>> n) / 2 := by
+  rw [Int.shiftRight_add, Int.shiftRight_eq_div_pow]; omega
 
 /-! ## Nat.size -/
 
@@ -23,12 +26,12 @@ public theorem Nat.lt_size {n k : Nat} : k < n.size ↔ 2 ^ k ≤ n := by
 public theorem Nat.size_eq_zero {n : Nat} : n.size = 0 ↔ n = 0 := by
   grind only [Nat.size_le (n := n) (k := 0)]
 
-/-- The size of zero is zero. -/
-public theorem Nat.size_zero : (0 : Nat).size = 0 := Nat.size_eq_zero.mpr rfl
-
 /-- `n.size` is positive iff `n` is positive. -/
 public theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
   grind only [Nat.lt_size]
+
+/-- The size of zero is zero. -/
+public theorem Nat.size_zero : (0 : Nat).size = 0 := Nat.size_eq_zero.mpr rfl
 
 /-- Shifting right reduces the size by the shift amount. -/
 public theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
@@ -51,6 +54,8 @@ public theorem Nat.shiftRight_size_self {n : Nat} : n >>> n.size = 0 := by
 public theorem Nat.shiftRight_pos {n k : Nat} (hk : k < n.size) : 0 < n >>> k := by
   rw [← Nat.size_pos, Nat.size_shiftRight]; grind only
 
+/-! ## Int.toNat.size -/
+
 /-- Defining property of `Nat.size`, lifted to `Int` via `toNat`. -/
 public theorem Int.size_le {n : Int} {k : Nat} : n.toNat.size ≤ k ↔ n < 2 ^ k := by
   grind only [Nat.size_le, Nat.size_zero]
@@ -58,6 +63,10 @@ public theorem Int.size_le {n : Int} {k : Nat} : n.toNat.size ≤ k ↔ n < 2 ^ 
 /-- The same, with inequalities inverted. -/
 public theorem Int.lt_size {n : Int} {k : Nat} : k < n.toNat.size ↔ 2 ^ k ≤ n := by
   grind only [Int.size_le (n := n) (k := k)]
+
+/-- `n.size` is positive iff `n` is positive. -/
+public theorem Int.size_pos {n : Int} : 0 < n.toNat.size ↔ 0 < n := by
+  grind only [Int.lt_size]
 
 /-- Size of a right-shifted integer. -/
 public theorem Int.size_shiftRight {n : Int} {k : Nat} :

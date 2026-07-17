@@ -79,15 +79,12 @@ theorem n_lt_four (p : SizedProblem) : p.irreducible ↔ p.n < 4 := by
 /-- The seed problem's value is `n`. -/
 theorem ofPos_n {n : Int} (hn : 0 < n) : (ofPos hn).n = n := (rfl)
 
-/-- The seed problem's level is `(n.toNat.size - 1)/2`. -/
-theorem ofPos_c {n : Int} (hn : 0 < n) : (ofPos hn).c = (n.toNat.size - 1) / 2 := (rfl)
-
 /-- Two SizedProblems are equal if and only if their `n`s are equal. -/
 theorem eq_of_n_eq {p q : SizedProblem} : p.n = q.n → p = q := (mk.injEq _ _ _ _).mpr
 
 /-- The descended level is `⌊c/2⌋`. -/
 theorem descend_c (p : SizedProblem) (hp : p.reducible) : (p.descend hp).c = p.c / 2 := by
-  grind only [descend, ofPos_c, Int.size_shiftRight, c, k]
+  grind only [descend, ofPos_n, Int.size_shiftRight, c, k]
 
 /-- Descending strictly lowers the size of `n`, so the recursion terminates. -/
 theorem descend_lt (p : SizedProblem) (hp : p.reducible):

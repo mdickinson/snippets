@@ -51,8 +51,7 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
 
 /-- The effect of one iteration of the for loop. -/
 private def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := do
-  let ⟨a_old, d_old⟩ := r
-  let e := d_old
+  let ⟨a_old, e⟩ := r
   let d ← pyRshift c s
   let lsh ← pyLshift a_old (d - e - 1)
   let rsh ← pyRshift n (2 * c - e - d + 1)
@@ -60,17 +59,26 @@ private def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := 
   let a := lsh + q
   pure ⟨a, d⟩
 
-/-- `stepM`'s `.ok` value, given nonneg shift `s`, positive `r.fst`, and the two shift-amount
-bounds. -/
+/--
+The effect of the loop body in terms of shifts.
+-/
 private theorem stepM_eq_ok {n c : Int} (r : LoopState) (s : Int)
-    (hs_nn : 0 ≤ s) (ha_pos : 0 < r.fst)
-    (hK : 0 ≤ c >>> s.toNat - r.snd - 1)
-    (hJ : 0 ≤ 2 * c - r.snd - c >>> s.toNat + 1) :
-    stepM n c r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
-        + (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) / r.fst,
-      c >>> s.toNat⟩ := by
+    (hc_nn : 0 ≤ c) (hs_nn : 0 ≤ s) (hs_lt : s < c.toNat.size) (ha_pos : 0 < r.fst)
+    (hsnd : r.snd = ↑(c >>> (s.toNat + 1))) :
+    let a := r.fst
+    let d := c >>> s.toNat
+    let m := n >>> (2 * (c - d)).toNat
+    let k := (d - 1) / 2
+    stepM n c r s = .ok ⟨a <<< k.toNat + (m >>> (k + 2).toNat) / a, d⟩ := by
+  intro a d m k
+  let e := r.snd
+  have : 0 < d := by rw [← Int.size_pos, Int.size_shiftRight]; omega
+  have : d ≤ c := Int.shiftRight_le_of_nonneg hc_nn
+  have : e = d / 2 := by subst e; rw [hsnd, Int.shiftRight_succ]
   rw [stepM, pyRshift_ok_bind (by omega)]
   rw [pyLshift_ok_bind (by omega), pyRshift_ok_bind (by omega), pyFloordiv_ok_bind (by omega)]
+  rw [show n >>> (2 * c - e - d + 1).toNat = m >>> (d - e + 1).toNat by rw [← Int.shiftRight_add]; congr 1; omega]
+  rw [show d - e - 1 = k by omega, show d - e + 1 = k + 2 by omega]
   rfl
 
 /-! ## The subproblem chain -/
@@ -85,7 +93,6 @@ private theorem descend_n_of_c (p : SizedProblem) (hp : p.reducible) :
 
 private theorem subAt_pos (p : SizedProblem) (i : Nat) : 0 < p.n >>> (2 * (p.c - (p.c >>> i))) := by
   apply Int.shiftRight_pos
-
   have : 2 * (p.c - p.c >>> i) ≤ 2 * p.c := by grind only
   apply Nat.lt_of_le_of_lt this
   rw [p.c_eq]
@@ -107,7 +114,11 @@ private theorem subAt_n (p : SizedProblem) (i : Nat) :
 
 /-- The iteration-`i` subproblem's level is `c >>> i`. -/
 private theorem subAt_c (p : SizedProblem) (i : Nat) : (subAt p i).c = p.c >>> i := by
-  grind only [subAt, SizedProblem.ofPos_c, Int.size_shiftRight, Nat.shiftRight_le, p.c_eq]
+  grind only [subAt, SizedProblem.ofPos_n, SizedProblem.c_eq, Int.size_shiftRight, Nat.shiftRight_le]
+
+/-- The iteration-`i` subproblem's `k` is `(c>>>i - 1)/2`. -/
+private theorem subAt_k (p : SizedProblem) (i : Nat) : (subAt p i).k = (p.c >>> i - 1) / 2 := by
+  rw [SizedProblem.k_of_c, subAt_c]
 
 /-- Chain top: iteration `0` is the whole problem. -/
 private theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
@@ -126,46 +137,24 @@ private theorem descend_subAt (p : SizedProblem) (i : Nat) (hp : (subAt p i).red
   have : p.c >>> (i + 1) ≤ p.c >>> i := by rw [Nat.shiftRight_add]; apply Nat.shiftRight_le
   omega
 
-/-- The decoded loop body at position `i` is the iteration-`i` subproblem's Newton lift. -/
-private theorem subAt_body_eq (p : SizedProblem) (i : Nat) (a : Int) (hd_pos : 0 < p.c >>> i) :
-    a <<< (p.c >>> i - p.c >>> (i + 1) - 1)
-        + (p.n >>> (2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1)) / a
-      = (subAt p i).newtonLift a := by
-  -- Expand the lift via the shared `k = (c-1)/2` shape (as `nsqrtRecursive_succ` does), then
-  -- reconcile the two Nat shift amounts with the child level `c >>> (i+1) = c >>> i / 2`.
-  rw [SizedProblem.newtonLift_eq, (subAt p i).k_of_c, subAt_c, subAt_n, ← Int.shiftRight_add,
-    Nat.shiftRight_succ]
-  have hle : p.c >>> i ≤ p.c := Nat.shiftRight_le p.c i
-  have e1 : p.c >>> i - p.c >>> i / 2 - 1 = (p.c >>> i - 1) / 2 := by omega
-  have e2 : 2 * p.c - p.c >>> i / 2 - p.c >>> i + 1
-      = 2 * (p.c - p.c >>> i) + ((p.c >>> i - 1) / 2 + 2) := by omega
-  rw [e1, e2]
-
 /-- One `stepM` at position `i` succeeds and returns the iteration-`i` subproblem's Newton lift —
 the iterative analogue of `nsqrtRecursive_succ`. -/
 private theorem stepM_subAt (p : SizedProblem) {i : Nat} (r : LoopState)
-    (hd_pos : 0 < p.c >>> i) (ha : 0 < r.fst) (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
+    (hi : i < p.c.size)
+    (ha : 0 < r.fst)
+    (hsnd : r.snd = ↑(p.c >>> (i + 1))) :
     stepM p.n (↑p.c) r (Int.ofNat i)
       = .ok ⟨(subAt p i).newtonLift r.fst, ↑(p.c >>> i)⟩ := by
   -- Decode the loop's Int shift `↑c >>> i` to the Nat `↑(c >>> i)`, and record the child halving.
-  have hsi : (Int.ofNat i).toNat = i := Int.toNat_natCast i
-  have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by
-    rw [hsi]; exact (Int.natCast_shiftRight p.c i).symm
-  have heN_halve : p.c >>> (i + 1) = p.c >>> i / 2 := Nat.shiftRight_succ p.c i
-  have hd_le : p.c >>> i ≤ p.c := Nat.shiftRight_le p.c i
-  have he_le : p.c >>> (i + 1) ≤ p.c := Nat.shiftRight_le p.c (i + 1)
-  -- Every Python op takes its `.ok` branch: the two shift amounts are nonnegative, `r.fst` positive.
-  have hK : 0 ≤ (↑p.c : Int) >>> (Int.ofNat i).toNat - r.snd - 1 := by
-    rw [hd_new, hsnd, heN_halve]; omega
-  have hJ : 0 ≤ 2 * (↑p.c : Int) - r.snd - (↑p.c : Int) >>> (Int.ofNat i).toNat + 1 := by
-    rw [hd_new, hsnd]; omega
-  rw [stepM_eq_ok r (Int.ofNat i) (Int.natCast_nonneg i) ha hK hJ, hsnd]
-  -- Decode the two shift amounts to `Nat`, then recognise the body as the subproblem's Newton lift.
-  have he1 : ((↑p.c : Int) >>> (Int.ofNat i).toNat - ↑(p.c >>> (i + 1)) - 1).toNat
-      = p.c >>> i - p.c >>> (i + 1) - 1 := by rw [hd_new]; omega
-  have he2 : (2 * (↑p.c : Int) - ↑(p.c >>> (i + 1)) - (↑p.c : Int) >>> (Int.ofNat i).toNat + 1).toNat
-      = 2 * p.c - p.c >>> (i + 1) - p.c >>> i + 1 := by rw [hd_new]; omega
-  rw [he1, he2, hd_new, subAt_body_eq p i r.fst hd_pos]
+  have hd_new : (↑p.c : Int) >>> (Int.ofNat i).toNat = ↑(p.c >>> i) := by norm_cast
+  have : Int.ofNat i < (↑p.c : Int).toNat.size := by
+    simp only [Int.ofNat_eq_natCast, Int.toNat_natCast, Int.ofNat_lt]
+    exact hi
+  rw [stepM_eq_ok r (Int.ofNat i) (by omega) (Int.natCast_nonneg i) this ha hsnd]
+  rw [SizedProblem.newtonLift_eq]
+  rw [subAt_n, subAt_k]
+  have : 0 < p.c >>> i := by rw [← Nat.size_pos, Nat.size_shiftRight]; omega
+  congr <;> omega
 
 /-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of `p.n`. -/
 private theorem monadicLoop_near (p : SizedProblem) :
@@ -210,7 +199,7 @@ private theorem monadicLoop_near (p : SizedProblem) :
       rw [SizedProblem.reducible_iff]; rw [subAt_c];exact hdN_pos
     have h_child : isNearSquareRoot ((chain i).descend hdp).n x.fst := by
       rw [descend_subAt]; exact hx_near
-    exact ⟨_, stepM_subAt p x hdN_pos hx_near.1 hx_snd,
+    exact ⟨_, stepM_subAt p x hi hx_near.1 hx_snd,
       rfl, isNearSquareRoot_newtonLift (chain i) hdp h_child⟩
   obtain ⟨y, hy_eq, _hy_d, hy_near⟩ :=
     foldlM_reverseRange_invariant motive (fun x s => stepM p.n (↑p.c) x (Int.ofNat s))
@@ -238,7 +227,7 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
       obtain ⟨y, hy_eq, hy_near⟩ :=
         monadicLoop_near (.ofPos hpos)
-      simp only [SizedProblem.ofPos_n, SizedProblem.ofPos_c] at hy_eq hy_near
+      simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at hy_eq hy_near
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
