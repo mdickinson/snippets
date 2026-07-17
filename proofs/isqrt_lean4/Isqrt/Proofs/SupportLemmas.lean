@@ -77,5 +77,5 @@ public theorem Int.shiftRight_pos {n : Int} {k : Nat} (hk : k < n.toNat.size) : 
 /-! ## Except.ok binding -/
 
 /-- `Except.ok a >>= f = f a` (definitional). -/
-public theorem Except.ok_bind {ε α β : Type _} (a : α) (f : α → Except ε β) :
+public theorem Except.ok_bind {ε α β : Type} (a : α) (f : α → Except ε β) :
     (Except.ok a >>= f) = f a := rfl

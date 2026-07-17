@@ -23,17 +23,6 @@ public section
 /-- The mutable state defined before and updated within the for loop: (a, d). -/
 abbrev LoopState := MProd Int Int
 
-/-- The effect of one iteration of the for loop. -/
-private def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := do
-  let ⟨a_old, d_old⟩ := r
-  let e := d_old
-  let d ← pyRshift c s
-  let lsh ← pyLshift a_old (d - e - 1)
-  let rsh ← pyRshift n (2 * c - e - d + 1)
-  let q ← pyFloordiv rsh a_old
-  let a := lsh + q
-  pure ⟨a, d⟩
-
 /-- A `forIn` whose body always yields the result of a monadic step `g` equals `foldlM g` over the
 same list. -/
 private theorem forIn_yield_bind_eq_foldlM {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
@@ -60,6 +49,17 @@ private theorem foldlM_reverseRange_invariant {A : Type} (motive : Nat → A →
     rw [hy1_eq, Except.ok_bind]
     exact ih y1 hy1_mot (fun s hs x hmot => hstep s (Nat.lt_succ_of_lt hs) x hmot)
 
+/-- The effect of one iteration of the for loop. -/
+private def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := do
+  let ⟨a_old, d_old⟩ := r
+  let e := d_old
+  let d ← pyRshift c s
+  let lsh ← pyLshift a_old (d - e - 1)
+  let rsh ← pyRshift n (2 * c - e - d + 1)
+  let q ← pyFloordiv rsh a_old
+  let a := lsh + q
+  pure ⟨a, d⟩
+
 /-- `stepM`'s `.ok` value, given nonneg shift `s`, positive `r.fst`, and the two shift-amount
 bounds. -/
 private theorem stepM_eq_ok {n c : Int} (r : LoopState) (s : Int)
@@ -69,9 +69,8 @@ private theorem stepM_eq_ok {n c : Int} (r : LoopState) (s : Int)
     stepM n c r s = .ok ⟨r.fst <<< (c >>> s.toNat - r.snd - 1).toNat
         + (n >>> (2 * c - r.snd - c >>> s.toNat + 1).toNat) / r.fst,
       c >>> s.toNat⟩ := by
-  simp only [stepM, pyRshift_eq_ok hs_nn, Except.ok_bind,
-    pyLshift_eq_ok hK, pyRshift_eq_ok hJ,
-    pyFloordiv_eq_ok ha_pos]
+  rw [stepM, pyRshift_ok_bind (by omega)]
+  rw [pyLshift_ok_bind (by omega), pyRshift_ok_bind (by omega), pyFloordiv_ok_bind (by omega)]
   rfl
 
 /-! ## The subproblem chain -/
@@ -244,12 +243,12 @@ theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         unfold isqrtIterative
         simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_eq_ok (show (0 : Int) < 2 by decide)]
+          pyFloordiv_ok_bind (show (0 : Int) < 2 by decide)]
         have key := forIn_yield_bind_eq_foldlM (stepM n ((n.bitLength - 1) / 2))
           (range ((n.bitLength - 1) / 2).bitLength).reverse ⟨1, 0⟩
         conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
         have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-        rw [Except.ok_bind, key, Int.bitLength_eq hn,
+        rw [key, Int.bitLength_eq hn,
           show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
           hy_eq]
         rfl
