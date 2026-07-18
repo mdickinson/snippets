@@ -36,15 +36,16 @@ theorem nsqrtRecursive_succ_shift
     nsqrtRecursive n ↑c = .ok (a <<< k + (n >>> (k + 2)) / a) := by
   intro k nsr_inner
   rw [nsqrtRecursive, if_neg (by omega)]
-  rw [pyFloordiv_ok_bind (by decide), pyRshift_ok_bind (by omega)]
-
-  rw [show (2 * (((c : Int) - 1) / 2) + 2).toNat = 2 * k + 2 by omega]
+  rw [pyFloordiv_ok_bind (by decide)]
+  rw [show (2 * (((c : Int) - 1) / 2) + 2) = (2 * k + 2 : Nat) by omega]
+  rw [pyRshift_ok_bind]
   rw [show ((c : Int) / 2) = ↑(c / 2) by omega]
   rw [nsr_inner, Except.ok_bind]
-
-  rw [pyLshift_ok_bind (by omega), pyRshift_ok_bind (by omega), pyFloordiv_ok_bind (by omega)]
-  rw [show (((c : Int) - 1) / 2).toNat = k by omega]
-  rw [show (((c : Int) - 1) / 2 + 2).toNat = k + 2 by omega]
+  rw [show (((c : Int) - 1) / 2) = k by omega]
+  rw [pyLshift_ok_bind]
+  norm_cast
+  rw [pyRshift_ok_bind]
+  rw [pyFloordiv_ok_bind (by omega)]
   rfl
 
 /-- The recursive step in `SizedProblem` terms: a solved descendant lifts back to `p` via
