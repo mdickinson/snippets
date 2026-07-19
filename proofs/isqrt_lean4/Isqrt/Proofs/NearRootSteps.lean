@@ -14,12 +14,12 @@ import Isqrt.Proofs.KeyLemmaBitwise
 /-! ## Base case, Newton lift, correction -/
 
 /-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
-public theorem isNearSquareRoot_one (p : SizedProblem) (hp : p.irreducible) :
+public theorem isNearSquareRoot_one {p : SizedProblem} (hp : p.irreducible) :
     isNearSquareRoot p.n 1 :=
   isqrt_base_case p.n_pos (p.n_lt_four.mp hp)
 
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
-public theorem isNearSquareRoot_newtonLift (p : SizedProblem) (hp : p.reducible) {a : Int}
+public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hp : p.reducible) {a : Int}
     (h : isNearSquareRoot (p.descend hp).n a) :
     isNearSquareRoot p.n (p.newtonLift a) := by
   rw [SizedProblem.newtonLift_eq, SizedProblem.k_eq]

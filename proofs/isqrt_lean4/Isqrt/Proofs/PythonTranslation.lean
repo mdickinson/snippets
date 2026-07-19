@@ -1,7 +1,6 @@
 /-
-Bridges from the Python primitives to the pure `Int` / `Nat` forms the correctness proofs reason
-with: the `_eq_ok` lemmas that discharge each operation's error branch and expose its value, and
-`Int.bitLength_eq` relating `int.bit_length()` to `Nat.size`.
+Bridges from the Python primitives to the pure `Int` / `Nat` forms the correctness
+proofs reason with.
 -/
 
 module
@@ -25,14 +24,16 @@ public theorem pyRshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyE
     (pyRshift n ↑k >>= f) = f (n >>> k) := by
   rw [pyRshift, if_neg (by omega)]; rfl
 
-/-- For nonnegative `m`, `m.bitLength = ↑m.toNat.size`. -/
-public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size := by
-  unfold Int.bitLength
-  rw [show m.natAbs = m.toNat from by omega]
-  rcases Int.lt_or_eq_of_le hm with hlt | rfl
+/-- For a Nat `m`, `bitLength` and `size` match. -/
+public theorem Nat.bitLength_eq (m : Nat) : (m : Int).bitLength = m.size := by
+  unfold Int.bitLength; rcases m.eq_zero_or_pos with rfl | hm_pos
+  · rw [if_pos (by rfl), Nat.size_zero]; rfl
   · rw [if_neg (by omega)]; norm_cast
+    show m.log2 + 1 = m.size
     apply Nat.le_antisymm
     · apply Nat.succ_le_of_lt; rw [Nat.log2_lt (by omega), ← Nat.size_le]; omega
     · rw [Nat.size_le, ← Nat.log2_lt (by omega)]; omega
-  · rw [if_pos rfl]; norm_cast
-    exact Nat.size_zero.symm
+
+/-- For a nonnegative Int `m`, `bitLength` and `size` match. -/
+public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
+  (Int.toNat_of_nonneg hm) ▸ Nat.bitLength_eq m.toNat
