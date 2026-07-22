@@ -19,12 +19,16 @@ import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SupportLemmas
 
-/-- A `forIn` whose body always yields the result of a monadic step `g` equals `foldlM g` over the
-same list. -/
-theorem forIn_yield_bind_eq_foldlM {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
-    (g : β → α → m β) (L : List α) (init : β) :
-    forIn L init (fun a b => g b a >>= fun b' => pure (ForInStep.yield b')) = L.foldlM g init := by
-  simp
+/-- Rewrite a `forIn`-and-continuation as a `foldlM`-and-continuation. The loop `body` is opaque: it
+is matched as-is (like the `pyFloordiv a b` in `pyFloordiv_ok_bind`) and identified with the step
+`g` by the `hbody` side goal, so a single rewrite retires the whole `forIn L init body >>= f`. -/
+theorem forIn_yield_foldlM_bind {α β γ : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+    (L : List α) (init : β) (body : α → β → m (ForInStep β)) (g : β → α → m β) (f : β → m γ)
+    (hbody : ∀ a b, body a b = g b a >>= fun b' => pure (ForInStep.yield b')) :
+    forIn L init body >>= f = L.foldlM g init >>= f := by
+  have hb : body = fun a b => g b a >>= fun b' => pure (ForInStep.yield b') := by
+    funext a b; exact hbody a b
+  rw [hb]; simp
 
 /-! ## The subproblem chain -/
 
@@ -269,14 +273,13 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
         rw [pyFloordiv_ok_bind (by decide)]
         simp only [pure_bind]
         rw [← initialLoopState]
+        -- Structural: lift the always-yielding `forIn` (and its continuation) to `stepM`'s fold.
+        rw [forIn_yield_foldlM_bind (g := stepM n (((n.toNat.size : Int) - 1) / 2))]
+        case hbody => intro s r; simp only [stepM, bind_assoc, pure_bind]
+        -- Arithmetic: identify the fold's index and list with `finalLoopState`'s.
         have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-        let c := (n.toNat.size - 1) / 2
-        rw [show ((n.toNat.size : Int) - 1) / 2 = c by omega]
-        rw [Nat.bitLength_eq]
-        have key := forIn_yield_bind_eq_foldlM (stepM n ↑c)
-          (range (c.size : Int)).reverse initialLoopState
-        conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
-        rw [key, hy_eq]
+        rw [show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) by omega]
+        rw [Nat.bitLength_eq, hy_eq, Except.ok_bind]
         rfl
       exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
