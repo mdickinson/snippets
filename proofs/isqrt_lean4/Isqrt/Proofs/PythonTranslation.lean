@@ -37,3 +37,6 @@ public theorem Nat.bitLength_eq (m : Nat) : (m : Int).bitLength = m.size := by
 /-- For a nonnegative Int `m`, `bitLength` and `size` match. -/
 public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
   (Int.toNat_of_nonneg hm) ▸ Nat.bitLength_eq m.toNat
+
+/-- range of a casted Nat -/
+public theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map Nat.cast := rfl

@@ -101,19 +101,21 @@ abbrev LoopState := MProd Int Int
 def initialLoopState : LoopState := ⟨1, 0⟩
 
 /-- The computation represented by one iteration of the for loop. -/
-def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState := do
-  let ⟨a_old, d_old⟩ := r
-  let e := d_old
+def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState :=
+  have a := r.fst
+  have d := r.snd
+  have e := d
+  do
   let d ← pyRshift c s
-  let lsh ← pyLshift a_old (d - e - 1)
+  let lsh ← pyLshift a (d - e - 1)
   let rsh ← pyRshift n (2 * c - e - d + 1)
-  let q ← pyFloordiv rsh a_old
+  let q ← pyFloordiv rsh a
   let a := lsh + q
   pure ⟨a, d⟩
 
 /-- The state on exiting the for loop. -/
 def finalLoopState (p : SizedProblem) : PyExcept LoopState :=
-  (range (↑p.c : Int).bitLength).reverse.foldlM (stepM p.n ↑p.c) initialLoopState
+  (range (p.c.size : Int)).reverse.foldlM (stepM p.n ↑p.c) initialLoopState
 
 /--
 A single iteration performs a Newton lift of the current approximation
@@ -230,8 +232,7 @@ theorem foldl_augmentedAfter (p : SizedProblem) :
 /-- The loop's `foldlM` computes exactly the final augmented state. -/
 theorem finalLoopState_eq_augmentedFinal (p : SizedProblem) :
     finalLoopState p = .ok (forget (augmentedFinal p)) := by
-  rw [finalLoopState, range, ← List.map_reverse, List.foldlM_map]
-  rw [Nat.bitLength_eq, Int.toNat_natCast]
+  rw [finalLoopState, Nat.range_eq, ← List.map_reverse, List.foldlM_map]
   rw [show initialLoopState = forget (augmentedAfter p p.c.size (Nat.le_refl _)) by
         rw [augmentedAfter, dif_pos rfl]; exact initialAugmented_eq_initialLoopState.symm]
   exact foldl_augmentedAfter p p.c.size (Nat.le_refl _)
@@ -255,27 +256,27 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
     show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot n a
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
-      refine ⟨0, ?_, ?_⟩
-      · show isqrtIterative 0 = .ok 0; unfold isqrtIterative; simp only [reduceIte]; rfl
-      · show isIntegerSquareRoot 0 0; unfold isIntegerSquareRoot; decide
+      exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
-      obtain ⟨y, hy_eq, hy_near⟩ :=
-        monadicLoop_near (.ofPos hpos)
+      obtain ⟨y, hy_eq, hy_near⟩ := monadicLoop_near (.ofPos hpos)
       rw [finalLoopState] at hy_eq
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at hy_eq hy_near
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
-        unfold isqrtIterative
-        simp only [if_neg (show ¬ n < 0 by omega), if_neg hn0, pure_bind,
-          pyFloordiv_ok_bind (show (0 : Int) < 2 by decide)]
-        have key := forIn_yield_bind_eq_foldlM (stepM n ((n.bitLength - 1) / 2))
-          (range ((n.bitLength - 1) / 2).bitLength).reverse initialLoopState
-        conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
+        rw [isqrtIterative, Int.bitLength_eq hn]
+        rw [if_neg (by omega), pure_bind, if_neg (by omega), pure_bind]
+        rw [pyFloordiv_ok_bind (by decide)]
+        simp only [pure_bind]
+        rw [← initialLoopState]
         have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-        rw [← initialLoopState, key, Int.bitLength_eq hn,
-          show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) from by omega,
-          hy_eq]
+        let c := (n.toNat.size - 1) / 2
+        rw [show ((n.toNat.size : Int) - 1) / 2 = c by omega]
+        rw [Nat.bitLength_eq]
+        have key := forIn_yield_bind_eq_foldlM (stepM n ↑c)
+          (range (c.size : Int)).reverse initialLoopState
+        conv at key => lhs; simp only [stepM, bind_assoc, pure_bind]
+        rw [key, hy_eq]
         rfl
       exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
