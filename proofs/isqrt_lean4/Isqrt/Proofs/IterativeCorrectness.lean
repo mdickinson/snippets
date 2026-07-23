@@ -17,9 +17,8 @@ import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SupportLemmas
-
-
 
 /-- A loop that is effect-free under an invariant is a pure fold. If, on every state meeting the
 (list-indexed, hence position-aware) invariant `Inv`, the `body` reduces to `pure (.yield (f a b))`
@@ -47,72 +46,6 @@ theorem range_reverse_succ (m : Nat) :
     (range (↑(m + 1) : Int)).reverse = ↑m :: (range (↑m : Int)).reverse := by
   rw [Nat.range_eq, Nat.range_eq, List.range_succ, List.map_append, List.reverse_append]
   rfl
-
-/-! ## The subproblem chain -/
-
-/-- `descend`'s value in terms of the level `c`: it shifts `n` right by `2(c − ⌊c/2⌋)`, the form the
-subproblem chain descends by (equivalently `descend_n`'s `2k+2`). -/
-theorem descend_n_of_c (p : SizedProblem) (hp : p.reducible) :
-    (p.descend hp).n = p.n >>> (2 * (p.c - p.c / 2)) := by
-  rw [SizedProblem.descend_n, SizedProblem.c_eq, SizedProblem.k_eq]
-  have : 2 < p.n.toNat.size := Int.lt_size.mpr (p.four_le_n.mp hp)
-  congr 1; omega
-
-theorem subAt_pos (p : SizedProblem) (i : Nat) : 0 < p.n >>> (2 * (p.c - (p.c >>> i))) := by
-  apply Int.shiftRight_pos
-  have : 2 * (p.c - p.c >>> i) ≤ 2 * p.c := by grind only
-  apply Nat.lt_of_le_of_lt this
-  rw [p.c_eq]
-  have : 0 < p.n.toNat.size := by
-    rw [Nat.size_pos]
-    have := p.n_pos
-    omega
-  omega
-
-/-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
-`c >>> i`, carrying the inherited size invariant. -/
-def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
-  SizedProblem.ofPos (subAt_pos p i)
-
-/-- The iteration-`i` subproblem's value in shift form. -/
-theorem subAt_n (p : SizedProblem) (i : Nat) :
-    (subAt p i).n = p.n >>> (2 * (p.c - p.c >>> i)) := by
-  unfold subAt; rw [SizedProblem.ofPos_n]
-
-/-- The iteration-`i` subproblem's level is `c >>> i`. -/
-theorem subAt_c (p : SizedProblem) (i : Nat) : (subAt p i).c = p.c >>> i := by
-  grind only [subAt, SizedProblem.ofPos_n, SizedProblem.c_eq, Int.size_shiftRight, Nat.shiftRight_le]
-
-/-- The iteration-`i` subproblem's `k` is `((c >>> i) - 1)/2`. -/
-theorem subAt_k (p : SizedProblem) (i : Nat) : (subAt p i).k = (p.c >>> i - 1) / 2 := by
-  rw [SizedProblem.k_of_c, subAt_c]
-
-/-- Chain top: iteration `0` is the whole problem. -/
-theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
-  apply SizedProblem.eq_of_n_eq
-  simp only [subAt, SizedProblem.ofPos_n, Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
-
-/-- The subproblem at depth `c.size` is irreducible. -/
-theorem subAt_irreducible {p : SizedProblem} : (subAt p p.c.size).irreducible := by
-  rw [SizedProblem.irreducible_iff, subAt_c]
-  exact Nat.shiftRight_size_self
-
-/-- Subproblems below depth `c.size` are reducible. -/
-theorem subAt_reducible (p : SizedProblem) (i : Nat) (hi : i < p.c.size) :
-    (subAt p i).reducible := by
-  rw [SizedProblem.reducible_iff, subAt_c]; exact Nat.shiftRight_pos hi
-
-/-- Chain step: descending iteration `i` gives iteration `i+1`. -/
-theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) :
-    (subAt p i).descend hp = subAt p (i + 1) := by
-  apply SizedProblem.eq_of_n_eq
-  rw [descend_n_of_c]
-  rw [subAt_c, subAt_n, subAt_n]
-  rw [← Int.shiftRight_add, ← Nat.shiftRight_succ]
-  congr 1
-  have : p.c >>> i ≤ p.c := by apply Nat.shiftRight_le
-  have : p.c >>> (i + 1) ≤ p.c >>> i := by rw [Nat.shiftRight_add]; apply Nat.shiftRight_le
-  omega
 
 /-! ## The main loop -/
 
@@ -168,26 +101,36 @@ theorem stepM_subAt
     {s : Nat} (hs : s < p.c.size)
     (r : LoopState)
     (ha : 0 < r.fst)
-    (hsnd : r.snd = ↑(p.c >>> (s + 1))) :
+    (hsnd : r.snd = ↑(subAt p (s + 1)).c) :
     stepM p.n ↑p.c r ↑s
-      = .ok ⟨(subAt p s).newtonLift r.fst, ↑(p.c >>> s)⟩ := by
-  rw [stepM_eq_ok p.n p.c r hs ha hsnd]
-  rw [SizedProblem.newtonLift_eq, subAt_n, subAt_k]
+      = .ok ⟨(subAt p s).newtonLift r.fst, ↑(subAt p s).c⟩ := by
+  rw [stepM_eq_ok p.n p.c r hs ha (subAt_c p (s + 1) ▸ hsnd)]
+  rw [SizedProblem.newtonLift_eq, subAt_n, subAt_k, subAt_c]
 
 /-- One loop iteration as a total function on the raw state: the running approximation is Newton
 lifted for the iteration-`s` subproblem and the second component records `p.c >>> s`. This is
 `stepM`'s `.ok` value under the loop invariant (see `stepM_subAt`). -/
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
-  ((subAt p s).newtonLift r.fst, ↑(p.c >>> s))
+  ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
+
+/-
+Infix aliases for the Python operations, with precedence chosen to match that of Python.
+We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
+-/
+
+local infixl:70 "//" => pyFloordiv
+local infixl:62 "<<" => pyLshift
+local infixl:62 (priority := high) ">>" => pyRshift
 
 /-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
 so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/
-abbrev loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopState) := do
-  let d ← pyRshift c s
-  let lsh ← pyLshift r.fst (d - r.snd - 1)
-  let rsh ← pyRshift n (2 * c - r.snd - d + 1)
-  let q ← pyFloordiv rsh r.fst
-  pure (ForInStep.yield (lsh + q, d))
+def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopState) :=
+  have ⟨a, d⟩ := r
+  do
+  let e := d
+  let d ← c >> s
+  let a := (← a << (d - e - 1)) + (← (← n >> (2 * c - e - d + 1)) // a)
+  pure (ForInStep.yield (a, d))
 
 /-- The loop never raises and folds to a near square root: driving `loopBody` over the reversed
 `range` from `(1, 0)` succeeds, and the first component of the result is a near square root of `p.n`.
@@ -200,10 +143,10 @@ theorem loop_near (p : SizedProblem) :
   obtain ⟨heq, hfin⟩ := forIn_pure_of_inv
     (fun (L' : List Int) (r : LoopState) =>
       ∃ m : Nat, m ≤ p.c.size ∧ L' = (range (↑m : Int)).reverse
-        ∧ r.snd = ↑(p.c >>> m) ∧ isNearSquareRoot (subAt p m).n r.fst)
+        ∧ r.snd = ↑(subAt p m).c ∧ isNearSquareRoot (subAt p m).n r.fst)
     (fun (s : Int) (r : LoopState) => pureStep p r s.toNat)
     (range (↑p.c.size : Int)).reverse (1, 0) (loopBody p.n ↑p.c)
-    ⟨p.c.size, Nat.le_refl _, rfl, by simp [Nat.shiftRight_size_self],
+    ⟨p.c.size, Nat.le_refl _, rfl, by simp [subAt_c, Nat.shiftRight_size_self],
       isNearSquareRoot_one subAt_irreducible⟩
     (by
       rintro a L' r ⟨m, hm, hL, hd, hnear⟩
@@ -237,35 +180,32 @@ theorem loop_near (p : SizedProblem) :
     | succ k => rw [range_reverse_succ] at hL; exact (List.cons_ne_nil _ _ hL.symm).elim
   rwa [subAt_zero] at hnear
 
+
+theorem loop_near' (p : SizedProblem) :
+    ∃ y : LoopState,
+      (∀ g : LoopState → PyExcept Int,
+      (forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c)) >>= g = g y)
+      ∧ isNearSquareRoot p.n y.fst := by
+  obtain ⟨y, heq, hnear⟩ := loop_near p
+  refine ⟨y, ?_, hnear⟩
+  intro g
+  rw [heq]
+  rfl
+
 /-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
 public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_⟩ <;> intro n hn
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
-    intro n hn
-    show ∃ a, returns (isqrtIterative n) a ∧ isIntegerSquareRoot n a
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
-      exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
+      exact ⟨0, rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the loop runs and never raises.
-      have hn0 : n ≠ 0 := Int.ne_of_gt hpos
-      obtain ⟨y, hy_eq, hy_near⟩ := loop_near (.ofPos hpos)
-      simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at hy_eq hy_near
-      refine ⟨_, ?_, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
-      -- Reduce `isqrtIterative` to the named loop, then read off `pure y`.
-      show isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst)
-      rw [isqrtIterative, Int.bitLength_eq hn]
-      simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
-      rw [pyFloordiv_ok_bind (by decide)]
-      -- The def's `Int` seed `(n.bitLength - 1) // 2` is the struct's `↑p.c`.
-      have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-      rw [show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) by omega,
-        Nat.bitLength_eq, hy_eq, pure_bind]
-      rfl
+      rw [isqrtIterative, if_neg (by omega), if_neg (by omega)]
+      rw [half_dec_bitLength hpos, Nat.bitLength_eq]
+      obtain ⟨y, hy_eq, hy_near⟩ := loop_near' (.ofPos hpos)
+      rw [SizedProblem.c_eq, SizedProblem.ofPos_n] at hy_eq
+      rw [SizedProblem.ofPos_n] at hy_near
+      exact ⟨_, hy_eq _, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
-    intro n hn
-    show raises (isqrtIterative n) (.valueError "isqrt() argument must be nonnegative")
-    have herr : isqrtIterative n
-        = .error (.valueError "isqrt() argument must be nonnegative") := by
-      unfold isqrtIterative; rw [if_pos hn]; rfl
-    exact herr
+    rw [isqrtIterative, if_pos hn]; rfl

@@ -11,8 +11,6 @@ public import Isqrt.Definitions.Specification
 public import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.KeyLemmaBitwise
 
-/-! ## Base case, Newton lift, correction -/
-
 /-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
 public theorem isNearSquareRoot_one {p : SizedProblem} (hp : p.irreducible) :
     isNearSquareRoot p.n 1 :=

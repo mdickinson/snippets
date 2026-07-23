@@ -17,5 +17,6 @@ import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.RecursiveCorrectness
+import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SupportLemmas

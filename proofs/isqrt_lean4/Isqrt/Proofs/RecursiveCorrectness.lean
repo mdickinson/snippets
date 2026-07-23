@@ -88,14 +88,8 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (.ofPos hpos)
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at ha_eq a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
-        unfold isqrtRecursive
-        simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
-        rw [pyFloordiv_ok_bind (by decide)]
-        have : ((n.bitLength - 1) / 2) = ↑((n.toNat.size - 1) / 2) := by
-          rw [Int.bitLength_eq hn]
-          have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-          omega
-        rw [this, ha_eq]
+        rw [isqrtRecursive, if_neg (by omega), if_neg (by omega)]
+        rw [half_dec_bitLength hpos, ha_eq]
         rfl
       exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot a_near⟩
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

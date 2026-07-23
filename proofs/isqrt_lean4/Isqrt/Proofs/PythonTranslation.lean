@@ -40,3 +40,11 @@ public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.to
 
 /-- range of a casted Nat -/
 public theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map Nat.cast := rfl
+
+/--
+Translation used by both the recursive and iterative correctness proofs.
+-/
+public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int -> PyExcept α):
+    (pyFloordiv (n.bitLength - 1) 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
+  have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
+  grind only [Int.bitLength_eq, pyFloordiv_ok_bind]
