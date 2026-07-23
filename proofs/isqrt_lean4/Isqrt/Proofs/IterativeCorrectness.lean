@@ -1,11 +1,11 @@
 /-
 Correctness of the iterative monadic integer square root `isqrtIterative`.
 
-The loop's `foldlM` is mirrored by `augmentedAfter`, a recursion over the subproblem chain whose
-state (`AugmentedLoopState`) carries the near-√ invariant alongside the running approximation,
-sharing the Newton step (`isNearSquareRoot_newtonLift`) with the recursive proof; `monadicLoop_near`
-reads the result off the final augmented state and `isCorrectIsqrt_isqrtIterative` wraps it in the
-`isCorrectIsqrt` contract.
+Under the near-√ invariant the loop body never raises, so `forIn_pure_of_inv` collapses the whole
+`forIn` to a pure `foldl` (`loop_near`); the invariant, indexed by the remaining iteration count,
+carries a near square root of the iteration-`s` subproblem and shares the Newton step
+(`isNearSquareRoot_newtonLift`) with the recursive proof. `isCorrectIsqrt_isqrtIterative` folds
+`isqrtIterative` onto that loop and reads the result off, wrapping it in the `isCorrectIsqrt` contract.
 -/
 
 module
@@ -19,16 +19,34 @@ import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SupportLemmas
 
-/-- Rewrite a `forIn`-and-continuation as a `foldlM`-and-continuation. The loop `body` is opaque: it
-is matched as-is (like the `pyFloordiv a b` in `pyFloordiv_ok_bind`) and identified with the step
-`g` by the `hbody` side goal, so a single rewrite retires the whole `forIn L init body >>= f`. -/
-theorem forIn_yield_foldlM_bind {α β γ : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
-    (L : List α) (init : β) (body : α → β → m (ForInStep β)) (g : β → α → m β) (f : β → m γ)
-    (hbody : ∀ a b, body a b = g b a >>= fun b' => pure (ForInStep.yield b')) :
-    forIn L init body >>= f = L.foldlM g init >>= f := by
-  have hb : body = fun a b => g b a >>= fun b' => pure (ForInStep.yield b') := by
-    funext a b; exact hbody a b
-  rw [hb]; simp
+
+
+/-- A loop that is effect-free under an invariant is a pure fold. If, on every state meeting the
+(list-indexed, hence position-aware) invariant `Inv`, the `body` reduces to `pure (.yield (f a b))`
+and re-establishes `Inv`, then the whole `forIn` collapses to `pure` of the corresponding `foldl`,
+and `Inv` holds of the final state. This is the invariant-carrying analogue of the core lemma
+`List.forIn_pure_yield_eq_foldl` (its `Inv := fun _ _ => True` case). -/
+theorem forIn_pure_of_inv {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+    (Inv : List α → β → Prop) (f : α → β → β)
+    (L : List α) (init : β) (body : α → β → m (ForInStep β))
+    (hinit : Inv L init)
+    (hstep : ∀ a L' b, Inv (a :: L') b →
+        body a b = pure (ForInStep.yield (f a b)) ∧ Inv L' (f a b)) :
+    forIn L init body = pure (L.foldl (fun b a => f a b) init)
+      ∧ Inv [] (L.foldl (fun b a => f a b) init) := by
+  induction L generalizing init with
+  | nil => exact ⟨by simp, hinit⟩
+  | cons a L' ih =>
+    obtain ⟨hbody, hinv'⟩ := hstep a L' init hinit
+    obtain ⟨heq, hfin⟩ := ih (f a init) hinv'
+    exact ⟨by rw [List.forIn_cons, hbody, pure_bind, List.foldl_cons]; exact heq,
+      by rw [List.foldl_cons]; exact hfin⟩
+
+/-- The reversed `range` peels its largest element off the front. -/
+theorem range_reverse_succ (m : Nat) :
+    (range (↑(m + 1) : Int)).reverse = ↑m :: (range (↑m : Int)).reverse := by
+  rw [Nat.range_eq, Nat.range_eq, List.range_succ, List.map_append, List.reverse_append]
+  rfl
 
 /-! ## The subproblem chain -/
 
@@ -101,9 +119,6 @@ theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) 
 /-- The mutable state defined before and updated within the for loop: (a, d). -/
 abbrev LoopState := Int × Int
 
-/-- The loop state immediately before entering the for loop. -/
-def initialLoopState : LoopState := ⟨1, 0⟩
-
 /-- The computation represented by one iteration of the for loop. -/
 def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState :=
   have a := r.fst
@@ -116,10 +131,6 @@ def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState :=
   let q ← pyFloordiv rsh a
   let a := lsh + q
   pure ⟨a, d⟩
-
-/-- The state on exiting the for loop. -/
-def finalLoopState (p : SizedProblem) : PyExcept LoopState :=
-  (range (p.c.size : Int)).reverse.foldlM (stepM p.n ↑p.c) initialLoopState
 
 /--
 A single iteration performs a Newton lift of the current approximation
@@ -163,93 +174,68 @@ theorem stepM_subAt
   rw [stepM_eq_ok p.n p.c r hs ha hsnd]
   rw [SizedProblem.newtonLift_eq, subAt_n, subAt_k]
 
-/-- Loop state augmented with the near-√ invariant at iteration `s`. The second component `p.c >>> s`
-is pinned by the index, so `forget` recovers it without storing it. -/
-private structure AugmentedLoopState (p : SizedProblem) (s : Nat) where
-  a : Int
-  a_near : isNearSquareRoot (subAt p s).n a
+/-- One loop iteration as a total function on the raw state: the running approximation is Newton
+lifted for the iteration-`s` subproblem and the second component records `p.c >>> s`. This is
+`stepM`'s `.ok` value under the loop invariant (see `stepM_subAt`). -/
+def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
+  ((subAt p s).newtonLift r.fst, ↑(p.c >>> s))
 
-/-- Initial augmented loop state. -/
-def augmentedInitial {p : SizedProblem} : AugmentedLoopState p p.c.size :=
-  ⟨1, isNearSquareRoot_one subAt_irreducible⟩
+/-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
+so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/
+abbrev loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopState) := do
+  let d ← pyRshift c s
+  let lsh ← pyLshift r.fst (d - r.snd - 1)
+  let rsh ← pyRshift n (2 * c - r.snd - d + 1)
+  let q ← pyFloordiv rsh r.fst
+  pure (ForInStep.yield (lsh + q, d))
 
-/-- One iteration of the augmented for loop. -/
-def augmentedStep {p : SizedProblem} {s : Nat} (hs : s < p.c.size)
-    (r : AugmentedLoopState p (s + 1)) : AugmentedLoopState p s := by
-  obtain ⟨a_old, a_near_old⟩ := r
-  refine ⟨(subAt p s).newtonLift a_old, ?_⟩
-  apply isNearSquareRoot_newtonLift (subAt_reducible p s hs)
-  rw [descend_subAt]
-  exact a_near_old
-
-/-- The augmented loop state after iteration `s`. -/
-def augmentedAfter (p : SizedProblem) (s : Nat) (hs : s ≤ p.c.size) : AugmentedLoopState p s :=
-  if h : s = p.c.size then
-    h ▸ augmentedInitial
-  else
-    augmentedStep (by omega) (augmentedAfter p (s + 1) (by omega))
-
-/-- The final augmented state. -/
-def augmentedFinal (p : SizedProblem) : AugmentedLoopState p 0 := augmentedAfter p 0 (by omega)
-
-/-- Below the top level, iteration `s` is one `augmentedStep` on iteration `s+1`. -/
-theorem augmentedAfter_of_lt (p : SizedProblem) {s : Nat} (hs : s < p.c.size) :
-    augmentedAfter p s (Nat.le_of_lt hs) = augmentedStep hs (augmentedAfter p (s + 1) hs) := by
-  rw [augmentedAfter, dif_neg (Nat.ne_of_lt hs)]
-
-/-- Extraction of loop state from augmented loop state; the second component is `p.c >>> s`. -/
-def forget {p : SizedProblem} {s : Nat} (r : AugmentedLoopState p s) : LoopState :=
-  ⟨r.a, ↑(p.c >>> s)⟩
-
-/-- Initial states coincide. -/
-theorem initialAugmented_eq_initialLoopState {p : SizedProblem} :
-    forget (augmentedInitial : AugmentedLoopState p p.c.size) = initialLoopState := by
-  show (⟨1, ↑(p.c >>> p.c.size)⟩ : LoopState) = ⟨1, 0⟩
-  rw [Nat.shiftRight_size_self]; rfl
-
-/-- One `stepM` on a forgotten state equals the forget of one `augmentedStep`. -/
-theorem stepM_forget (p : SizedProblem) {s : Nat} (hs : s < p.c.size)
-    (r : AugmentedLoopState p (s + 1)) :
-    stepM p.n ↑p.c (forget r) ↑s = .ok (forget (augmentedStep hs r)) := by
-  rw [stepM_subAt p hs _ r.a_near.1 rfl]; rfl
-
-/-- Running the loop's `foldlM` from iteration `s` reproduces the augmented recursion: each Python
-step mirrors one `augmentedStep`, so the fold lands on the final augmented state. -/
-theorem foldl_augmentedAfter (p : SizedProblem) :
-    ∀ (s : Nat) (hs : s ≤ p.c.size),
-      (List.range s).reverse.foldlM (fun (x : LoopState) (a : Nat) => stepM p.n ↑p.c x ↑a)
-          (forget (augmentedAfter p s hs))
-        = .ok (forget (augmentedFinal p)) := by
-  intro s
-  induction s with
-  | zero => intro _; rfl
-  | succ s ih =>
-    intro hs
-    have hcons : (List.range (s + 1)).reverse = s :: (List.range s).reverse := by
-      rw [List.range_succ, List.reverse_append]; rfl
-    rw [hcons]
-    simp only [List.foldlM_cons]
-    rw [stepM_forget p hs (augmentedAfter p (s + 1) hs),
-      ← augmentedAfter_of_lt p hs, Except.ok_bind]
-    exact ih (Nat.le_of_lt hs)
-
-/-- The loop's `foldlM` computes exactly the final augmented state. -/
-theorem finalLoopState_eq_augmentedFinal (p : SizedProblem) :
-    finalLoopState p = .ok (forget (augmentedFinal p)) := by
-  rw [finalLoopState, Nat.range_eq, ← List.map_reverse, List.foldlM_map]
-  rw [show initialLoopState = forget (augmentedAfter p p.c.size (Nat.le_refl _)) by
-        rw [augmentedAfter, dif_pos rfl]; exact initialAugmented_eq_initialLoopState.symm]
-  exact foldl_augmentedAfter p p.c.size (Nat.le_refl _)
-
-/-- The loop's `foldlM` is `.ok`, and its running approximation is a near square root of `p.n`. -/
-theorem monadicLoop_near (p : SizedProblem) :
+/-- The loop never raises and folds to a near square root: driving `loopBody` over the reversed
+`range` from `(1, 0)` succeeds, and the first component of the result is a near square root of `p.n`.
+The near-√ invariant — which subsumes `0 < a`, so no shift or division raises — is threaded through
+`forIn_pure_of_inv`, indexed by the number `m` of iterations still to run. -/
+theorem loop_near (p : SizedProblem) :
     ∃ y : LoopState,
-      finalLoopState p = .ok y
+      forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c) = pure y
       ∧ isNearSquareRoot p.n y.fst := by
-  refine ⟨forget (augmentedFinal p), finalLoopState_eq_augmentedFinal p, ?_⟩
-  -- The near-√ invariant is carried by the augmented state; at iteration `0` its subproblem is `p`.
-  have h := (augmentedFinal p).a_near
-  rwa [subAt_zero] at h
+  obtain ⟨heq, hfin⟩ := forIn_pure_of_inv
+    (fun (L' : List Int) (r : LoopState) =>
+      ∃ m : Nat, m ≤ p.c.size ∧ L' = (range (↑m : Int)).reverse
+        ∧ r.snd = ↑(p.c >>> m) ∧ isNearSquareRoot (subAt p m).n r.fst)
+    (fun (s : Int) (r : LoopState) => pureStep p r s.toNat)
+    (range (↑p.c.size : Int)).reverse (1, 0) (loopBody p.n ↑p.c)
+    ⟨p.c.size, Nat.le_refl _, rfl, by simp [Nat.shiftRight_size_self],
+      isNearSquareRoot_one subAt_irreducible⟩
+    (by
+      rintro a L' r ⟨m, hm, hL, hd, hnear⟩
+      -- The list is nonempty, so `m = k + 1`, and its head is `↑k`.
+      obtain ⟨k, rfl⟩ : ∃ k, m = k + 1 := by
+        cases m with
+        | zero =>
+          simp only [Nat.range_eq, List.range_zero, List.map_nil, List.reverse_nil] at hL
+          exact absurd hL (List.cons_ne_nil a L')
+        | succ k => exact ⟨k, rfl⟩
+      rw [range_reverse_succ] at hL
+      obtain ⟨rfl, rfl⟩ := List.cons.inj hL
+      have hk : k < p.c.size := by omega
+      have hstepM := stepM_subAt p hk r hnear.1 hd
+      refine ⟨?_, k, by omega, rfl, rfl, ?_⟩
+      · -- Purity: the body is `stepM`, which succeeds, wrapped for `forIn`.
+        have hbridge : loopBody p.n ↑p.c ↑k r
+            = stepM p.n ↑p.c r ↑k >>= fun r' => pure (ForInStep.yield r') := by
+          simp only [loopBody, stepM, bind_assoc, pure_bind]
+        rw [hbridge, hstepM, Except.ok_bind]; rfl
+      · -- The near-√ invariant is preserved by the Newton lift.
+        show isNearSquareRoot (subAt p k).n ((subAt p k).newtonLift r.fst)
+        apply isNearSquareRoot_newtonLift (subAt_reducible p k hk)
+        rw [descend_subAt]; exact hnear)
+  -- The final list is `[]`, forcing `m = 0`; and `subAt p 0 = p`.
+  refine ⟨_, heq, ?_⟩
+  obtain ⟨m, _, hL, _, hnear⟩ := hfin
+  obtain rfl : m = 0 := by
+    cases m with
+    | zero => rfl
+    | succ k => rw [range_reverse_succ] at hL; exact (List.cons_ne_nil _ _ hL.symm).elim
+  rwa [subAt_zero] at hnear
 
 /-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
@@ -263,24 +249,19 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the loop runs and never raises.
       have hn0 : n ≠ 0 := Int.ne_of_gt hpos
-      obtain ⟨y, hy_eq, hy_near⟩ := monadicLoop_near (.ofPos hpos)
-      rw [finalLoopState] at hy_eq
+      obtain ⟨y, hy_eq, hy_near⟩ := loop_near (.ofPos hpos)
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at hy_eq hy_near
-      -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
-      have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
-        rw [isqrtIterative, Int.bitLength_eq hn]
-        simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
-        rw [pyFloordiv_ok_bind (by decide)]
-        rw [← initialLoopState]
-        -- Structural: lift the always-yielding `forIn` (and its continuation) to `stepM`'s fold.
-        rw [forIn_yield_foldlM_bind (g := stepM n (((n.toNat.size : Int) - 1) / 2))]
-        case hbody => intro s r; simp only [stepM, bind_assoc, pure_bind]
-        -- Arithmetic: identify the fold's index and list with `finalLoopState`'s.
-        have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-        rw [show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) by omega]
-        rw [Nat.bitLength_eq, hy_eq, Except.ok_bind]
-        rfl
-      exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
+      refine ⟨_, ?_, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
+      -- Reduce `isqrtIterative` to the named loop, then read off `pure y`.
+      show isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst)
+      rw [isqrtIterative, Int.bitLength_eq hn]
+      simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
+      rw [pyFloordiv_ok_bind (by decide)]
+      -- The def's `Int` seed `(n.bitLength - 1) // 2` is the struct's `↑p.c`.
+      have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
+      rw [show ((n.toNat.size : Int) - 1) / 2 = ((n.toNat.size - 1) / 2 : Nat) by omega,
+        Nat.bitLength_eq, hy_eq, pure_bind]
+      rfl
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
     intro n hn
     show raises (isqrtIterative n) (.valueError "isqrt() argument must be nonnegative")
