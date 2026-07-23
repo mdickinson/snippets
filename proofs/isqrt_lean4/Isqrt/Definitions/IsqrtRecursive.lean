@@ -45,14 +45,7 @@ public import Isqrt.Definitions.PythonPrimitives
 
 @[expose] public section
 
-/-
-Infix aliases for the Python operations, with precedence chosen to match that of Python.
-We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
--/
-
-local infixl:70 "//" => pyFloordiv
-local infixl:62 "<<" => pyLshift
-local infixl:62 (priority := high) ">>" => pyRshift
+open scoped Python
 
 /-- Return a near square root of a positive integer n. -/
 def nsqrtRecursive (n c : Int) : PyExcept Int := do

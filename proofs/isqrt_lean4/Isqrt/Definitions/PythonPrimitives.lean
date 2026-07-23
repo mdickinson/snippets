@@ -30,4 +30,15 @@ def range (n : Int) : List Int := (List.range n.toNat).map Nat.cast
 /-- Minimum number of bits needed to represent abs(n). -/
 def Int.bitLength (n : Int) : Int := if n = 0 then 0 else n.natAbs.log2 + 1
 
+/-
+Infix aliases for the Python operations, with precedence chosen to match that of Python;
+`open scoped Python` to use them. We bump the priority of `>>` to avoid a clash with the
+monadic `>>` operator.
+-/
+namespace Python
+@[inherit_doc] scoped infixl:70 "//" => pyFloordiv
+@[inherit_doc] scoped infixl:62 "<<" => pyLshift
+@[inherit_doc] scoped infixl:62 (priority := high) ">>" => pyRshift
+end Python
+
 end

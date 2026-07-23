@@ -113,14 +113,7 @@ lifted for the iteration-`s` subproblem and the second component records `p.c >>
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
   ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
 
-/-
-Infix aliases for the Python operations, with precedence chosen to match that of Python.
-We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
--/
-
-local infixl:70 "//" => pyFloordiv
-local infixl:62 "<<" => pyLshift
-local infixl:62 (priority := high) ">>" => pyRshift
+open scoped Python
 
 /-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
 so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/

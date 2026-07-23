@@ -30,14 +30,7 @@ public import Isqrt.Definitions.PythonPrimitives
 
 @[expose] public section
 
-/-
-Infix aliases for the Python operations, with precedence chosen to match that of Python.
-We bump the priority of `>>` to avoid a clash with the monadic `>>` operator.
--/
-
-local infixl:70 "//" => pyFloordiv
-local infixl:62 "<<" => pyLshift
-local infixl:62 (priority := high) ">>" => pyRshift
+open scoped Python
 
 /-- Return the integer part of the square root of the input. -/
 def isqrtIterative (n : Int) : PyExcept Int := do
