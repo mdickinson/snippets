@@ -89,8 +89,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at ha_eq a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
         unfold isqrtRecursive
-        rw [if_neg (by omega), pure_bind]
-        rw [if_neg (by omega), pure_bind]
+        simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
         rw [pyFloordiv_ok_bind (by decide)]
         have : ((n.bitLength - 1) / 2) = ↑((n.toNat.size - 1) / 2) := by
           rw [Int.bitLength_eq hn]

@@ -99,7 +99,7 @@ theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) 
 /-! ## The main loop -/
 
 /-- The mutable state defined before and updated within the for loop: (a, d). -/
-abbrev LoopState := MProd Int Int
+abbrev LoopState := Int × Int
 
 /-- The loop state immediately before entering the for loop. -/
 def initialLoopState : LoopState := ⟨1, 0⟩
@@ -269,9 +269,8 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       -- The struct's `↑c` is the def's `Int` seed `(n.bitLength - 1) // 2`.
       have hred : isqrtIterative n = .ok (if n < y.fst * y.fst then y.fst - 1 else y.fst) := by
         rw [isqrtIterative, Int.bitLength_eq hn]
-        rw [if_neg (by omega), pure_bind, if_neg (by omega), pure_bind]
+        simp only [if_neg (show ¬ n < 0 by omega), if_neg (show ¬ n = 0 by omega)]
         rw [pyFloordiv_ok_bind (by decide)]
-        simp only [pure_bind]
         rw [← initialLoopState]
         -- Structural: lift the always-yielding `forIn` (and its continuation) to `stepM`'s fold.
         rw [forIn_yield_foldlM_bind (g := stepM n (((n.toNat.size : Int) - 1) / 2))]
