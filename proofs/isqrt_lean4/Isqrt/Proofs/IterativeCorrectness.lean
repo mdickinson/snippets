@@ -133,12 +133,15 @@ def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopSta
   pure (ForInStep.yield (a, d))
 
 /-- The loop never raises and folds to a near square root: driving `loopBody` over the reversed
-`range` from `(1, 0)` succeeds, and the first component of the result is a near square root of `p.n`.
+`range` from `(1, 0)` succeeds with some final state `y`, so feeding the loop's result to any
+continuation `g` evaluates to `g y` — the shape the caller needs to push the loop through the rest
+of `isqrtIterative`'s `do` block — and the first component `y.fst` is a near square root of `p.n`.
 The near-√ invariant — which subsumes `0 < a`, so no shift or division raises — is threaded through
 `forIn_pure_of_inv`, indexed by the number `m` of iterations still to run. -/
 theorem loop_near (p : SizedProblem) :
     ∃ y : LoopState,
-      forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c) = pure y
+      (∀ g : LoopState → PyExcept Int,
+        forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c) >>= g = g y)
       ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨heq, hfin⟩ := forIn_pure_of_inv
     (fun (L' : List Int) (r : LoopState) =>
@@ -172,25 +175,14 @@ theorem loop_near (p : SizedProblem) :
         apply isNearSquareRoot_newtonLift (subAt_reducible p k hk)
         rw [descend_subAt]; exact hnear)
   -- The final list is `[]`, forcing `m = 0`; and `subAt p 0 = p`.
-  refine ⟨_, heq, ?_⟩
+  -- `heq : forIn … = pure y` gives the `∀ g` form by `pure_bind`.
+  refine ⟨_, fun g => by rw [heq, pure_bind], ?_⟩
   obtain ⟨m, _, hL, _, hnear⟩ := hfin
   obtain rfl : m = 0 := by
     cases m with
     | zero => rfl
     | succ k => rw [range_reverse_succ] at hL; exact (List.cons_ne_nil _ _ hL.symm).elim
   rwa [subAt_zero] at hnear
-
-
-theorem loop_near' (p : SizedProblem) :
-    ∃ y : LoopState,
-      (∀ g : LoopState → PyExcept Int,
-      (forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c)) >>= g = g y)
-      ∧ isNearSquareRoot p.n y.fst := by
-  obtain ⟨y, heq, hnear⟩ := loop_near p
-  refine ⟨y, ?_, hnear⟩
-  intro g
-  rw [heq]
-  rfl
 
 /-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
@@ -203,7 +195,7 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
     · -- 0 < n: the loop runs and never raises.
       rw [isqrtIterative, if_neg (by omega), if_neg (by omega)]
       rw [half_dec_bitLength hpos, Nat.bitLength_eq]
-      obtain ⟨y, hy_eq, hy_near⟩ := loop_near' (.ofPos hpos)
+      obtain ⟨y, hy_eq, hy_near⟩ := loop_near (.ofPos hpos)
       rw [SizedProblem.c_eq, SizedProblem.ofPos_n] at hy_eq
       rw [SizedProblem.ofPos_n] at hy_near
       exact ⟨_, hy_eq _, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
