@@ -8,35 +8,37 @@ module
 meta import Isqrt.Definitions.PythonPrimitives
 meta import Isqrt.Tests.Assertions
 
-/-! ## pyFloordiv -/
+open scoped Python
 
-#guard assertReturns (pyFloordiv 10 3) 3
-#guard assertReturns (pyFloordiv 10 (-3)) (-4)
-#guard assertReturns (pyFloordiv (-10) (-3)) 3
-#guard assertReturns (pyFloordiv (-10) 3) (-4)
-#guard assertRaisesZeroDivisionError (pyFloordiv 10 0)
-#guard assertRaisesZeroDivisionError (pyFloordiv (-10) 0)
-#guard assertRaisesZeroDivisionError (pyFloordiv 0 0)
+/-! ## Floor division -/
 
-/-! ## pyLshift -/
+#guard assertReturns (10 // 3) 3
+#guard assertReturns (10 // (-3)) (-4)
+#guard assertReturns ((-10) // (-3)) 3
+#guard assertReturns ((-10) // 3) (-4)
+#guard assertRaisesZeroDivisionError (10 // 0)
+#guard assertRaisesZeroDivisionError ((-10) // 0)
+#guard assertRaisesZeroDivisionError (0 // 0)
 
-#guard assertReturns (pyLshift 3 2) 12
-#guard assertReturns (pyLshift 3 0) 3
-#guard assertReturns (pyLshift (-3) 2) (-12)
-#guard assertReturns (pyLshift (-3) 0) (-3)
-#guard assertRaisesValueError "negative shift count" (pyLshift 3 (-1))
-#guard assertRaisesValueError "negative shift count" (pyLshift (-3) (-1))
+/-! ## Left shift -/
 
-/-! ## pyRshift -/
+#guard assertReturns (3 << 2) 12
+#guard assertReturns (3 << 0) 3
+#guard assertReturns ((-3) << 2) (-12)
+#guard assertReturns ((-3) << 0) (-3)
+#guard assertRaisesValueError "negative shift count" (3 << (-1))
+#guard assertRaisesValueError "negative shift count" ((-3) << (-1))
 
-#guard assertReturns (pyRshift 12 3) 1
-#guard assertReturns (pyRshift 12 2) 3
-#guard assertReturns (pyRshift 12 0) 12
-#guard assertReturns (pyRshift (-12) 3) (-2)
-#guard assertReturns (pyRshift (-12) 2) (-3)
-#guard assertReturns (pyRshift (-12) 0) (-12)
-#guard assertRaisesValueError "negative shift count" (pyRshift 12 (-1))
-#guard assertRaisesValueError "negative shift count" (pyRshift (-12) (-1))
+/-! ## Right shift -/
+
+#guard assertReturns (12 >> 3) 1
+#guard assertReturns (12 >> 2) 3
+#guard assertReturns (12 >> 0) 12
+#guard assertReturns ((-12) >> 3) (-2)
+#guard assertReturns ((-12) >> 2) (-3)
+#guard assertReturns ((-12) >> 0) (-12)
+#guard assertRaisesValueError "negative shift count" (12 >> (-1))
+#guard assertRaisesValueError "negative shift count" ((-12) >>  (-1))
 
 /-! ## range -/
 

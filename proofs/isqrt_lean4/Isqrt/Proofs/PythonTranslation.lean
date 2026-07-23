@@ -9,19 +9,21 @@ public import Isqrt.Definitions.PythonPrimitives
 public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
 
-/-- For a positive divisor, `pyFloordiv a b` returns `.ok (a / b)`. -/
+open scoped Python
+
+/-- For a positive divisor, `a // b` returns `.ok (a / b)`. -/
 public theorem pyFloordiv_ok_bind {α : Type} {a b : Int} (hb : 0 < b) (f : Int → PyExcept α) :
-    (pyFloordiv a b >>= f) = f (a / b) := by
+    (a // b >>= f) = f (a / b) := by
   rw [pyFloordiv, if_neg (by omega), Int.fdiv_eq_ediv_of_nonneg _ (by omega)]; rfl
 
-/-- For a nonnegative shift, `pyLshift n k` returns `.ok (n <<< k.toNat)`. -/
+/-- For a nonnegative shift, `n << k` returns `.ok (n <<< k.toNat)`. -/
 public theorem pyLshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
-    (pyLshift n ↑k >>= f) = f (n <<< k) := by
+    (n << ↑k >>= f) = f (n <<< k) := by
   rw [pyLshift, if_neg (by omega)]; rfl
 
-/-- For a nonnegative shift, `pyRshift n k` returns `.ok (n >>> k.toNat)`. -/
+/-- For a nonnegative shift, `n >> k` returns `.ok (n >>> k.toNat)`. -/
 public theorem pyRshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
-    (pyRshift n ↑k >>= f) = f (n >>> k) := by
+    (n >> ↑k >>= f) = f (n >>> k) := by
   rw [pyRshift, if_neg (by omega)]; rfl
 
 /-- For a Nat `m`, `bitLength` and `size` match. -/
@@ -45,6 +47,6 @@ public theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map N
 Translation used by both the recursive and iterative correctness proofs.
 -/
 public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int -> PyExcept α):
-    (pyFloordiv (n.bitLength - 1) 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
+    ((n.bitLength - 1) // 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
   have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
   grind only [Int.bitLength_eq, pyFloordiv_ok_bind]

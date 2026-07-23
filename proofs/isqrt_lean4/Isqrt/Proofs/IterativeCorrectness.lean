@@ -20,6 +20,8 @@ import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SupportLemmas
 
+open scoped Python
+
 /-- A loop that is effect-free under an invariant is a pure fold. If, on every state meeting the
 (list-indexed, hence position-aware) invariant `Inv`, the `body` reduces to `pure (.yield (f a b))`
 and re-establishes `Inv`, then the whole `forIn` collapses to `pure` of the corresponding `foldl`,
@@ -58,10 +60,10 @@ def stepM (n c : Int) (r : LoopState) (s : Int) : PyExcept LoopState :=
   have d := r.snd
   have e := d
   do
-  let d ← pyRshift c s
-  let lsh ← pyLshift a (d - e - 1)
-  let rsh ← pyRshift n (2 * c - e - d + 1)
-  let q ← pyFloordiv rsh a
+  let d ← c >> s
+  let lsh ← a << d - e - 1
+  let rsh ← n >> 2 * c - e - d + 1
+  let q ← rsh // a
   let a := lsh + q
   pure ⟨a, d⟩
 
@@ -112,8 +114,6 @@ lifted for the iteration-`s` subproblem and the second component records `p.c >>
 `stepM`'s `.ok` value under the loop invariant (see `stepM_subAt`). -/
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
   ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
-
-open scoped Python
 
 /-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
 so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/
