@@ -13,9 +13,6 @@ public import Isqrt.Proofs.NatSize
 public theorem Int.shiftRight_eq_ediv (n : Int) (k : Nat) : n >>> k = n / 2 ^ k := by
   grind only [Int.shiftRight_eq_div_pow]
 
-public theorem Int.shiftRight_succ (m : Int) (n : Nat) : m >>> (n + 1) = (m >>> n) / 2 := by
-  rw [Int.shiftRight_add, Int.shiftRight_eq_div_pow]; omega
-
 /-! ## Nat.size -/
 
 /-- Defining property, with inequalities inverted. -/
