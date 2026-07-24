@@ -12,6 +12,7 @@ module
 public import Isqrt.Definitions.IsqrtRecursive
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Proofs.KeyLemmaBitwise
 import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
@@ -32,8 +33,8 @@ lift. -/
 theorem nsqrtRecursive_succ_shift
     {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (a_pos : 0 < a):
     let k := (c - 1) / 2
-    nsqrtRecursive (n >>> (2 * k + 2)) ↑(c / 2) = .ok a →
-    nsqrtRecursive n ↑c = .ok (a <<< k + (n >>> (k + 2)) / a) := by
+    nsqrtRecursive (descend n k) ↑(c / 2) = .ok a →
+    nsqrtRecursive n ↑c = .ok (newtonLift n k a) := by
   intro k nsr_inner
   rw [nsqrtRecursive, if_neg (by omega)]
   rw [pyFloordiv_ok_bind (by decide)]
@@ -78,9 +79,10 @@ decreasing_by exact p.descend_lt hp
 /-- Correctness of `isqrtRecursive`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
 public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
-  constructor
+  refine ⟨?_, ?_⟩ <;> intro n hn
+  · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
+    rw [isqrtRecursive, if_pos hn]; rfl
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
-    intro n hn
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
       exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
@@ -92,6 +94,3 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
         rw [half_dec_bitLength hpos, ha_eq]
         rfl
       exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot a_near⟩
-  · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
-    intro n hn
-    rw [isqrtRecursive, if_pos hn]; rfl

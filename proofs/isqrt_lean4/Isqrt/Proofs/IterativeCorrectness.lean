@@ -13,6 +13,7 @@ module
 public import Isqrt.Definitions.IsqrtIterative
 public import Isqrt.Definitions.Specification
 import Isqrt.Definitions.PythonPrimitives
+import Isqrt.Proofs.KeyLemmaBitwise
 import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
@@ -57,7 +58,7 @@ abbrev LoopState := Int × Int
 /-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
 so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/
 def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopState) :=
-  have ⟨a, d⟩ := r
+  let ⟨a, d⟩ := r
   do
   let e := d
   let d ← c >> s
@@ -68,15 +69,14 @@ def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopSta
 A single iteration performs a Newton lift of the current approximation
 with respect to n >> (2(c - d)) and k = (d - 1) / 2.
 -/
-theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState)
-    {s : Nat} (hs : s < c.size)
+theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState) {s : Nat} (hs : s < c.size)
     (ha_pos : 0 < r.fst)
     (hsnd : r.snd = (c >>> (s + 1) : Nat)) :
     let a := r.fst
     let d := c >>> s
     let m := n >>> (2 * (c - d))
     let k := (d - 1) / 2
-    loopBody n ↑c ↑s r = .ok (ForInStep.yield ⟨a <<< k + (m >>> (k + 2)) / a, ↑d⟩) := by
+    loopBody n ↑c ↑s r = .ok (ForInStep.yield ⟨newtonLift m k a, ↑d⟩) := by
   intro a d m k
   let e := c >>> (s + 1)
   have : 0 < d := by rw [← Nat.size_pos, Nat.size_shiftRight]; omega
@@ -93,24 +93,67 @@ theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState)
   rw [show d - e - 1 = k by omega, show d - e + 1 = k + 2 by omega]
   rfl
 
-/-- One `loopBody` at position `i` succeeds and yields the iteration-`i` subproblem's Newton lift —
-the iterative analogue of `nsqrtRecursive_succ`. -/
-theorem loopBody_subAt
-    (p : SizedProblem)
-    {s : Nat} (hs : s < p.c.size)
-    (r : LoopState)
-    (ha : 0 < r.fst)
-    (hsnd : r.snd = ↑(subAt p (s + 1)).c) :
-    loopBody p.n ↑p.c ↑s r
-      = .ok (ForInStep.yield ⟨(subAt p s).newtonLift r.fst, ↑(subAt p s).c⟩) := by
-  rw [loopBody_eq_ok p.n p.c r hs ha (subAt_c p (s + 1) ▸ hsnd)]
-  rw [SizedProblem.newtonLift_eq, subAt_n, subAt_k, subAt_c]
-
 /-- One loop iteration as a total function on the raw state: the running approximation is Newton
 lifted for the iteration-`s` subproblem and the second component records `p.c >>> s`. This is the
 value `loopBody` yields under the loop invariant (see `loopBody_subAt`). -/
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
   ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
+
+/-- Invariant at depth s. -/
+def loopInvariant (p : SizedProblem) (r : LoopState) (s : Nat) : Prop :=
+  let ⟨a, d⟩ := r
+  isNearSquareRoot (subAt p s).n a ∧ d = ↑(subAt p s).c
+
+/-- Under the loop invariant, loopBody yields the result of applying pureStep. -/
+theorem loopBody_subAt (p : SizedProblem)
+    {s : Nat} (hs : s < p.height)
+    (r : LoopState)
+    (hinv : loopInvariant p r (s + 1)) :
+    loopBody p.n ↑p.c ↑s r = .ok (ForInStep.yield (pureStep p r s)) := by
+  rw [loopBody_eq_ok p.n p.c r hs hinv.1.1 (subAt_c p (s + 1) ▸ hinv.2)]
+  rw [pureStep, SizedProblem.newtonLift_eq, subAt_n, subAt_k, subAt_c]
+
+/-- The loop invariant holds initially. -/
+theorem loopInvariant_initial (p : SizedProblem) :
+    loopInvariant p (1, 0) p.height :=
+  ⟨subAt_isNearSquareRoot_one p, by rw [subAt_c, SizedProblem.height, Nat.shiftRight_size_self, Int.cast_ofNat_Int]⟩
+
+/-- Each step preserves the loop invariant. -/
+theorem loopInvariant_step (p : SizedProblem)
+    {s : Nat} (hs : s < p.height)
+    (r : LoopState)
+    (hinv : loopInvariant p r (s + 1)) :
+    loopInvariant p (pureStep p r s) s := by
+  obtain ⟨ha_near, hsnd⟩ := hinv
+  refine ⟨subAt_isNearSquareRoot_newtonLift hs ha_near, rfl⟩
+
+/-
+Threading a general invariant through a for loop over a reversed range, where each
+iteration of the for loop is a pure yield, and that fact depends on the invariant.
+-/
+theorem reverse_range_zero : (range (0 : Nat)).reverse = [] := by
+  rw [Nat.range_eq, List.range_zero, List.map_nil, List.reverse_nil]
+
+theorem reverse_range_succ (m : Nat) : (range ↑(m + 1)).reverse = ↑m :: (range ↑m).reverse := by
+  rw [Nat.range_eq, Nat.range_eq, List.range_succ, List.map_append, List.reverse_append]
+  rfl
+
+theorem forIn_reverse_range_invariant
+    {LoopState : Type}
+    (height : Nat)
+    (initial : LoopState)
+    (step : LoopState -> Nat -> LoopState)
+    (body : Int -> LoopState -> PyExcept (ForInStep LoopState))
+    (invariant : LoopState -> Nat -> Prop)
+    (hinitial : invariant initial height)
+    (hstep : ∀ {s : Nat}, s < height → ∀ r : LoopState, invariant r (s + 1) →
+      body ↑s r = .ok (ForInStep.yield (step r s)) ∧ invariant (step r s) s) :
+    ∃ y : LoopState, forIn (range height).reverse initial body = .ok y ∧ invariant y 0 := by
+  induction height generalizing initial with
+  | zero => rw [reverse_range_zero]; exact ⟨initial, rfl, hinitial⟩
+  | succ height ind_hyp => rw [reverse_range_succ, List.forIn_cons]; exact (hstep (by omega) initial hinitial).1 ▸ (
+      ind_hyp (step initial height)
+      (hstep (by omega) initial hinitial).2 (fun hs => hstep (by omega)))
 
 /-- The loop never raises and folds to a near square root: driving `loopBody` over the reversed
 `range` from `(1, 0)` succeeds with some final state `y`, so feeding the loop's result to any
@@ -121,16 +164,16 @@ The near-√ invariant — which subsumes `0 < a`, so no shift or division raise
 theorem loop_near (p : SizedProblem) :
     ∃ y : LoopState,
       (∀ g : LoopState → PyExcept Int,
-        forIn (range (↑p.c.size : Int)).reverse ((1, 0) : LoopState) (loopBody p.n ↑p.c) >>= g = g y)
+        forIn (range (p.height : Int)).reverse (1, 0) (loopBody p.n ↑p.c) >>= g = g y)
       ∧ isNearSquareRoot p.n y.fst := by
   obtain ⟨heq, hfin⟩ := forIn_pure_of_inv
     (fun (L' : List Int) (r : LoopState) =>
-      ∃ m : Nat, m ≤ p.c.size ∧ L' = (range (↑m : Int)).reverse
+      ∃ m : Nat, m ≤ p.height ∧ L' = (range (↑m : Int)).reverse
         ∧ r.snd = ↑(subAt p m).c ∧ isNearSquareRoot (subAt p m).n r.fst)
     (fun (s : Int) (r : LoopState) => pureStep p r s.toNat)
-    (range (↑p.c.size : Int)).reverse (1, 0) (loopBody p.n ↑p.c)
-    ⟨p.c.size, Nat.le_refl _, rfl, by simp [subAt_c, Nat.shiftRight_size_self],
-      isNearSquareRoot_one subAt_irreducible⟩
+    (range (↑p.height : Int)).reverse (1, 0) (loopBody p.n ↑p.c)
+    ⟨p.height, Nat.le_refl _, rfl, by simp [subAt_c, SizedProblem.height, Nat.shiftRight_size_self],
+      subAt_isNearSquareRoot_one p⟩
     (by
       rintro a L' r ⟨m, hm, hL, hd, hnear⟩
       -- The list is nonempty, so `m = k + 1`, and its head is `↑k`.
@@ -142,15 +185,10 @@ theorem loop_near (p : SizedProblem) :
         | succ k => exact ⟨k, rfl⟩
       rw [range_reverse_succ] at hL
       obtain ⟨rfl, rfl⟩ := List.cons.inj hL
-      have hk : k < p.c.size := by omega
-      have hstep := loopBody_subAt p hk r hnear.1 hd
-      refine ⟨?_, k, by omega, rfl, rfl, ?_⟩
-      · -- Purity: the body succeeds and yields the pure step.
-        exact hstep
-      · -- The near-√ invariant is preserved by the Newton lift.
-        show isNearSquareRoot (subAt p k).n ((subAt p k).newtonLift r.fst)
-        apply isNearSquareRoot_newtonLift (subAt_reducible p k hk)
-        rw [descend_subAt]; exact hnear)
+      have hk : k < p.height := by omega
+      have hstep := loopBody_subAt p hk r ⟨hnear, hd⟩
+      exact ⟨hstep, k, by omega, rfl, rfl, subAt_isNearSquareRoot_newtonLift hk hnear⟩
+    )
   -- The final list is `[]`, forcing `m = 0`; and `subAt p 0 = p`.
   -- `heq : forIn … = pure y` gives the `∀ g` form by `pure_bind`.
   refine ⟨_, fun g => by rw [heq, pure_bind], ?_⟩
@@ -159,12 +197,14 @@ theorem loop_near (p : SizedProblem) :
     cases m with
     | zero => rfl
     | succ k => rw [range_reverse_succ] at hL; exact (List.cons_ne_nil _ _ hL.symm).elim
-  rwa [subAt_zero] at hnear
+  exact isNearSquareRoot_of_subAt hnear
 
 /-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
 raises the same `ValueError` as CPython. -/
 public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩ <;> intro n hn
+  · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
+    rw [isqrtIterative, if_pos hn]; rfl
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
@@ -173,8 +213,6 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       rw [isqrtIterative, if_neg (by omega), if_neg (by omega)]
       rw [half_dec_bitLength hpos, Nat.bitLength_eq]
       obtain ⟨y, hy_eq, hy_near⟩ := loop_near (.ofPos hpos)
-      rw [SizedProblem.c_eq, SizedProblem.ofPos_n] at hy_eq
+      rw [SizedProblem.height, SizedProblem.c_eq, SizedProblem.ofPos_n] at hy_eq
       rw [SizedProblem.ofPos_n] at hy_near
       exact ⟨_, hy_eq _, isIntegerSquareRoot_of_isNearSquareRoot hy_near⟩
-  · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
-    rw [isqrtIterative, if_pos hn]; rfl

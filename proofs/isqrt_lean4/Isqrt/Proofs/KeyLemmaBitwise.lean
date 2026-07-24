@@ -22,33 +22,42 @@ public import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.SupportLemmas
 
-/--
-Given `4 ≤ n`, let `k = (n.size - 3) / 4`, where `n.size` is the bit length of `n`.
+/-- Descent for an input `n` to the smaller `n` that we'll solve recursively. -/
+public abbrev descend (n : Int) (k : Nat) : Int := n >>> (2 * k + 2)
 
-Then if `a` is a near square root of `n >>> (2 * k + 2)`,
-`(a <<< k) + (n >>> (k + 2)) / a` is a near square root of `n`.
+/-- Lift of the solution for the descended `n` to the current `n`. -/
+public abbrev newtonLift (n : Int) (k : Nat) (a : Int) : Int :=
+  (a <<< k) + (n >>> (k + 2)) / a
+
+/--
+Key lemma in bitwise form.
+
+For n ≥ 4, descending, solving the descended problem, and lifting the result
+gives a solution to the original problem.
 -/
 public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
     let k := (n.toNat.size - 3) / 4
-    isNearSquareRoot (n >>> (2 * k + 2)) a →
-    isNearSquareRoot n ((a <<< k) + (n >>> (k + 2)) / a) := by
+    isNearSquareRoot (descend n k) a → isNearSquareRoot n (newtonLift n k a) := by
   intro k
 
+  /- Show that M := 2^k is a suitable scaler for n. -/
+  let M : Int := 2^k
+  have M_suitable : 4 * M^4 ≤ n := by
+    rw [show 4 * M^4 = (2 : Int)^(4*k+2) by rw [← Int.pow_mul]; grind only]
+    rw [← Int.lt_size]
+    have : 2 < n.toNat.size := Int.lt_size.mpr (by omega)
+    omega
+
   /- Rewrite the conclusion to match the original form of the key lemma. -/
+  rw [newtonLift, descend]
   rw [Int.shiftRight_eq_ediv, Int.shiftRight_eq_ediv, Int.shiftLeft_eq, Int.mul_comm a]
   rw [Int.ediv_ediv_of_nonneg (Int.pow_nonneg (by decide))]
-  rw [show (2 : Int)^(2 * k + 2) = 4 * (2^k)^2 by rw [← Int.pow_mul]; grind only]
-  rw [show (2 : Int)^(k + 2) = 4 * 2^k by grind only]
+  rw [show (2 : Int)^(2 * k + 2) = 4 * M^2 by rw [← Int.pow_mul]; grind only]
+  rw [show (2 : Int)^(k + 2) = 4 * M by grind only]
+  rw [show (2 : Int)^k = M by rfl]
 
-  /- Apply the key lemma with M := 2^k. -/
-  apply key_lemma (M := 2^k)
-
-  /- Show that 2^k is a suitable scaler for n. -/
-  refine ⟨Int.pow_pos (by decide), ?_⟩
-  rw [show 4 * (2^k)^4 = (2 : Int)^(4*k+2) by rw [← Int.pow_mul]; grind only]
-  rw [← Int.lt_size]
-  have : 2 < n.toNat.size := Int.lt_size.mpr (by omega)
-  omega
+  /- Apply the key lemma. -/
+  exact key_lemma ⟨Int.pow_pos (by decide), M_suitable⟩
 
 /-- Companion for the base case. -/
 public theorem isqrt_base_case {n : Int} (hn : 0 < n) (hn4 : n < 4) :

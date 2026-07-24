@@ -26,8 +26,8 @@ square root for all nonnegative inputs, and raises a valueError with the expecte
 message for all negative inputs.
 -/
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) :=
-  (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
+  (∀ {n : Int}, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
   ∧
-  (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
+  (∀ {n : Int}, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
 
 end

@@ -6,17 +6,15 @@ both correctness proofs build on.
 
 module
 
+public import Isqrt.Proofs.KeyLemmaBitwise
 public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
-import Isqrt.Proofs.PythonTranslation
-
-public section
 
 /-! ## The sized problem -/
 
 /-- A *sized problem*: a value `n`, a recursion level `c`, and the size invariant `isSizedAt n c`
 relating them. -/
-structure SizedProblem where
+public structure SizedProblem where
   /-- The value whose near square root is sought (at this recursion level). -/
   n : Int
   n_pos : 0 < n
@@ -29,45 +27,44 @@ namespace SizedProblem
 -- https://github.com/leanprover/lean4/issues/12803.
 
 /-- Constructor for `SizedProblem`. -/
-def ofPos {n : Int} (hn : 0 < n) : SizedProblem := ⟨n, hn⟩
+public def ofPos {n : Int} (hn : 0 < n) : SizedProblem := ⟨n, hn⟩
 
 /-- A problem `p` is *reducible* if `p.n ≥ 4`. -/
-def reducible (p : SizedProblem) : Prop := 4 ≤ p.n
+public def reducible (p : SizedProblem) : Prop := 4 ≤ p.n
 
 /-- ... and *irreducible* if it's not reducible. -/
-abbrev irreducible (p : SizedProblem) : Prop := ¬p.reducible
+public abbrev irreducible (p : SizedProblem) : Prop := ¬p.reducible
 
 /--
 `p.c` is the size of `p.n` in base 4: the floor of `log_4 n`, or one less than the
 number of digits of `n` when it's written in base 4.
 -/
-def c (p : SizedProblem) : Nat := (p.n.toNat.size - 1) / 2
+public def c (p : SizedProblem) : Nat := (p.n.toNat.size - 1) / 2
 
 /-- `p.k` is the base value used for shifts when descending `p`. -/
-def k (p : SizedProblem) : Nat := (p.n.toNat.size - 3) / 4
+public def k (p : SizedProblem) : Nat := (p.n.toNat.size - 3) / 4
 
 /-- The problem is reducible if and only if 0 < p.c. -/
-theorem reducible_iff {p : SizedProblem} : p.reducible ↔ 0 < p.c := by
+public theorem reducible_iff {p : SizedProblem} : p.reducible ↔ 0 < p.c := by
   rw [reducible, c, show (4 : Int) = 2^2 by decide, ← Int.lt_size]
   omega
 
-private theorem descended_n_pos (p : SizedProblem) (hp : p.reducible) :
-    0 < p.n >>> (2 * p.k + 2) := by
+/-- Counterpart for irreducibility. -/
+public theorem irreducible_iff {p : SizedProblem} : p.irreducible ↔ p.c = 0 := by
+  grind only [reducible_iff]
+
+theorem descended_n_pos (p : SizedProblem) (hp : p.reducible) :
+    0 < _root_.descend p.n p.k := by
   have : 2 < p.n.toNat.size := Int.lt_size.mpr hp
   apply Int.shiftRight_pos
   grind only [k]
 
 /-- For a reducible SizedProblem, descend gives its reduction. -/
-def descend {p : SizedProblem} (hp : p.reducible) : SizedProblem :=
-  SizedProblem.ofPos (n := p.n >>> (2 * p.k + 2)) (descended_n_pos p hp)
+public def descend {p : SizedProblem} (hp : p.reducible) : SizedProblem :=
+  SizedProblem.ofPos (n := _root_.descend p.n p.k) (descended_n_pos p hp)
 
 /-- And newtonLift lifts a near square root for the descended problem back -/
-def newtonLift (p : SizedProblem) (a : Int) : Int :=
-  (a <<< p.k) + (p.n >>> (p.k + 2)) / a
-
-/-- Counterpart for irreducibility. -/
-theorem irreducible_iff {p : SizedProblem} : p.irreducible ↔ p.c = 0 := by
-  grind only [reducible_iff]
+public def newtonLift (p : SizedProblem) (a : Int) : Int := _root_.newtonLift p.n p.k a
 
 /-- The problem is reducible if and only if n is at least 4. -/
 theorem four_le_n (p : SizedProblem) : p.reducible ↔ 4 ≤ p.n := by rfl
@@ -77,35 +74,47 @@ theorem n_lt_four (p : SizedProblem) : p.irreducible ↔ p.n < 4 := by
   grind only [four_le_n]
 
 /-- The seed problem's value is `n`. -/
-theorem ofPos_n {n : Int} (hn : 0 < n) : (ofPos hn).n = n := (rfl)
+public theorem ofPos_n {n : Int} (hn : 0 < n) : (ofPos hn).n = n := (rfl)
 
 /-- Two SizedProblems are equal if and only if their `n`s are equal. -/
-theorem eq_of_n_eq {p q : SizedProblem} : p.n = q.n → p = q := (mk.injEq _ _ _ _).mpr
+public theorem eq_of_n_eq {p q : SizedProblem} : p.n = q.n → p = q := (mk.injEq _ _ _ _).mpr
 
 /-- The descended level is `⌊c/2⌋`. -/
-theorem descend_c (p : SizedProblem) (hp : p.reducible) : (p.descend hp).c = p.c / 2 := by
+public theorem descend_c (p : SizedProblem) (hp : p.reducible) : (p.descend hp).c = p.c / 2 := by
   grind only [descend, ofPos_n, Int.size_shiftRight, c, k]
 
 /-- Descending strictly lowers the size of `n`, so the recursion terminates. -/
-theorem descend_lt (p : SizedProblem) (hp : p.reducible):
+public theorem descend_lt (p : SizedProblem) (hp : p.reducible):
     (p.descend hp).n.toNat.size < p.n.toNat.size := by
   have : 0 < p.n.toNat.size := Int.lt_size.mpr ((Int.pow_zero 2) ▸ p.n_pos)
   grind only [descend, ofPos_n, Int.size_shiftRight]
 
 /-- k in terms of c. -/
-theorem k_of_c (p : SizedProblem): p.k = (p.c - 1) / 2 := by rw [c, k]; omega
+public theorem k_of_c (p : SizedProblem): p.k = (p.c - 1) / 2 := by rw [c, k]; omega
 
 /-- Expose the definitions of `c`, `k`, `descend` and `newtonLift`. -/
-theorem c_eq (p : SizedProblem) : p.c = (p.n.toNat.size - 1) / 2 := (rfl)
+public theorem c_eq (p : SizedProblem) : p.c = (p.n.toNat.size - 1) / 2 := (rfl)
 
 theorem k_eq (p : SizedProblem) : p.k = (p.n.toNat.size - 3) / 4 := (rfl)
 
-theorem descend_n (p : SizedProblem) (hp : p.reducible) :
-    (p.descend hp).n = p.n >>> (2 * p.k + 2) := (rfl)
+public theorem descend_n (p : SizedProblem) (hp : p.reducible) :
+    (p.descend hp).n = _root_.descend p.n p.k := (rfl)
 
-theorem newtonLift_eq (p : SizedProblem) (a : Int) :
-    p.newtonLift a = (a <<< p.k) + (p.n >>> (p.k + 2)) / a := by (rfl)
+public theorem newtonLift_eq (p : SizedProblem) (a : Int) :
+    p.newtonLift a = _root_.newtonLift p.n p.k a := by (rfl)
 
 end SizedProblem
 
-end
+/-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
+public theorem isNearSquareRoot_one {p : SizedProblem} (hp : p.irreducible) :
+    isNearSquareRoot p.n 1 :=
+  isqrt_base_case p.n_pos (p.n_lt_four.mp hp)
+
+/-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
+public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hp : p.reducible) {a : Int}
+    (h : isNearSquareRoot (p.descend hp).n a) :
+    isNearSquareRoot p.n (p.newtonLift a) := by
+  rw [SizedProblem.newtonLift_eq, SizedProblem.k_eq]
+  apply key_lemma_bitwise (p.four_le_n.mp hp)
+  rw [← SizedProblem.k_eq, ← p.descend_n]
+  exact h

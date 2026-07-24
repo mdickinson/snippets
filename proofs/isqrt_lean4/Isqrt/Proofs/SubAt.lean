@@ -6,22 +6,17 @@ module
 
 public import Isqrt.Proofs.SizedProblem
 
-/-- The subproblem at iteration `i` is well-defined. -/
-theorem subAt_pos (p : SizedProblem) (i : Nat) : 0 < p.n >>> (2 * (p.c - (p.c >>> i))) := by
-  apply Int.shiftRight_pos
-  have : 2 * (p.c - p.c >>> i) ≤ 2 * p.c := by grind only
-  apply Nat.lt_of_le_of_lt this
-  rw [p.c_eq]
-  have : 0 < p.n.toNat.size := by
-    rw [Nat.size_pos]
-    have := p.n_pos
-    omega
-  omega
-
 /-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
 `c >>> i`, carrying the inherited size invariant. -/
 public def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
-  SizedProblem.ofPos (subAt_pos p i)
+  SizedProblem.ofPos (
+    show 0 < p.n >>> (2 * (p.c - (p.c >>> i)))
+    from Int.shiftRight_pos (by grind only [p.c_eq, Int.size_pos.mpr p.n_pos])
+  )
+
+/-- The "height" of a problem. subAt p i makes sense for i ≤ p.height. -/
+@[expose]
+public def SizedProblem.height (p : SizedProblem) := p.c.size
 
 /-- The iteration-`i` subproblem's value in shift form. -/
 public theorem subAt_n (p : SizedProblem) (i : Nat) :
@@ -37,36 +32,44 @@ public theorem subAt_k (p : SizedProblem) (i : Nat) : (subAt p i).k = (p.c >>> i
   rw [SizedProblem.k_of_c, subAt_c]
 
 /-- Chain top: iteration `0` is the whole problem. -/
-public theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
+theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
   apply SizedProblem.eq_of_n_eq
   simp only [subAt, SizedProblem.ofPos_n, Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
 
-/-- The subproblem at depth `c.size` is irreducible. -/
-public theorem subAt_irreducible {p : SizedProblem} : (subAt p p.c.size).irreducible := by
+/-- The subproblem at depth `p.height` is irreducible. -/
+theorem subAt_irreducible {p : SizedProblem} : (subAt p p.height).irreducible := by
   rw [SizedProblem.irreducible_iff, subAt_c]
   exact Nat.shiftRight_size_self
 
-/-- Subproblems below depth `c.size` are reducible. -/
-public theorem subAt_reducible (p : SizedProblem) (i : Nat) (hi : i < p.c.size) :
+/-- Subproblems below depth `p.height` are reducible. -/
+theorem subAt_reducible {p : SizedProblem} {i : Nat} (hi : i < p.height) :
     (subAt p i).reducible := by
   rw [SizedProblem.reducible_iff, subAt_c]; exact Nat.shiftRight_pos hi
 
-/-- `descend`'s value in terms of the level `c`: it shifts `n` right by `2(c − ⌊c/2⌋)`, the form the
-subproblem chain descends by (equivalently `descend_n`'s `2k+2`). -/
-theorem descend_n_of_c (p : SizedProblem) (hp : p.reducible) :
-    (p.descend hp).n = p.n >>> (2 * (p.c - p.c / 2)) := by
-  rw [SizedProblem.descend_n, SizedProblem.c_eq, SizedProblem.k_eq]
-  have : 2 < p.n.toNat.size := Int.lt_size.mpr (p.four_le_n.mp hp)
-  congr 1; omega
-
 /-- Chain step: descending iteration `i` gives iteration `i+1`. -/
-public theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) :
+theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) :
     (subAt p i).descend hp = subAt p (i + 1) := by
   apply SizedProblem.eq_of_n_eq
-  rw [descend_n_of_c]
-  rw [subAt_c, subAt_n, subAt_n]
-  rw [← Int.shiftRight_add, ← Nat.shiftRight_succ]
+  rw [SizedProblem.descend_n, descend, subAt_n, subAt_n, subAt_k]
+  rw [← Int.shiftRight_add, Nat.shiftRight_succ]
   congr 1
   have : p.c >>> i ≤ p.c := by apply Nat.shiftRight_le
-  have : p.c >>> (i + 1) ≤ p.c >>> i := by rw [Nat.shiftRight_add]; apply Nat.shiftRight_le
+  have : 0 < p.c >>> i := subAt_c p i ▸ SizedProblem.reducible_iff.mp hp
   omega
+
+/-- 1 is a solution to the bottommost problem: subAt p p.height. -/
+public theorem subAt_isNearSquareRoot_one (p : SizedProblem) :
+    isNearSquareRoot (subAt p p.height).n 1 :=
+  isNearSquareRoot_one subAt_irreducible
+
+/-- The lift of a solution of subAt p (i + 1) is a solution to subAt p i. -/
+public theorem subAt_isNearSquareRoot_newtonLift {p : SizedProblem} {i : Nat} (hi : i < p.height)
+    {a : Int} (ha : isNearSquareRoot (subAt p (i + 1)).n a) :
+    isNearSquareRoot (subAt p i).n ((subAt p i).newtonLift a) :=
+  isNearSquareRoot_newtonLift (subAt_reducible hi) (descend_subAt (subAt_reducible hi) ▸ ha)
+
+/-- A solution to subAt p 0 is a solution to p. -/
+public theorem isNearSquareRoot_of_subAt {p : SizedProblem} {a : Int}
+    (ha : isNearSquareRoot (subAt p 0).n a) : isNearSquareRoot p.n a := by
+  rw [subAt_zero] at ha
+  exact ha
