@@ -29,10 +29,10 @@ namespace SizedProblem
 public def ofPos {n : Int} (hn : 0 < n) : SizedProblem := ⟨n, hn⟩
 
 /-- A problem `p` is *reducible* if `p.n ≥ 4`. -/
-public def reducible (p : SizedProblem) : Prop := 4 ≤ p.n
+public def reducible (p : SizedProblem) := 4 ≤ p.n
 
 /-- ... and *irreducible* if it's not reducible. -/
-public abbrev irreducible (p : SizedProblem) : Prop := ¬p.reducible
+public abbrev irreducible (p : SizedProblem) := ¬p.reducible
 
 /-- `p.c` is `⌊log₄ p.n⌋`: one less than the number of digits of `p.n` written in base 4. -/
 public def c (p : SizedProblem) : Nat := (p.n.toNat.size - 1) / 2
