@@ -106,7 +106,7 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       exact ⟨0, rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the loop runs and never raises.
       rw [isqrtIterative, if_neg (by omega), if_neg (by omega)]
-      rw [half_dec_bitLength hpos, Nat.bitLength_eq]
+      rw [half_dec_bitLength hpos, Int.bitLength_natCast]
       let p : SizedProblem := .ofPos hpos
       obtain ⟨y, hy_eq, hy_inv⟩ := forIn_reverse_range_invariant p.height (1, 0)
         (pureStep p) (loopBody p.n ↑p.c) (loopInvariant p) (loopInvariant_initial p) (loopInvariant_step p)

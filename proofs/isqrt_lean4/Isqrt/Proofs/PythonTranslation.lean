@@ -27,7 +27,7 @@ public theorem pyRshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyE
   rw [pyRshift, if_neg (by omega)]; rfl
 
 /-- For a Nat `m`, `bitLength` and `size` match. -/
-public theorem Nat.bitLength_eq (m : Nat) : (m : Int).bitLength = m.size := by
+public theorem Int.bitLength_natCast (m : Nat) : (m : Int).bitLength = m.size := by
   unfold Int.bitLength; rcases m.eq_zero_or_pos with rfl | hm_pos
   · rw [if_pos (by rfl), Nat.size_zero]; rfl
   · rw [if_neg (by omega)]; norm_cast
@@ -37,8 +37,8 @@ public theorem Nat.bitLength_eq (m : Nat) : (m : Int).bitLength = m.size := by
     · rw [Nat.size_le, ← Nat.log2_lt (by omega)]; omega
 
 /-- For a nonnegative Int `m`, `bitLength` and `size` match. -/
-public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
-  (Int.toNat_of_nonneg hm) ▸ Nat.bitLength_eq m.toNat
+public theorem Int.bitLength_eq_size {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
+  (Int.toNat_of_nonneg hm) ▸ Int.bitLength_natCast m.toNat
 
 /--
 Translation used by both the recursive and iterative correctness proofs.
@@ -46,7 +46,7 @@ Translation used by both the recursive and iterative correctness proofs.
 public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int -> PyExcept α):
     ((n.bitLength - 1) // 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
   have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
-  grind only [Int.bitLength_eq, pyFloordiv_ok_bind]
+  grind only [Int.bitLength_eq_size, pyFloordiv_ok_bind]
 
 /-! ## Looping over a reversed range -/
 

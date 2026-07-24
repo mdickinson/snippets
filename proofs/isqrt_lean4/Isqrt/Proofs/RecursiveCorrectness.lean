@@ -31,17 +31,17 @@ theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
 returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the Newton
 lift. -/
 theorem nsqrtRecursive_succ_shift
-    {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (a_pos : 0 < a):
+    {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (ha_pos : 0 < a):
     let k := (c - 1) / 2
     nsqrtRecursive (descend n k) ↑(c / 2) = .ok a →
     nsqrtRecursive n ↑c = .ok (newtonLift n k a) := by
-  intro k nsr_inner
+  intro k h_sub
   rw [nsqrtRecursive, if_neg (by omega)]
   rw [pyFloordiv_ok_bind (by decide)]
   rw [show (2 * (((c : Int) - 1) / 2) + 2) = (2 * k + 2 : Nat) by omega]
   rw [pyRshift_ok_bind]
   rw [show ((c : Int) / 2) = ↑(c / 2) by omega]
-  rw [nsr_inner, Except.ok_bind]
+  rw [h_sub, Except.ok_bind]
   rw [show (((c : Int) - 1) / 2) = k by omega]
   rw [pyLshift_ok_bind]
   norm_cast
