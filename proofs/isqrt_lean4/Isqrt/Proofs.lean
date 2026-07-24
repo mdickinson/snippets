@@ -4,7 +4,6 @@ import Isqrt.Proofs.IterativeCorrectness
 import Isqrt.Proofs.KeyLemma
 import Isqrt.Proofs.KeyLemmaBitwise
 import Isqrt.Proofs.NatSize
-import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.RecursiveCorrectness
 import Isqrt.Proofs.SizedProblem

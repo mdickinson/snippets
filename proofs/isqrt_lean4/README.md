@@ -1,6 +1,6 @@
 # Formal proof of correctness for Python's isqrt algorithm
 
-This repository provides a formal machine-verifiable proof of correctness of the
+This Lean project provides a formal machine-verifiable proof of correctness of the
 algorithm underlying the CPython implementation of Python's `math.integer.isqrt`
 function. It starts with a version of the algorithm written in Python, translates that
 into Lean, and then proves correctness of the translated version.
@@ -42,14 +42,14 @@ def isqrt(n):
 ```
 
 Despite its simplicity, the algorithm is unpublished and novel, and in places quite
-delicate, so it's not unreasonable to question its correctness. This repository provides
+delicate, so it's not unreasonable to question its correctness. This project provides
 evidence of the correctness of the algorithm in the form of a faithful line-by-line
 translation of the above algorithm into the [Lean programming language][lean], along
 with a formal machine-checkable proof of correctness of that translation.
 
 While the iterative presentation above is what's implemented in CPython, the algorithm
 as originally derived was recursive, and is conceptually clearer when presented that
-way. This repository also contains a definition and proof of correctness for a recursive
+way. This project also contains a definition and proof of correctness for a recursive
 spelling of the algorithm.
 
 ## Project structure
