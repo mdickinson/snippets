@@ -102,18 +102,18 @@ public theorem descend_n (p : SizedProblem) (hp : p.reducible) :
 public theorem newtonLift_eq (p : SizedProblem) (a : Int) :
     p.newtonLift a = _root_.newtonLift p.n p.k a := by (rfl)
 
-end SizedProblem
-
 /-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
-public theorem isNearSquareRoot_one {p : SizedProblem} (hp : p.irreducible) :
+public theorem nsqrt_base {p : SizedProblem} (hp : p.irreducible) :
     isNearSquareRoot p.n 1 :=
-  isqrt_base_case p.n_pos (p.n_lt_four.mp hp)
+  _root_.nsqrt_base p.n_pos (p.n_lt_four.mp hp)
 
 /-- The Newton refinement step: a near square root of the descended problem lifts to one of `p`. -/
-public theorem isNearSquareRoot_newtonLift {p : SizedProblem} (hp : p.reducible) {a : Int}
+public theorem nsqrt_lift {p : SizedProblem} (hp : p.reducible) {a : Int}
     (h : isNearSquareRoot (p.descend hp).n a) :
     isNearSquareRoot p.n (p.newtonLift a) := by
-  rw [SizedProblem.newtonLift_eq, SizedProblem.k_eq]
-  apply key_lemma_bitwise (p.four_le_n.mp hp)
-  rw [← SizedProblem.k_eq, ← p.descend_n]
+  rw [newtonLift_eq, k_eq]
+  apply _root_.nsqrt_lift (p.four_le_n.mp hp)
+  rw [← k_eq, ← p.descend_n]
   exact h
+
+end SizedProblem

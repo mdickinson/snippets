@@ -70,9 +70,9 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
   · -- step: solve the descended problem, lift its near square root back.
     obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (p.descend hp)
     exact ⟨p.newtonLift a, nsqrtRecursive_succ hp a_near.1 ha_eq,
-      isNearSquareRoot_newtonLift hp a_near⟩
+      SizedProblem.nsqrt_lift hp a_near⟩
   · -- base: at `p.c = 0`, `1` is a near square root.
-    exact ⟨1, nsqrtRecursive_base hp, isNearSquareRoot_one hp⟩
+    exact ⟨1, nsqrtRecursive_base hp, SizedProblem.nsqrt_base hp⟩
 termination_by p.n.toNat.size
 decreasing_by exact p.descend_lt hp
 

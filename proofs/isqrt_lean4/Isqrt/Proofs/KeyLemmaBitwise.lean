@@ -35,7 +35,7 @@ Key lemma in bitwise form.
 For n ≥ 4, descending, solving the descended problem, and lifting the result
 gives a solution to the original problem.
 -/
-public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
+public theorem nsqrt_lift {n : Int} (hn : 4 ≤ n) {a : Int}:
     let k := (n.toNat.size - 3) / 4
     isNearSquareRoot (descend n k) a → isNearSquareRoot n (newtonLift n k a) := by
   intro k
@@ -59,7 +59,7 @@ public theorem key_lemma_bitwise {n : Int} (hn : 4 ≤ n) {a : Int}:
   /- Apply the key lemma. -/
   exact key_lemma ⟨Int.pow_pos (by decide), M_suitable⟩
 
-/-- Companion for the base case. -/
-public theorem isqrt_base_case {n : Int} (hn : 0 < n) (hn4 : n < 4) :
+/-- For `0 < n < 4`, `1` is a near square root of `n` — the recursion's base case. -/
+public theorem nsqrt_base {n : Int} (hn : 0 < n) (hn4 : n < 4) :
     isNearSquareRoot n 1 := by
   unfold isNearSquareRoot; omega

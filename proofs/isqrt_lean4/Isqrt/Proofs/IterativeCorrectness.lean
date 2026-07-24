@@ -81,7 +81,7 @@ def loopInvariant (p : SizedProblem) (r : LoopState) (s : Nat) : Prop :=
 /-- The loop invariant holds initially. -/
 theorem loopInvariant_initial (p : SizedProblem) :
     loopInvariant p (1, 0) p.height :=
-  ⟨subAt_isNearSquareRoot_one p, by rw [subAt_c, SizedProblem.height, Nat.shiftRight_size_self, Int.cast_ofNat_Int]⟩
+  ⟨subAt_nsqrt_base p, by rw [subAt_c, SizedProblem.height, Nat.shiftRight_size_self, Int.cast_ofNat_Int]⟩
 
 /-- Under the loop invariant, loopBody is a pure yield and the new invariant holds. -/
 theorem loopInvariant_step (p : SizedProblem)
@@ -90,7 +90,7 @@ theorem loopInvariant_step (p : SizedProblem)
     (hinv : loopInvariant p r (s + 1)) :
     loopBody p.n ↑p.c ↑s r = .ok (ForInStep.yield (pureStep p r s)) ∧
     loopInvariant p (pureStep p r s) s := by
-  refine ⟨?_, subAt_isNearSquareRoot_newtonLift hs hinv.1, rfl⟩
+  refine ⟨?_, subAt_nsqrt_lift hs hinv.1, rfl⟩
   rw [loopBody_eq_ok p.n p.c r hs hinv.1.1 (subAt_c p (s + 1) ▸ hinv.2)]
   rw [pureStep, SizedProblem.newtonLift_eq, subAt_n, subAt_k, subAt_c]
 
@@ -114,5 +114,5 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       exact ⟨
         _,
         hy_eq _,
-        isIntegerSquareRoot_of_isNearSquareRoot (SizedProblem.ofPos_n hpos ▸ isNearSquareRoot_of_subAt hy_inv.1)
+        isIntegerSquareRoot_of_isNearSquareRoot (SizedProblem.ofPos_n hpos ▸ nsqrt_of_subAt_zero hy_inv.1)
       ⟩

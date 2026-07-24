@@ -47,7 +47,7 @@ theorem subAt_reducible {p : SizedProblem} {i : Nat} (hi : i < p.height) :
   rw [SizedProblem.reducible_iff, subAt_c]; exact Nat.shiftRight_pos hi
 
 /-- Chain step: descending iteration `i` gives iteration `i+1`. -/
-theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) :
+theorem subAt_descend {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) :
     (subAt p i).descend hp = subAt p (i + 1) := by
   apply SizedProblem.eq_of_n_eq
   rw [SizedProblem.descend_n, descend, subAt_n, subAt_n, subAt_k]
@@ -58,18 +58,18 @@ theorem descend_subAt {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) 
   omega
 
 /-- 1 is a solution to the bottommost problem: subAt p p.height. -/
-public theorem subAt_isNearSquareRoot_one (p : SizedProblem) :
+public theorem subAt_nsqrt_base (p : SizedProblem) :
     isNearSquareRoot (subAt p p.height).n 1 :=
-  isNearSquareRoot_one subAt_irreducible
+  SizedProblem.nsqrt_base subAt_irreducible
 
 /-- The lift of a solution of subAt p (i + 1) is a solution to subAt p i. -/
-public theorem subAt_isNearSquareRoot_newtonLift {p : SizedProblem} {i : Nat} (hi : i < p.height)
+public theorem subAt_nsqrt_lift {p : SizedProblem} {i : Nat} (hi : i < p.height)
     {a : Int} (ha : isNearSquareRoot (subAt p (i + 1)).n a) :
     isNearSquareRoot (subAt p i).n ((subAt p i).newtonLift a) :=
-  isNearSquareRoot_newtonLift (subAt_reducible hi) (descend_subAt (subAt_reducible hi) ▸ ha)
+  SizedProblem.nsqrt_lift (subAt_reducible hi) (subAt_descend (subAt_reducible hi) ▸ ha)
 
 /-- A solution to subAt p 0 is a solution to p. -/
-public theorem isNearSquareRoot_of_subAt {p : SizedProblem} {a : Int}
+public theorem nsqrt_of_subAt_zero {p : SizedProblem} {a : Int}
     (ha : isNearSquareRoot (subAt p 0).n a) : isNearSquareRoot p.n a := by
   rw [subAt_zero] at ha
   exact ha
