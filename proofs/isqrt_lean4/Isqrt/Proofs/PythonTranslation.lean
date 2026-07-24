@@ -77,7 +77,7 @@ public theorem forIn_reverse_range_invariant
     (hstep : ∀ {s : Nat}, s < n → ∀ r : α, invariant r (s + 1) →
       body ↑s r = pure (ForInStep.yield (step r s)) ∧ invariant (step r s) s) :
     ∃ y : α,
-      (∀ g : α → m Int, forIn (range n).reverse init body >>= g = g y)
+      (∀ {β : Type} (g : α → m β), forIn (range n).reverse init body >>= g = g y)
       ∧
       invariant y 0 := by
   induction n generalizing init with
