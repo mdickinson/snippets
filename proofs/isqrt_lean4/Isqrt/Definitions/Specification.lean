@@ -21,9 +21,9 @@ def isIntegerSquareRoot (n a : Int) := 0 ≤ a ∧ a * a ≤ n ∧ n < (a + 1) *
 def isNearSquareRoot (n a : Int) := 0 < a ∧ (a - 1) * (a - 1) < n ∧ n < (a + 1) * (a + 1)
 
 /--
-Statement that a function `isqrt` has the correct behaviour: returns an integer
-square root for all nonnegative inputs, and raises a valueError with the expected
-message for all negative inputs.
+Statement that a function `isqrt` has the correct behaviour: raises a `valueError` with
+the expected message for all negative inputs, and returns an integer square root for
+all nonnegative inputs.
 -/
 def isCorrectIsqrt (isqrt : Int → PyExcept Int) :=
   (∀ {n : Int}, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))

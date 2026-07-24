@@ -1,7 +1,7 @@
 /-
-The bit-length invariant `isSizedAt n c` (`0 < n ∧ c = (n.toNat.size - 1)/2`) and its descent, and
-the `SizedProblem` structure carrying it, with the shift-form operations `descend` / `newtonLift`
-both correctness proofs build on.
+The `SizedProblem` structure — a positive value `n`, with recursion level `c` and step shift `k`
+derived from its bit length — and the shift-form operations `descend` / `newtonLift` both
+correctness proofs build on.
 -/
 
 module
@@ -12,8 +12,7 @@ public import Isqrt.Proofs.SupportLemmas
 
 /-! ## The sized problem -/
 
-/-- A *sized problem*: a value `n`, a recursion level `c`, and the size invariant `isSizedAt n c`
-relating them. -/
+/-- A *sized problem*: a positive value `n` whose near square root is sought. -/
 public structure SizedProblem where
   /-- The value whose near square root is sought (at this recursion level). -/
   n : Int
@@ -76,7 +75,7 @@ theorem n_lt_four (p : SizedProblem) : p.irreducible ↔ p.n < 4 := by
 /-- The seed problem's value is `n`. -/
 public theorem ofPos_n {n : Int} (hn : 0 < n) : (ofPos hn).n = n := (rfl)
 
-/-- Two SizedProblems are equal if and only if their `n`s are equal. -/
+/-- Two `SizedProblem`s are equal if their `n`s are equal. -/
 public theorem eq_of_n_eq {p q : SizedProblem} : p.n = q.n → p = q := (mk.injEq _ _ _ _).mpr
 
 /-- The descended level is `⌊c/2⌋`. -/

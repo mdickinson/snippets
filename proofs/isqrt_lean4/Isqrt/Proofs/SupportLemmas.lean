@@ -64,7 +64,7 @@ public theorem Int.size_le {n : Int} {k : Nat} : n.toNat.size ≤ k ↔ n < 2 ^ 
 public theorem Int.lt_size {n : Int} {k : Nat} : k < n.toNat.size ↔ 2 ^ k ≤ n := by
   grind only [Int.size_le (n := n) (k := k)]
 
-/-- `n.size` is positive iff `n` is positive. -/
+/-- `n.toNat.size` is positive iff `n` is positive. -/
 public theorem Int.size_pos {n : Int} : 0 < n.toNat.size ↔ 0 < n := by
   grind only [Int.lt_size]
 

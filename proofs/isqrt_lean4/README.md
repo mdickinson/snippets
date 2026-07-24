@@ -288,11 +288,11 @@ inductive PyException where
 abbrev PyExcept := Except PyException
 ```
 
-As a final piece of syntactic sugar, in the modules that define the translated
-`isqrt`, we define a local infix operator `//` that binds to `pyFloordiv`.
+As a final piece of syntactic sugar, we define an infix operator `//` bound to
+`pyFloordiv`.
 
 ```lean
-local infixl:70 "//" => pyFloordiv
+infixl:70 "//" => pyFloordiv
 ```
 
 That then lets us write `a // b` instead of `pyFloordiv a b`.
@@ -414,25 +414,25 @@ to assert correctness for both the iterative and recursive integer square root
 implementations. Here's the proposition:
 
 ```lean
-def isCorrectIsqrt (isqrt : Int → PyExcept Int) : Prop :=
-  (∀ n, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
+def isCorrectIsqrt (isqrt : Int → PyExcept Int) :=
+  (∀ {n : Int}, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
   ∧
-  (∀ n, n < 0 → raises (isqrt n) (.valueError "isqrt() argument must be nonnegative"))
+  (∀ {n : Int}, 0 ≤ n → ∃ a, returns (isqrt n) a ∧ isIntegerSquareRoot n a)
 ```
 
 where `returns`, `raises` and `isIntegerSquareRoot` are defined by:
 
 ```lean
-def returns {α : Type} (x : PyExcept α) (a : α) : Prop := x = .ok a
-def raises {α : Type} (x : PyExcept α) (e : PyException) : Prop := x = .error e
-def isIntegerSquareRoot (n a : Int) : Prop := 0 ≤ a ∧ a * a ≤ n ∧ n < (a + 1) * (a + 1)
+def returns {α : Type} (x : PyExcept α) (a : α) := x = .ok a
+def raises {α : Type} (x : PyExcept α) (e : PyException) := x = .error e
+def isIntegerSquareRoot (n a : Int) := 0 ≤ a ∧ a * a ≤ n ∧ n < (a + 1) * (a + 1)
 ```
 
 In other words, `isCorrectIsqrt` represents the statement that, for a given
 possibly-exception-raising function `isqrt` mapping integers to integers, that function
-returns a correct integer square root for any nonnegative input, and raises a
-`ValueError` with the expected message for any negative input. Note that this is simply
-a statement, not a proof: for a given implementation of `isqrt`, the proposition
+raises a `valueError` with the expected message for any negative input, and returns a
+correct integer square root for any nonnegative input. Note that this is simply a
+statement, not a proof: for a given implementation of `isqrt`, the proposition
 `isCorrectIsqrt isqrt` might be provable (in which case that implementation is proved
 correct), or it might not.
 

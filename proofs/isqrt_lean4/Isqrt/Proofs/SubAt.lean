@@ -7,7 +7,7 @@ module
 public import Isqrt.Proofs.SizedProblem
 
 /-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
-`c >>> i`, carrying the inherited size invariant. -/
+`c >>> i`. -/
 public def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
   SizedProblem.ofPos (
     show 0 < p.n >>> (2 * (p.c - (p.c >>> i)))

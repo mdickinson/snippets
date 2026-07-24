@@ -16,12 +16,12 @@ public theorem pyFloordiv_ok_bind {α : Type} {a b : Int} (hb : 0 < b) (f : Int 
     (a // b >>= f) = f (a / b) := by
   rw [pyFloordiv, if_neg (by omega), Int.fdiv_eq_ediv_of_nonneg _ (by omega)]; rfl
 
-/-- For a nonnegative shift, `n << k` returns `.ok (n <<< k.toNat)`. -/
+/-- For a `Nat` shift count `k`, `n << ↑k` returns `.ok (n <<< k)`. -/
 public theorem pyLshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
     (n << ↑k >>= f) = f (n <<< k) := by
   rw [pyLshift, if_neg (by omega)]; rfl
 
-/-- For a nonnegative shift, `n >> k` returns `.ok (n >>> k.toNat)`. -/
+/-- For a `Nat` shift count `k`, `n >> ↑k` returns `.ok (n >>> k)`. -/
 public theorem pyRshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
     (n >> ↑k >>= f) = f (n >>> k) := by
   rw [pyRshift, if_neg (by omega)]; rfl
