@@ -31,7 +31,7 @@ theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
 returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the Newton
 lift. -/
 theorem nsqrtRecursive_succ_shift
-    {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (ha_pos : 0 < a):
+    {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (ha_pos : 0 < a) :
     let k := (c - 1) / 2
     nsqrtRecursive (descend n k) ↑(c / 2) = .ok a →
     nsqrtRecursive n ↑c = .ok (newtonLift n k a) := by
@@ -85,7 +85,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
-      exact ⟨0, by rfl, by unfold isIntegerSquareRoot; decide⟩
+      exact ⟨0, rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the recursion runs and never raises.
       obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (.ofPos hpos)
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at ha_eq a_near

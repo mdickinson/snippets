@@ -63,7 +63,8 @@ theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState) {s : Nat} (hs : s < c
   rw [show (2 * (c : Int) - r.snd - (c : Int) >>> s + 1) = ((2 * ↑c - e - d + 1) : Nat) by
     rw [hsnd]; norm_cast; omega]
   rw [pyRshift_ok_bind, pyFloordiv_ok_bind (by omega)]
-  rw [show n >>> (2 * c - e - d + 1) = m >>> (d - e + 1) by rw [← Int.shiftRight_add]; congr 1; omega]
+  rw [show n >>> (2 * c - e - d + 1) = m >>> (d - e + 1) by
+    rw [← Int.shiftRight_add]; congr 1; omega]
   rw [show d - e - 1 = k by omega, show d - e + 1 = k + 2 by omega]
   rfl
 
@@ -81,7 +82,8 @@ def loopInvariant (p : SizedProblem) (r : LoopState) (s : Nat) : Prop :=
 /-- The loop invariant holds initially. -/
 theorem loopInvariant_initial (p : SizedProblem) :
     loopInvariant p (1, 0) p.height :=
-  ⟨subAt_nsqrt_base p, by rw [subAt_c, SizedProblem.height, Nat.shiftRight_size_self, Int.cast_ofNat_Int]⟩
+  ⟨subAt_nsqrt_base p,
+    by rw [subAt_c, SizedProblem.height, Nat.shiftRight_size_self, Int.cast_ofNat_Int]⟩
 
 /-- Under the loop invariant, loopBody is a pure yield and the new invariant holds. -/
 theorem loopInvariant_step (p : SizedProblem)
@@ -109,10 +111,12 @@ public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := 
       rw [half_dec_bitLength hpos, Int.bitLength_natCast]
       let p : SizedProblem := .ofPos hpos
       obtain ⟨y, hy_eq, hy_inv⟩ := forIn_reverse_range_invariant p.height (1, 0)
-        (pureStep p) (loopBody p.n ↑p.c) (loopInvariant p) (loopInvariant_initial p) (loopInvariant_step p)
+        (pureStep p) (loopBody p.n ↑p.c) (loopInvariant p)
+        (loopInvariant_initial p) (loopInvariant_step p)
       rw [SizedProblem.height, SizedProblem.c_eq, SizedProblem.ofPos_n] at hy_eq
       exact ⟨
         _,
         hy_eq _,
-        isIntegerSquareRoot_of_isNearSquareRoot (SizedProblem.ofPos_n hpos ▸ nsqrt_of_subAt_zero hy_inv.1)
+        isIntegerSquareRoot_of_isNearSquareRoot
+          (SizedProblem.ofPos_n hpos ▸ nsqrt_of_subAt_zero hy_inv.1)
       ⟩

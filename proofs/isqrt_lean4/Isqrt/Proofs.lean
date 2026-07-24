@@ -1,13 +1,3 @@
-/-
-Library root for the **proofs** component — the correctness theorems and every
-supporting lemma. A reader who trusts Lean's checker need only confirm that the two
-top-level theorems (`isCorrectIsqrt_isqrtRecursive` in
-`Isqrt.Proofs.RecursiveCorrectness`, `isCorrectIsqrt_isqrtIterative` in
-`Isqrt.Proofs.IterativeCorrectness`) assert `isCorrectIsqrt` of the two `isqrt`
-translations; the contract itself lives in `Isqrt.Definitions.Specification`. This component
-depends on `Isqrt.Definitions.*`, never on `Isqrt.Tests.*`.
--/
-
 module
 
 import Isqrt.Proofs.IterativeCorrectness
@@ -17,6 +7,11 @@ import Isqrt.Proofs.NatSize
 import Isqrt.Proofs.NearRootSteps
 import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.RecursiveCorrectness
-import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SizedProblem
+import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SupportLemmas
+
+/-!
+Aggregator module for the proofs component — the correctness theorems and their
+supporting lemmas.
+-/

@@ -38,7 +38,7 @@ open scoped Python
 #guard assertReturns ((-12) >> 2) (-3)
 #guard assertReturns ((-12) >> 0) (-12)
 #guard assertRaisesValueError "negative shift count" (12 >> (-1))
-#guard assertRaisesValueError "negative shift count" ((-12) >>  (-1))
+#guard assertRaisesValueError "negative shift count" ((-12) >> (-1))
 
 /-! ## range -/
 

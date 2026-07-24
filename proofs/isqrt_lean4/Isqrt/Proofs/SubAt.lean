@@ -14,9 +14,9 @@ public def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
     from Int.shiftRight_pos (by grind only [p.c_eq, Int.size_pos.mpr p.n_pos])
   )
 
-/-- The "height" of a problem. subAt p i makes sense for i ≤ p.height. -/
+/-- The *height* of a problem: `subAt p i` makes sense for `i ≤ p.height`. -/
 @[expose]
-public def SizedProblem.height (p : SizedProblem) := p.c.size
+public def SizedProblem.height (p : SizedProblem) : Nat := p.c.size
 
 /-- The iteration-`i` subproblem's value in shift form. -/
 public theorem subAt_n (p : SizedProblem) (i : Nat) :
@@ -34,7 +34,8 @@ public theorem subAt_k (p : SizedProblem) (i : Nat) : (subAt p i).k = (p.c >>> i
 /-- Chain top: iteration `0` is the whole problem. -/
 theorem subAt_zero (p : SizedProblem) : subAt p 0 = p := by
   apply SizedProblem.eq_of_n_eq
-  simp only [subAt, SizedProblem.ofPos_n, Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero, Int.shiftRight_zero]
+  simp only [subAt, SizedProblem.ofPos_n, Nat.shiftRight_zero, Nat.sub_self, Nat.mul_zero,
+    Int.shiftRight_zero]
 
 /-- The subproblem at depth `p.height` is irreducible. -/
 theorem subAt_irreducible {p : SizedProblem} : (subAt p p.height).irreducible := by

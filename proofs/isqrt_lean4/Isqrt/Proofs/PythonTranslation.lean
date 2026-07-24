@@ -43,17 +43,17 @@ public theorem Int.bitLength_eq_size {m : Int} (hm : 0 ≤ m) : m.bitLength = �
 /--
 Translation used by both the recursive and iterative correctness proofs.
 -/
-public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int -> PyExcept α):
+public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int → PyExcept α) :
     ((n.bitLength - 1) // 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
   have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
   grind only [Int.bitLength_eq_size, pyFloordiv_ok_bind]
 
 /-! ## Looping over a reversed range -/
 
-/-- range of a casted Nat -/
+/-- `range` of a casted `Nat`. -/
 theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map Nat.cast := rfl
 
-/-- The reverse range of 0 is empty.-/
+/-- The reverse range of 0 is empty. -/
 theorem reverse_range_zero : (range (0 : Nat)).reverse = [] := by
   rw [Nat.range_eq, List.range_zero, List.map_nil, List.reverse_nil]
 
@@ -67,12 +67,12 @@ Threading an invariant through a for loop over a reversed range, in a situation 
 the loop body gives a pure yield (under the assumption of the invariant).
 -/
 public theorem forIn_reverse_range_invariant
-    {m : Type -> Type} {α : Type} [Monad m] [LawfulMonad m]
+    {m : Type → Type} {α : Type} [Monad m] [LawfulMonad m]
     (n : Nat)
     (init : α)
-    (step : α -> Nat -> α)
-    (body : Int -> α -> m (ForInStep α))
-    (invariant : α -> Nat -> Prop)
+    (step : α → Nat → α)
+    (body : Int → α → m (ForInStep α))
+    (invariant : α → Nat → Prop)
     (hinit : invariant init n)
     (hstep : ∀ {s : Nat}, s < n → ∀ r : α, invariant r (s + 1) →
       body ↑s r = pure (ForInStep.yield (step r s)) ∧ invariant (step r s) s) :

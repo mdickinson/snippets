@@ -31,7 +31,7 @@ public theorem Nat.size_pos {n : Nat} : 0 < n.size ↔ 0 < n := by
 public theorem Nat.size_zero : (0 : Nat).size = 0 := Nat.size_eq_zero.mpr rfl
 
 /-- Shifting right reduces the size by the shift amount. -/
-public theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size  = n.size - k := by
+public theorem Nat.size_shiftRight {n k : Nat} : (n >>> k).size = n.size - k := by
   rw [Nat.shiftRight_eq_div_pow]
   apply Nat.le_antisymm
   · rw [Nat.size_le]

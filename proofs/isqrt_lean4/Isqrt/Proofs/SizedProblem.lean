@@ -83,13 +83,13 @@ public theorem descend_c (p : SizedProblem) (hp : p.reducible) : (p.descend hp).
   grind only [descend, ofPos_n, Int.size_shiftRight, c, k]
 
 /-- Descending strictly lowers the size of `n`, so the recursion terminates. -/
-public theorem descend_lt (p : SizedProblem) (hp : p.reducible):
+public theorem descend_lt (p : SizedProblem) (hp : p.reducible) :
     (p.descend hp).n.toNat.size < p.n.toNat.size := by
   have : 0 < p.n.toNat.size := Int.lt_size.mpr ((Int.pow_zero 2) ▸ p.n_pos)
   grind only [descend, ofPos_n, Int.size_shiftRight]
 
-/-- k in terms of c. -/
-public theorem k_of_c (p : SizedProblem): p.k = (p.c - 1) / 2 := by rw [c, k]; omega
+/-- `k` in terms of `c`. -/
+public theorem k_of_c (p : SizedProblem) : p.k = (p.c - 1) / 2 := by rw [c, k]; omega
 
 /-- Expose the definitions of `c`, `k`, `descend` and `newtonLift`. -/
 public theorem c_eq (p : SizedProblem) : p.c = (p.n.toNat.size - 1) / 2 := (rfl)
@@ -100,7 +100,7 @@ public theorem descend_n (p : SizedProblem) (hp : p.reducible) :
     (p.descend hp).n = _root_.descend p.n p.k := (rfl)
 
 public theorem newtonLift_eq (p : SizedProblem) (a : Int) :
-    p.newtonLift a = _root_.newtonLift p.n p.k a := by (rfl)
+    p.newtonLift a = _root_.newtonLift p.n p.k a := (rfl)
 
 /-- Base case: at level `p.c = 0` the value `p.n` is below 4, so `1` is a near square root of it. -/
 public theorem nsqrt_base {p : SizedProblem} (hp : p.irreducible) :

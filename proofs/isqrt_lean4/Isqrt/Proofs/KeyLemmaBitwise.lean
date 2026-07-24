@@ -1,4 +1,5 @@
-/- Key lemma in bitwise form.
+/-
+Key lemma in bitwise form.
 
 Restatement of the lemma in `KeyLemma.lean` for a specific scaler `M`, equal to
 the largest power of two that gives a suitable scaler for `n`.  Multiplications
@@ -35,7 +36,7 @@ Key lemma in bitwise form.
 For n ≥ 4, descending, solving the descended problem, and lifting the result
 gives a solution to the original problem.
 -/
-public theorem nsqrt_lift {n : Int} (hn : 4 ≤ n) {a : Int}:
+public theorem nsqrt_lift {n : Int} (hn : 4 ≤ n) {a : Int} :
     let k := (n.toNat.size - 3) / 4
     isNearSquareRoot (descend n k) a → isNearSquareRoot n (newtonLift n k a) := by
   intro k
