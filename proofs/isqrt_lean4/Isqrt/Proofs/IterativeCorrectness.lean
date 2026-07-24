@@ -40,8 +40,8 @@ def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopSta
   pure (ForInStep.yield (a, d))
 
 /--
-A single iteration performs a Newton lift of the current approximation
-with respect to n >> (2(c - d)) and k = (d - 1) / 2.
+A single iteration performs a Newton lift of the current approximation with respect to
+`m = n >>> 2(c - d)` and `k = (d - 1) / 2`.
 -/
 theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState) {s : Nat} (hs : s < c.size)
     (ha_pos : 0 < r.fst)
@@ -74,7 +74,8 @@ value `loopBody` yields under the loop invariant (see `loopInvariant_step`). -/
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
   ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
 
-/-- Invariant at depth s. -/
+/-- The loop invariant at depth `s`: the running pair `(a, d)` holds a near square root of
+`subAt p s`, with `d` recording its level. -/
 def loopInvariant (p : SizedProblem) (r : LoopState) (s : Nat) : Prop :=
   let ⟨a, d⟩ := r
   isNearSquareRoot (subAt p s).n a ∧ d = ↑(subAt p s).c

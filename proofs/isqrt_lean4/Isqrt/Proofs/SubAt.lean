@@ -59,18 +59,18 @@ theorem subAt_descend {p : SizedProblem} {i : Nat} (hp : (subAt p i).reducible) 
   have : 0 < p.c >>> i := subAt_c p i ▸ SizedProblem.reducible_iff.mp hp
   omega
 
-/-- 1 is a solution to the bottommost problem: subAt p p.height. -/
+/-- `1` is a near square root of the bottommost subproblem, `subAt p p.height`. -/
 public theorem subAt_nsqrt_base (p : SizedProblem) :
     isNearSquareRoot (subAt p p.height).n 1 :=
   SizedProblem.nsqrt_base subAt_irreducible
 
-/-- The lift of a solution of subAt p (i + 1) is a solution to subAt p i. -/
+/-- A near square root of `subAt p (i + 1)` lifts to one of `subAt p i`. -/
 public theorem subAt_nsqrt_lift {p : SizedProblem} {i : Nat} (hi : i < p.height)
     {a : Int} (ha : isNearSquareRoot (subAt p (i + 1)).n a) :
     isNearSquareRoot (subAt p i).n ((subAt p i).newtonLift a) :=
   SizedProblem.nsqrt_lift (subAt_reducible hi) (subAt_descend (subAt_reducible hi) ▸ ha)
 
-/-- A solution to subAt p 0 is a solution to p. -/
+/-- A near square root of `subAt p 0` is one of `p` itself. -/
 public theorem nsqrt_of_subAt_zero {p : SizedProblem} {a : Int}
     (ha : isNearSquareRoot (subAt p 0).n a) : isNearSquareRoot p.n a := by
   rw [subAt_zero] at ha

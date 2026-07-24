@@ -23,18 +23,18 @@ Informally, writing `n.size` for the bit length of `n`: if `M = 2^k` for some
 So the largest power-of-two suitable scaler is 2^((n.size - 3) / 4).
 -/
 
-/-- Descent for an input `n` to the smaller `n` that we'll solve recursively. -/
+/-- Descent from `n` to the smaller value whose near square root is computed first. -/
 public abbrev descend (n : Int) (k : Nat) : Int := n >>> (2 * k + 2)
 
-/-- Lift of the solution for the descended `n` to the current `n`. -/
+/-- The Newton lift, carrying an approximation for the descended value back to `n`. -/
 public abbrev newtonLift (n : Int) (k : Nat) (a : Int) : Int :=
   (a <<< k) + (n >>> (k + 2)) / a
 
 /--
 Key lemma in bitwise form.
 
-For n ≥ 4, descending, solving the descended problem, and lifting the result
-gives a solution to the original problem.
+For `n ≥ 4`, a near square root of the descended value lifts, via `newtonLift`, to a
+near square root of `n`.
 -/
 public theorem nsqrt_lift {n : Int} (hn : 4 ≤ n) {a : Int} :
     let k := (n.toNat.size - 3) / 4

@@ -34,13 +34,11 @@ public def reducible (p : SizedProblem) : Prop := 4 ≤ p.n
 /-- ... and *irreducible* if it's not reducible. -/
 public abbrev irreducible (p : SizedProblem) : Prop := ¬p.reducible
 
-/--
-`p.c` is the size of `p.n` in base 4: the floor of `log_4 n`, or one less than the
-number of digits of `n` when it's written in base 4.
--/
+/-- `p.c` is `⌊log₄ p.n⌋`: one less than the number of digits of `p.n` written in base 4. -/
 public def c (p : SizedProblem) : Nat := (p.n.toNat.size - 1) / 2
 
-/-- `p.k` is the base value used for shifts when descending `p`. -/
+/-- `p.k` is the shift exponent for descending `p`: the largest `k` for which `2^k` is a
+suitable scaler for `p.n`. -/
 public def k (p : SizedProblem) : Nat := (p.n.toNat.size - 3) / 4
 
 /-- The problem is reducible if and only if 0 < p.c. -/
@@ -58,11 +56,11 @@ theorem descended_n_pos (p : SizedProblem) (hp : p.reducible) :
   apply Int.shiftRight_pos
   grind only [k]
 
-/-- For a reducible SizedProblem, descend gives its reduction. -/
+/-- For a reducible problem `p`, the descended problem that the recursion solves next. -/
 public def descend {p : SizedProblem} (hp : p.reducible) : SizedProblem :=
   SizedProblem.ofPos (n := _root_.descend p.n p.k) (descended_n_pos p hp)
 
-/-- And newtonLift lifts a near square root for the descended problem back -/
+/-- The Newton lift, carrying an approximation for the descended problem back to `p`. -/
 public def newtonLift (p : SizedProblem) (a : Int) : Int := _root_.newtonLift p.n p.k a
 
 /-- The problem is reducible if and only if n is at least 4. -/
@@ -91,14 +89,21 @@ public theorem descend_lt (p : SizedProblem) (hp : p.reducible) :
 /-- `k` in terms of `c`. -/
 public theorem k_of_c (p : SizedProblem) : p.k = (p.c - 1) / 2 := by rw [c, k]; omega
 
-/-- Expose the definitions of `c`, `k`, `descend` and `newtonLift`. -/
+/-! ## Equation lemmas
+
+The propositional `(rfl)` equalities through which clients reach the unexposed operations. -/
+
+/-- `c` in terms of the bit length of `n`. -/
 public theorem c_eq (p : SizedProblem) : p.c = (p.n.toNat.size - 1) / 2 := (rfl)
 
+/-- `k` in terms of the bit length of `n`. -/
 theorem k_eq (p : SizedProblem) : p.k = (p.n.toNat.size - 3) / 4 := (rfl)
 
+/-- The descended problem's value, in raw shift form. -/
 public theorem descend_n (p : SizedProblem) (hp : p.reducible) :
     (p.descend hp).n = _root_.descend p.n p.k := (rfl)
 
+/-- `newtonLift` in raw shift form. -/
 public theorem newtonLift_eq (p : SizedProblem) (a : Int) :
     p.newtonLift a = _root_.newtonLift p.n p.k a := (rfl)
 
