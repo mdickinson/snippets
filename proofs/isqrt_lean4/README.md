@@ -49,8 +49,12 @@ with a formal machine-checkable proof of correctness of that translation.
 
 While the iterative presentation above is what's implemented in CPython, the algorithm
 as originally derived was recursive, and is conceptually clearer when presented that
-way. This project also contains a definition and proof of correctness for a recursive
-spelling of the algorithm.
+way. This project therefore also contains a definition and proof of correctness for a
+recursive spelling of the algorithm.
+
+Finally, the project also includes source for a simple `isqrt` executable CLI that
+directly uses the Lean translation of the algorithm to compute integer square roots for
+values entered at the command line.
 
 ## Project structure
 
