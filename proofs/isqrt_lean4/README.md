@@ -52,9 +52,9 @@ as originally derived was recursive, and is conceptually clearer when presented 
 way. This project therefore also contains a definition and proof of correctness for a
 recursive spelling of the algorithm.
 
-Finally, the project also includes source for a simple `isqrt` executable CLI that
-directly uses the Lean translation of the algorithm to compute integer square roots for
-values entered at the command line.
+Finally, the project also includes source for a simple `isqrt` command-line executable
+that directly uses the Lean translation of the algorithm to compute integer square
+roots.
 
 ## Project structure
 
@@ -64,7 +64,7 @@ The Lean source code is organised into three subdirectories of [`Isqrt`](Isqrt):
   implementations of the integer square root algorithm in Lean, along with supporting
   definitions of Python primitives and mirrors of the relevant Python exceptions. It
   also contains _statements_ (but not proofs) of what constitutes correctness for an
-  implementation of integer square root - see
+  implementation of integer square root — see
   [`Isqrt/Definitions/Specification.lean`](Isqrt/Definitions/Specification.lean) for
   those statements.
 - [`Isqrt/Proofs`](Isqrt/Proofs) contains proofs of the correctness statements, along
@@ -74,10 +74,11 @@ The Lean source code is organised into three subdirectories of [`Isqrt`](Isqrt):
   checking that the outputs are as expected.
 
 In addition to the files under [`Isqrt`](Isqrt), there are three root files:
-[`Isqrt.lean`](Isqrt.lean), [`IsqrtTests.lean`](IsqrtTests.lean) and
-[`Main.lean`](Main.lean). The first imports the definitions and proofs; the second
-imports the tests; the third contains the source for the `isqrt` command-line executable
-described below.
+
+- [`Isqrt.lean`](Isqrt.lean) imports the definitions and proofs.
+- [`IsqrtTests.lean`](IsqrtTests.lean) imports the tests.
+- [`Main.lean`](Main.lean) contains the source for the `isqrt` command-line executable
+  described below.
 
 The project does not depend on [Mathlib][mathlib]: its proofs, definitions and tests are
 written using only Lean's core library. The sole external dependency is
@@ -99,7 +100,7 @@ instructions][elan-installation] in the README for that project. Check that `ela
 
 The key commands are all executed via Lean's build tool, `lake`. The first time you run
 `lake` it will automatically download the correct Lean toolchain version (as specified
-in `lean-toolchain`). From this directory:
+in [`lean-toolchain`](lean-toolchain)). From this directory:
 
 ```
 lake build            # build the project - definitions, proofs, tests and executable
@@ -116,9 +117,11 @@ build` will still pass (with warnings) if there are incomplete proofs, marked by
 
 ## Running the algorithm
 
-The project also includes a command-line executable `isqrt` that computes integer square
-roots via the same `isqrtIterative` function that's proved correct in the proofs. It can
-be executed via `lake exe isqrt`:
+Lean is both a proof assistant and a programming language, so the Lean definitions of
+the integer square root algorithm can be both proved correct and executed. This project
+includes Lean source for a command-line executable `isqrt` that computes integer square
+roots via the same `isqrtIterative` function that's verified correct by Lean. The
+executable can be built and executed via `lake exe isqrt`:
 
 ```console
 $ lake exe isqrt 1729
@@ -127,10 +130,9 @@ $ lake exe isqrt 1729
 
 The single argument must be a nonnegative integer.
 
-The executable is backed by the correctness proof — it is that proof which guarantees
-the computation never raises — yet the proof forms no part of the compiled program: Lean
-erases proofs from the runtime binary, and the project pulls in no heavyweight
-dependencies, leaving an `isqrt` executable well under a megabyte.
+The executable leans on the correctness proof — it's that proof that lets `Main.lean`
+omit any handling for the impossible exception case — though the proof itself is erased
+from the compiled binary.
 
 ## What do I need to trust?
 
@@ -189,13 +191,12 @@ empirical evidence that the two `isqrt` implementations do the right thing.
 
 ## Notes on the Python-to-Lean translation
 
-A key goal of the Python-to-Lean translation is clear fidelity: the Lean translation
-should be visibly equivalent to the original Python code, so that a reader can have
-confidence that the two pieces of code are both representations of the same underlying
-algorithm.
+A key goal of the Python-to-Lean translation is fidelity: the Lean translation should be
+visibly equivalent to the original Python code, so that a reader can have confidence
+that the two pieces of code are both representations of the same underlying algorithm.
 
-Lean 4's rich support for features resembling imperative programming - `do` notation,
-mutable variables, `for` loops, exception handling - enables us to carry out a
+Lean 4's rich support for features resembling imperative programming — `do` notation,
+mutable variables, `for` loops, exception handling — enables us to carry out a
 remarkably faithful line-for-line translation of the Python code into Lean. Here's the
 Lean translation of the main function:
 
@@ -218,8 +219,8 @@ def isqrtIterative (n : Int) : PyExcept Int := do
   return if n < a * a then a - 1 else a
 ```
 
-This section contains brief notes on some of the more interesting choices made for the
-Lean translation.
+This section contains notes on a few of the more interesting choices made for the Lean
+translation.
 
 ### Case study: translating Python's floor division into Lean
 
@@ -235,6 +236,11 @@ to two `Int`s, differs from Python's `//`:
 - Most significantly, Lean's `/` operator returns `0` on division by zero, while
   Python's `//` raises a `ZeroDivisionError` on division by zero.
 
+Lean's `/` operator on integers resolves to `Int.ediv` (Euclidean division). Lean also
+defines a function `Int.fdiv` that implements floor division. That function matches
+Python's `//` for both positive _and_ negative denominators, but it still returns `0` on
+division by zero.
+
 To translate Python's `//` into Lean, we have (at least) three choices:
 
 - just use `/` (or `Int.fdiv`), and convince the reader that the difference doesn't
@@ -245,7 +251,7 @@ To translate Python's `//` into Lean, we have (at least) three choices:
   result in the case of a nonzero denominator, or a representation of an exception for
   the division by zero case.
 
-The first is the weakest from a fidelity perspective, and it leaves a proof hole - we
+The first is the weakest from a fidelity perspective, and it leaves a proof hole — we
 might have Python code that _does_ (incorrectly) divide by zero in some unusual case,
 but the "equivalent" Lean code might instead do the right thing as a result of
 exercising the division-by-zero special case. Or we might be relying on division with a
@@ -260,7 +266,7 @@ harder to write the Lean translation, and it brings in visible divergence betwee
 Python code and its Lean translation, making it much harder for a reader to appreciate
 the equivalence. It also leads to a tangling of proof and definitions.
 
-The third approach gives us the high fidelity translation that we're after - we have a
+The third approach gives us the high fidelity translation that we're after — we have a
 Lean function whose behaviour is a very close match to Python's, and we get a clean
 separation between function translations and proofs. The cost is that we now have to
 thread the exception state through our algorithm. However, that cost turns out to be
@@ -271,7 +277,7 @@ A previous proof attempt trialled the second approach; while it was successful, 
 deviation between the two versions of the algorithm was significant. The current
 proof instead uses the third approach.
 
-Here's the Lean definition of the Python floor division that we use in this project:
+Here's the Lean translation of Python's floor division that we use in this project:
 
 ```lean
 def pyFloordiv (a b : Int) : PyExcept Int := do
@@ -403,7 +409,7 @@ type of an expression like `n < 0` is `Prop`, but that expression remains usable
 Python's `int.bit_length()` is a _method_ on the `int` type that returns the number of
 bits needed to represent `abs(n)`. For the Lean translation, we could have chosen to
 write a plain old `bitLength : Int → Int` function. Instead, we define the Lean-side
-function as `Int.bitLength` - it then lives in the `Int` namespace, and can be invoked
+function as `Int.bitLength` — it then lives in the `Int` namespace, and can be invoked
 on a value `n` of type `Int` as `n.bitLength`, mirroring the Python method call
 `n.bit_length()`. There's no real difference in utility, and a function would have
 worked just as well, but the method call is cosmetically closer to the Python source.
