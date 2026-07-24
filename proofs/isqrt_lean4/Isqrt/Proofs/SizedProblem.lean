@@ -37,8 +37,10 @@ public abbrev irreducible (p : SizedProblem) : Prop := ¬p.reducible
 /-- `p.c` is `⌊log₄ p.n⌋`: one less than the number of digits of `p.n` written in base 4. -/
 public def c (p : SizedProblem) : Nat := (p.n.toNat.size - 1) / 2
 
-/-- `p.k` is the shift exponent for descending `p`: the largest `k` for which `2^k` is a
-suitable scaler for `p.n`. -/
+/--
+`p.k` is the shift exponent for descending `p`: the largest `k` for which `2^k` is a
+suitable scaler for `p.n`.
+-/
 public def k (p : SizedProblem) : Nat := (p.n.toNat.size - 3) / 4
 
 /-- The problem is reducible if and only if 0 < p.c. -/

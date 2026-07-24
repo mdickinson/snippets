@@ -40,8 +40,10 @@ public theorem Int.bitLength_natCast (m : Nat) : (m : Int).bitLength = m.size :=
 public theorem Int.bitLength_eq_size {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
   (Int.toNat_of_nonneg hm) ▸ Int.bitLength_natCast m.toNat
 
-/-- For positive `n`, the seed computation `(n.bitLength - 1) // 2` never raises, and yields
-`(n.toNat.size - 1) / 2`. -/
+/--
+For positive `n`, the seed computation `(n.bitLength - 1) // 2` never raises, and yields
+`(n.toNat.size - 1) / 2`.
+-/
 public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int → PyExcept α) :
     ((n.bitLength - 1) // 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
   have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)

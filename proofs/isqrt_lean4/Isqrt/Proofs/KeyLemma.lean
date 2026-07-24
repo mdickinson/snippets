@@ -60,8 +60,10 @@ theorem four_mul_le_add_sq (x y : Int) : 4 * x * y ≤ (x + y) ^ 2 := by
 
 /-! ## The key lemma -/
 
-/-- If `M` is a suitable scaler for `n` and `a` is a near square root of `⌊n / 4M²⌋`, then
-`Ma + ⌊n / 4Ma⌋` is a near square root of `n`. -/
+/--
+If `M` is a suitable scaler for `n` and `a` is a near square root of `⌊n / 4M²⌋`, then
+`Ma + ⌊n / 4Ma⌋` is a near square root of `n`.
+-/
 public theorem key_lemma {n M a : Int}
     (hM_scaler : isSuitableScaler n M)
     (h_near : isNearSquareRoot (n / (4 * M^2)) a) :

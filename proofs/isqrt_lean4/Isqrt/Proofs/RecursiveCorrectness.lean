@@ -27,9 +27,11 @@ theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
     Int.natCast_nonpos_iff.mpr (SizedProblem.irreducible_iff.mp hp)
   rw [if_pos hc_neg]; rfl
 
-/-- One unfolding at `0 < c`, in raw shift form: a successful subcall on the descended value
+/--
+One unfolding at `0 < c`, in raw shift form: a successful subcall on the descended value
 returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the
-Newton lift. -/
+Newton lift.
+-/
 theorem nsqrtRecursive_succ_shift
     {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (ha_pos : 0 < a) :
     let k := (c - 1) / 2
@@ -49,8 +51,10 @@ theorem nsqrtRecursive_succ_shift
   rw [pyFloordiv_ok_bind (by omega)]
   rfl
 
-/-- The recursive step in `SizedProblem` terms: a solved descendant lifts back to `p` via
-`newtonLift`. -/
+/--
+The recursive step in `SizedProblem` terms: a solved descendant lifts back to `p` via
+`newtonLift`.
+-/
 theorem nsqrtRecursive_succ
     {p : SizedProblem} (hp : p.reducible) {a : Int} (ha : 0 < a) :
     nsqrtRecursive (p.descend hp).n ↑(p.descend hp).c = .ok a →
@@ -61,9 +65,11 @@ theorem nsqrtRecursive_succ
   rw [← p.k_of_c, ← p.descend_n hp, ← p.descend_c hp]
   exact h_sub
 
-/-- The recursive auxiliary returns a near square root of `p.n` and never raises, for any
+/--
+The recursive auxiliary returns a near square root of `p.n` and never raises, for any
 `SizedProblem p`: the base case (`p.c = 0`) returns `1`; the step solves `p.descend` and lifts it
-back with `p.newtonLift`. -/
+back with `p.newtonLift`.
+-/
 theorem nsqrtRecursive_correctness (p : SizedProblem) :
     ∃ a, nsqrtRecursive p.n ↑p.c = .ok a ∧ isNearSquareRoot p.n a := by
   by_cases hp : p.reducible
@@ -76,8 +82,10 @@ theorem nsqrtRecursive_correctness (p : SizedProblem) :
 termination_by p.n.toNat.size
 decreasing_by exact p.descend_lt hp
 
-/-- Correctness of `isqrtRecursive`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
-raises the same `ValueError` as CPython. -/
+/--
+Correctness of `isqrtRecursive`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
+raises the same `ValueError` as CPython.
+-/
 public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩ <;> intro n hn
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

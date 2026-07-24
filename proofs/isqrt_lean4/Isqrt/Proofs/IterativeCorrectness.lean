@@ -29,8 +29,10 @@ open scoped Python
 /-- The mutable state defined before and updated within the for loop: (a, d). -/
 abbrev LoopState := Int × Int
 
-/-- The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
-so the correctness proof folds the loop into `forIn … (loopBody n c)`. -/
+/--
+The for-loop body, named. This is definitionally what `isqrtIterative`'s `do`-block desugars to,
+so the correctness proof folds the loop into `forIn … (loopBody n c)`.
+-/
 def loopBody (n c : Int) (s : Int) (r : LoopState) : PyExcept (ForInStep LoopState) :=
   let ⟨a, d⟩ := r
   do
@@ -68,14 +70,18 @@ theorem loopBody_eq_ok (n : Int) (c : Nat) (r : LoopState) {s : Nat} (hs : s < c
   rw [show d - e - 1 = k by omega, show d - e + 1 = k + 2 by omega]
   rfl
 
-/-- One loop iteration as a total function on the raw state: the running approximation is Newton
+/--
+One loop iteration as a total function on the raw state: the running approximation is Newton
 lifted for the iteration-`s` subproblem and the second component records `p.c >>> s`. This is the
-value `loopBody` yields under the loop invariant (see `loopInvariant_step`). -/
+value `loopBody` yields under the loop invariant (see `loopInvariant_step`).
+-/
 def pureStep (p : SizedProblem) (r : LoopState) (s : Nat) : LoopState :=
   ((subAt p s).newtonLift r.fst, ↑(subAt p s).c)
 
-/-- The loop invariant at depth `s`: the running pair `(a, d)` holds a near square root of
-`subAt p s`, with `d` recording its level. -/
+/--
+The loop invariant at depth `s`: the running pair `(a, d)` holds a near square root of
+`subAt p s`, with `d` recording its level.
+-/
 def loopInvariant (p : SizedProblem) (r : LoopState) (s : Nat) : Prop :=
   let ⟨a, d⟩ := r
   isNearSquareRoot (subAt p s).n a ∧ d = ↑(subAt p s).c
@@ -97,8 +103,10 @@ theorem loopInvariant_step (p : SizedProblem)
   rw [loopBody_eq_ok p.n p.c r hs hinv.1.1 (subAt_c p (s + 1) ▸ hinv.2)]
   rw [pureStep, SizedProblem.newtonLift_eq, subAt_n, subAt_k, subAt_c]
 
-/-- Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
-raises the same `ValueError` as CPython. -/
+/--
+Correctness of `isqrtIterative`: for nonnegative `n` it returns `⌊√n⌋`, and for negative `n` it
+raises the same `ValueError` as CPython.
+-/
 public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩ <;> intro n hn
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.

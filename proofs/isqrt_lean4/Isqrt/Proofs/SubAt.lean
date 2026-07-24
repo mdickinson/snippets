@@ -6,8 +6,10 @@ public import Isqrt.Proofs.SizedProblem
 The subproblem chain that feeds into the iterative proof.
 -/
 
-/-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
-`c >>> i`. -/
+/--
+The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
+`c >>> i`.
+-/
 public def subAt (p : SizedProblem) (i : Nat) : SizedProblem :=
   SizedProblem.ofPos (
     show 0 < p.n >>> (2 * (p.c - (p.c >>> i)))
