@@ -40,9 +40,6 @@ public theorem Nat.bitLength_eq (m : Nat) : (m : Int).bitLength = m.size := by
 public theorem Int.bitLength_eq {m : Int} (hm : 0 ≤ m) : m.bitLength = ↑m.toNat.size :=
   (Int.toNat_of_nonneg hm) ▸ Nat.bitLength_eq m.toNat
 
-/-- range of a casted Nat -/
-public theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map Nat.cast := rfl
-
 /--
 Translation used by both the recursive and iterative correctness proofs.
 -/
@@ -50,3 +47,41 @@ public theorem half_dec_bitLength {α : Type} {n : Int} (hpos : 0 < n) (f : Int 
     ((n.bitLength - 1) // 2) >>= f = f ((n.toNat.size - 1) / 2 : Nat) := by
   have hsize : 0 < n.toNat.size := Nat.size_pos.mpr (by omega)
   grind only [Int.bitLength_eq, pyFloordiv_ok_bind]
+
+/-! ## Looping over a reversed range -/
+
+/-- range of a casted Nat -/
+theorem Nat.range_eq (n : Nat) : (range (n : Int)) = (List.range n).map Nat.cast := rfl
+
+/-- The reverse range of 0 is empty.-/
+theorem reverse_range_zero : (range (0 : Nat)).reverse = [] := by
+  rw [Nat.range_eq, List.range_zero, List.map_nil, List.reverse_nil]
+
+/-- The reverse range of a successor, as a cons. -/
+theorem reverse_range_succ (n : Nat) : (range ↑(n + 1)).reverse = ↑n :: (range ↑n).reverse := by
+  rw [Nat.range_eq, Nat.range_eq, List.range_succ, List.map_append, List.reverse_append]
+  rfl
+
+/--
+Threading an invariant through a for loop over a reversed range, in a situation where
+the loop body gives a pure yield (under the assumption of the invariant).
+-/
+public theorem forIn_reverse_range_invariant
+    {m : Type -> Type} {α : Type} [Monad m] [LawfulMonad m]
+    (n : Nat)
+    (init : α)
+    (step : α -> Nat -> α)
+    (body : Int -> α -> m (ForInStep α))
+    (invariant : α -> Nat -> Prop)
+    (hinit : invariant init n)
+    (hstep : ∀ {s : Nat}, s < n → ∀ r : α, invariant r (s + 1) →
+      body ↑s r = pure (ForInStep.yield (step r s)) ∧ invariant (step r s) s) :
+    ∃ y : α,
+      (∀ g : α → m Int, forIn (range n).reverse init body >>= g = g y)
+      ∧
+      invariant y 0 := by
+  induction n generalizing init with
+  | zero => rw [reverse_range_zero, List.forIn_nil]; exact ⟨init, fun g => by rw [pure_bind], hinit⟩
+  | succ n ind_hyp =>
+    rw [reverse_range_succ, List.forIn_cons, (hstep (by omega) init hinit).1, pure_bind]
+    exact ind_hyp (step init n) (hstep (by omega) init hinit).2 (fun hs => hstep (by omega))
