@@ -1,10 +1,10 @@
-/-
-Definition of correctness for a function claiming to be an integer square root.
--/
-
 module
 
 public import Isqrt.Definitions.Exceptions
+
+/-!
+Definition of correctness for a function claiming to be an integer square root.
+-/
 
 @[expose] public section
 

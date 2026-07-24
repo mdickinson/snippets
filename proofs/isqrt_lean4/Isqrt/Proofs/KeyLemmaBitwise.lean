@@ -1,4 +1,11 @@
-/-
+module
+
+public import Isqrt.Definitions.Specification
+public import Isqrt.Proofs.NatSize
+import Isqrt.Proofs.KeyLemma
+import Isqrt.Proofs.SupportLemmas
+
+/-!
 Key lemma in bitwise form.
 
 Restatement of the lemma in `KeyLemma.lean` for a specific scaler `M`, equal to
@@ -15,13 +22,6 @@ Informally, writing `n.size` for the bit length of `n`: if `M = 2^k` for some
 
 So the largest power-of-two suitable scaler is 2^((n.size - 3) / 4).
 -/
-
-module
-
-public import Isqrt.Definitions.Specification
-public import Isqrt.Proofs.NatSize
-import Isqrt.Proofs.KeyLemma
-import Isqrt.Proofs.SupportLemmas
 
 /-- Descent for an input `n` to the smaller `n` that we'll solve recursively. -/
 public abbrev descend (n : Int) (k : Nat) : Int := n >>> (2 * k + 2)

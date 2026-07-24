@@ -1,9 +1,9 @@
-/-
+module
+
+/-!
 The shared test vector for the integer square root, used by both
 `Isqrt.Tests.IsqrtIterative` and `Isqrt.Tests.IsqrtRecursive`.
 -/
-
-module
 
 @[expose] public section
 

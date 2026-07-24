@@ -1,11 +1,11 @@
-/-
-Lean equivalents of Python's <<, >>, //, range and int.bit_length(), with
-the same exception-raising behaviour as in Python.
--/
-
 module
 
 public import Isqrt.Definitions.Exceptions
+
+/-!
+Lean equivalents of Python's <<, >>, //, range and int.bit_length(), with
+the same exception-raising behaviour as in Python.
+-/
 
 @[expose] public section
 

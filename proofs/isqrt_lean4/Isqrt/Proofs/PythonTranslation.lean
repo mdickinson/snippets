@@ -1,13 +1,13 @@
-/-
-Bridges from the Python primitives to the pure `Int` / `Nat` forms the correctness
-proofs reason with.
--/
-
 module
 
 public import Isqrt.Definitions.PythonPrimitives
 public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
+
+/-!
+Bridges from the Python primitives to the pure `Int` / `Nat` forms the correctness
+proofs reason with.
+-/
 
 open scoped Python
 

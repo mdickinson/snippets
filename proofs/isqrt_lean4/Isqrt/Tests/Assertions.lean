@@ -1,4 +1,8 @@
-/-
+module
+
+public import Isqrt.Definitions.PythonPrimitives
+
+/-!
 Assertion helpers for the `#guard`-based sanity checks in `Isqrt.Tests.*`.
 
 The operations behind `math.isqrt` return `PyExcept Int`, which a bare
@@ -7,10 +11,6 @@ result into a `Bool` that `#guard` can check. They live here, rather than in eit
 test file, so the iterative and recursive test files can share them without one
 importing the other.
 -/
-
-module
-
-public import Isqrt.Definitions.PythonPrimitives
 
 @[expose] public section
 

@@ -1,9 +1,9 @@
-/-
+module
+
+/-!
 This module defines a `PyException` type representing the Python exceptions that we need
 to model (`ValueError` and `ZeroDivisionError`), and the corresponding `PyExcept` monad.
 -/
-
-module
 
 @[expose] public section
 

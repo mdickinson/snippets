@@ -1,12 +1,12 @@
-/-
-Direct actual-equals-expected-style tests for the Python primitives used by the `isqrt`
-implementations.
--/
-
 module
 
 meta import Isqrt.Definitions.PythonPrimitives
 meta import Isqrt.Tests.Assertions
+
+/-!
+Direct actual-equals-expected-style tests for the Python primitives used by the `isqrt`
+implementations.
+-/
 
 open scoped Python
 

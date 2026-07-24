@@ -1,10 +1,10 @@
-/-
-The subproblem chain that feeds into the iterative proof.
--/
-
 module
 
 public import Isqrt.Proofs.SizedProblem
+
+/-!
+The subproblem chain that feeds into the iterative proof.
+-/
 
 /-- The iteration-`i` subproblem descending from `p`: value `p.n >>> 2(c - c>>>i)` at level
 `c >>> i`. -/
@@ -25,7 +25,8 @@ public theorem subAt_n (p : SizedProblem) (i : Nat) :
 
 /-- The iteration-`i` subproblem's level is `c >>> i`. -/
 public theorem subAt_c (p : SizedProblem) (i : Nat) : (subAt p i).c = p.c >>> i := by
-  grind only [subAt, SizedProblem.ofPos_n, SizedProblem.c_eq, Int.size_shiftRight, Nat.shiftRight_le]
+  grind only [subAt, SizedProblem.ofPos_n, SizedProblem.c_eq, Int.size_shiftRight,
+    Nat.shiftRight_le]
 
 /-- The iteration-`i` subproblem's `k` is `((c >>> i) - 1)/2`. -/
 public theorem subAt_k (p : SizedProblem) (i : Nat) : (subAt p i).k = (p.c >>> i - 1) / 2 := by

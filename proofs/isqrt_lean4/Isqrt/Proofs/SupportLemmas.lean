@@ -1,11 +1,11 @@
-/-
-General `Int` / `Nat` facts missing from the core library, plus basic properties of `Nat.size`
-(bit length), and a small `Except`-monad helper.
--/
-
 module
 
 public import Isqrt.Proofs.NatSize
+
+/-!
+General `Int` / `Nat` facts missing from the core library, plus basic properties of `Nat.size`
+(bit length), and a small `Except`-monad helper.
+-/
 
 /-! ## Int.shiftRight -/
 

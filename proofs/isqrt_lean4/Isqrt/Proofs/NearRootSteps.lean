@@ -1,11 +1,11 @@
-/-
-The closing correction both correctness proofs share: `isIntegerSquareRoot_of_isNearSquareRoot`
-turns a near square root of `n` into `⌊√n⌋`, subtracting one exactly when `n < a*a`.
--/
-
 module
 
 public import Isqrt.Definitions.Specification
+
+/-!
+The closing correction both correctness proofs share: `isIntegerSquareRoot_of_isNearSquareRoot`
+turns a near square root of `n` into `⌊√n⌋`, subtracting one exactly when `n < a*a`.
+-/
 
 /-- Turn a near square root into the integer square root: subtract one exactly when `n < a*a`. -/
 public theorem isIntegerSquareRoot_of_isNearSquareRoot {n a : Int} (h : isNearSquareRoot n a) :

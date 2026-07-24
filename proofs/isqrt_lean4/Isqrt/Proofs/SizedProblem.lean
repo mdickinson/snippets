@@ -1,14 +1,14 @@
-/-
-The `SizedProblem` structure — a positive value `n`, with recursion level `c` and step shift `k`
-derived from its bit length — and the shift-form operations `descend` / `newtonLift` both
-correctness proofs build on.
--/
-
 module
 
 public import Isqrt.Proofs.KeyLemmaBitwise
 public import Isqrt.Proofs.NatSize
 public import Isqrt.Proofs.SupportLemmas
+
+/-!
+The `SizedProblem` structure — a positive value `n`, with recursion level `c` and step shift `k`
+derived from its bit length — and the shift-form operations `descend` / `newtonLift` both
+correctness proofs build on.
+-/
 
 /-! ## The sized problem -/
 

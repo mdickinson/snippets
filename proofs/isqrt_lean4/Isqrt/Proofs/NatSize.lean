@@ -1,8 +1,8 @@
-/-
+module
+
+/-!
 `Nat.size` (bit length) and its defining property `Nat.size_le`.
 -/
-
-module
 
 /-- Minimum number of bits required to represent a natural number. -/
 public def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1

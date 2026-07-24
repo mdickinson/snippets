@@ -1,4 +1,9 @@
-/-
+module
+
+public import Isqrt.Definitions.Exceptions
+public import Isqrt.Definitions.PythonPrimitives
+
+/-!
 Lean translation of the recursive form of the CPython `isqrt` algorithm.
 
 Here's the algorithm expressed recursively in Python. The inner `nsqrt` function
@@ -37,11 +42,6 @@ use in the recursive call, because Lean can't surface the wrapped `Int` value fo
 the proof that the measure decreases. So we accept a slight loss of fidelity with
 respect to the Python code and use the equivalent `c / 2` instead.
 -/
-
-module
-
-public import Isqrt.Definitions.Exceptions
-public import Isqrt.Definitions.PythonPrimitives
 
 @[expose] public section
 

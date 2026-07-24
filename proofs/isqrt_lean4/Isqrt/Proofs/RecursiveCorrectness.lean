@@ -1,12 +1,3 @@
-/-
-Correctness of the recursive monadic integer square root `isqrtRecursive`.
-
-`nsqrtRecursive_base` and `nsqrtRecursive_succ` reduce each recursion step to its returned value
-(discharging the `.ok`-ness of every Python operation), so `nsqrtRecursive_correctness` reads as the
-mathematical argument alone; `isCorrectIsqrt_isqrtRecursive` wraps it in the `isCorrectIsqrt`
-contract.
--/
-
 module
 
 public import Isqrt.Definitions.IsqrtRecursive
@@ -19,6 +10,15 @@ import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SupportLemmas
 
+/-!
+Correctness of the recursive monadic integer square root `isqrtRecursive`.
+
+`nsqrtRecursive_base` and `nsqrtRecursive_succ` reduce each recursion step to its returned value
+(discharging the `.ok`-ness of every Python operation), so `nsqrtRecursive_correctness` reads as the
+mathematical argument alone; `isCorrectIsqrt_isqrtRecursive` wraps it in the `isCorrectIsqrt`
+contract.
+-/
+
 /-- The recursion bottoms out at `c ≤ 0`, returning `1` regardless of `n`. -/
 theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
     nsqrtRecursive p.n ↑p.c = .ok 1 := by
@@ -28,8 +28,8 @@ theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
   rw [if_pos hc_neg]; rfl
 
 /-- One unfolding at `0 < c`, in raw shift form: a successful subcall on the descended value
-returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the Newton
-lift. -/
+returning `0 < a` makes every Python operation take its `.ok` branch, and the step returns the
+Newton lift. -/
 theorem nsqrtRecursive_succ_shift
     {n : Int} {c : Nat} (hc : 0 < c) {a : Int} (ha_pos : 0 < a) :
     let k := (c - 1) / 2

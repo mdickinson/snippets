@@ -1,4 +1,8 @@
-/-
+module
+
+public import Isqrt.Definitions.Specification
+
+/-!
 The isqrt correctness proof's pure-integer mathematics: near-square-root theory and the
 Newton-step key lemma.
 
@@ -31,10 +35,6 @@ The left side of (3) is `(4Ma(Ma+q-1))²`, so chaining (3) into (1) gives
 
 Upper bound:  n < 4Ma(q+1) ≤ (Ma+q+1)²          from (F), then AM–GM `4xy ≤ (x+y)²`.
 -/
-
-module
-
-public import Isqrt.Definitions.Specification
 
 /-! ## Algebraic helpers -/
 
@@ -106,7 +106,8 @@ public theorem key_lemma {n M a : Int}
     have hsq : (4 * M * a * (M * a + q - 1))^2 ≤ (4 * M^2 * a^2 + n - 4 * M^2)^2 :=
       sq_le_sq_of_le hVnonneg hVY
     -- Chain (3) into (1), then cancel (4Ma)² (= 16M²a²): `(Ma+q−1)²·(4Ma)² < n·(4Ma)²`.
-    have hfinal : (M * a + q - 1) * (M * a + q - 1) * (4 * M * a)^2 < n * (4 * M * a)^2 := by grind only
+    have hfinal : (M * a + q - 1) * (M * a + q - 1) * (4 * M * a)^2 < n * (4 * M * a)^2 := by
+      grind only
     exact Int.lt_of_mul_lt_mul_right hfinal (Int.sq_nonneg (4 * M * a))
   -- Upper bound: n < 4Ma(q + 1) ≤ (Ma + q + 1)²
   have upper : n < (M * a + q + 1) * (M * a + q + 1) :=

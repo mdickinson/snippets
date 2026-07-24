@@ -1,14 +1,3 @@
-/-
-Correctness of the iterative monadic integer square root `isqrtIterative`.
-
-The loop drives `loopBody` over the reversed `range p.height`. `loopInvariant` carries a near square
-root of the depth-`s` subproblem (`subAt p s`) — which subsumes `0 < a`, so the body never raises —
-and shares its Newton step with the recursive proof; `forIn_reverse_range_invariant` threads it to a
-final state satisfying the invariant at depth `0`, i.e. a near square root of `p` itself.
-`isCorrectIsqrt_isqrtIterative` folds `isqrtIterative` onto that loop and reads the result off,
-wrapping it in the `isCorrectIsqrt` contract.
--/
-
 module
 
 public import Isqrt.Definitions.IsqrtIterative
@@ -21,6 +10,17 @@ import Isqrt.Proofs.PythonTranslation
 import Isqrt.Proofs.SizedProblem
 import Isqrt.Proofs.SubAt
 import Isqrt.Proofs.SupportLemmas
+
+/-!
+Correctness of the iterative monadic integer square root `isqrtIterative`.
+
+The loop drives `loopBody` over the reversed `range p.height`. `loopInvariant` carries a near square
+root of the depth-`s` subproblem (`subAt p s`) — which subsumes `0 < a`, so the body never raises —
+and shares its Newton step with the recursive proof; `forIn_reverse_range_invariant` threads it to a
+final state satisfying the invariant at depth `0`, i.e. a near square root of `p` itself.
+`isCorrectIsqrt_isqrtIterative` folds `isqrtIterative` onto that loop and reads the result off,
+wrapping it in the `isCorrectIsqrt` contract.
+-/
 
 open scoped Python
 

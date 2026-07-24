@@ -1,4 +1,9 @@
-/-
+module
+
+public import Isqrt.Definitions.Exceptions
+public import Isqrt.Definitions.PythonPrimitives
+
+/-!
 Lean translation of the iterative form of the CPython `isqrt` algorithm.
 
 Here's the Python code that we'll translate. It's been tweaked slightly from the Python
@@ -22,11 +27,6 @@ should be self-evident.
 
         return a - 1 if n < a * a else a
 -/
-
-module
-
-public import Isqrt.Definitions.Exceptions
-public import Isqrt.Definitions.PythonPrimitives
 
 @[expose] public section
 

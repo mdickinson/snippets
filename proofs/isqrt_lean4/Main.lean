@@ -1,14 +1,14 @@
-/-
+module
+
+import Isqrt.Definitions.IsqrtIterative
+import Isqrt.Proofs.IterativeCorrectness
+
+/-!
 A simple CLI for computing integer square roots.
 
 The CLI accepts a single nonnegative integer argument, applies `isqrtIterative` to it,
 and writes the resulting integer square root to stdout.
 -/
-
-module
-
-import Isqrt.Definitions.IsqrtIterative
-import Isqrt.Proofs.IterativeCorrectness
 
 /-- The message shown on stderr when the command line is malformed. -/
 private def usage : String := "usage: isqrt N   (N a nonnegative integer)"
