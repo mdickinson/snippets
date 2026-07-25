@@ -1,4 +1,4 @@
-name = "isqrt-lean4"
+name = "isqrt"
 lintDriver = "batteries/runLinter"
 defaultTargets = ["Isqrt", "IsqrtTests", "isqrt"]
 

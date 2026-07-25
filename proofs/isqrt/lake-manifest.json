@@ -11,6 +11,6 @@
    "inputRev": "v4.32.0",
    "inherited": false,
    "configFile": "lakefile.toml"}],
- "name": "«isqrt-lean4»",
+ "name": "isqrt",
  "lakeDir": ".lake",
  "fixedToolchain": false}
