@@ -81,9 +81,13 @@ their denominators and the third then equates their numerators. That is
 `isBestApproximation_unique`, in
 [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean).
 
-Note what is *not* specified: the behaviour for `n ≤ 0`. Python cannot produce such a
-target, because a `Fraction`'s denominator is always positive, so pinning down the
-behaviour there would be inventing a promise rather than recording one.
+The behaviour for `n ≤ 0` is not left unspecified: the listing tests for it and raises a
+`ValueError`, which is what lets `limitDenominatorSimplified_total` state that every input
+either raises one of the two `ValueError`s or returns the best approximation. Python cannot
+produce such a target, because a `Fraction`'s denominator is always positive, so that check
+is a promise this project invents rather than one it records. The alternative is worse: every
+line below assumes `0 < n`, so without the check a negative denominator returns a wrong
+answer with no indication that anything went wrong.
 
 ## Removing the orientation from the state
 

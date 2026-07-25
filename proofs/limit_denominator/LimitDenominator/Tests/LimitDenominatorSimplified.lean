@@ -22,11 +22,16 @@ executable form of the specification over a grid of targets.
 #guard assertRaisesValueError "max_denominator should be at least 1"
   (limitDenominatorSimplified 22 7 (-1))
 
-/-
-A zero target denominator is outside the specification — `Fraction` cannot produce one — and the
-`%` in the very first line is what reports it.
--/
-#guard assertRaisesZeroDivisionError (limitDenominatorSimplified 22 0 5)
+#guard assertRaisesValueError "denominator should be positive"
+  (limitDenominatorSimplified 22 0 5)
+#guard assertRaisesValueError "denominator should be positive"
+  (limitDenominatorSimplified 22 (-7) 5)
+#guard assertRaisesValueError "denominator should be positive"
+  (limitDenominatorSimplified (-22) (-7) 5)
+
+/- The denominator limit is checked before the target, so its message wins when both are bad. -/
+#guard assertRaisesValueError "max_denominator should be at least 1"
+  (limitDenominatorSimplified 22 (-7) 0)
 
 /-! ## The specification, evaluated -/
 

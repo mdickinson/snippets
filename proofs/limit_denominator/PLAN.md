@@ -42,6 +42,11 @@ Three things, in rough order of effort.
    and `n` coprime, hence `a = 1` and `n = s ≤ l`, contradicting `l < n`. With `b`
    positive throughout, this listing needs no short-circuiting `and` at all.
 
+One difference deliberately *not* carried over: the simplified listing tests `n <= 0` and
+raises, but the shipped code has no such test and should not gain one. It reads
+`self._denominator`, which a `Fraction` keeps positive, so the translation stays faithful and
+`valid` carries the precondition instead.
+
 Also cosmetic but worth getting right: the shipped code names its variables `p0, q0, p1,
 q1` and uses `n, d` for the running target. Whether to keep those names in the Lean
 translation (fidelity) or rename to `p, q, r, s` (shared vocabulary with the proof layer)

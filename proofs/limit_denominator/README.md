@@ -35,12 +35,15 @@ def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
     Given a fraction m/n and a positive integer l, return integers r and s such
     that r/s is the closest fraction to m/n with denominator bounded by l.
 
-    m/n need not be in lowest terms, but n must be positive.
+    m/n need not be in lowest terms. Raises ValueError if l is less than one, or
+    if n is not positive.
 
     On return, 0 < s <= l and gcd(r, s) = 1.
     """
     if l < 1:
         raise ValueError("max_denominator should be at least 1")
+    if n <= 0:
+        raise ValueError("denominator should be positive")
 
     a, b, p, q, r, s = n, m % n, 1, 0, m // n, 1
     while 0 < b and q + a // b * s <= l:
@@ -49,11 +52,19 @@ def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
     return (r, s) if 2 * b * u <= n else (t, u)
 ```
 
-This is the issue's listing with one change: the issue carries a seventh variable `v`,
+This is the issue's listing with two changes. The issue carries a seventh variable `v`,
 alternating between `1` and `-1`, which it uses in the statements of the invariants but
 which does not affect the result. `v` turns out to equal `p*s - r*q` throughout, so the
 proof recovers it from the state rather than tracking it, and the listing drops it. See
 [PROOF.md](PROOF.md) for that step.
+
+The second change is the `n <= 0` check. The issue's listing states `n > 0` as a
+precondition and does not test it; here it is enforced, which is what lets the proof say
+that *every* input either gets a correct answer or an exception. Without the check, a
+negative `n` returns a plausible-looking wrong answer: `m = 22, n = -7, l = 5` gives `-4/1`,
+which is out by `6/7`, where the best approximation to `22/-7` with denominator at most `5`
+is `-16/5`, out by `2/35`. The `ValueError` message is this project's own; the other one is
+CPython's, verbatim.
 
 The relationship between this listing and the body of `Fraction.limit_denominator` in
 `Lib/fractions.py` is close but not line-for-line: the standard library version operates
@@ -100,11 +111,30 @@ message whenever the denominator limit is not positive, and otherwise returns a 
 approximation. The `valid` parameter carries the precondition: here, that the target's
 denominator is positive.
 
-Behaviour for `n ≤ 0` is deliberately left unspecified rather than left out by oversight.
-Python cannot produce such a target — a `Fraction`'s denominator is always positive — so
-specifying it would be inventing a promise rather than recording one. In the Lean
-translation such a call raises `ZeroDivisionError` from the `m % n` on the first line, and
-there is a test to that effect, but the theorem says nothing about it.
+A target denominator that is not positive is rejected rather than left unspecified:
+
+```lean
+theorem limitDenominatorSimplified_raises_of_denominator_nonpos {m n l : Int}
+    (hn : n ≤ 0) (hl : 0 < l) :
+    raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive")
+```
+
+Python cannot produce such a target — a `Fraction`'s denominator is always positive — so this
+is a promise the project invents rather than one it records, which is why the message is not
+CPython's. It earns its place by making the behaviour exhaustive:
+
+```lean
+theorem limitDenominatorSimplified_total (m n l : Int) :
+    raises (limitDenominatorSimplified m n l) (.valueError "max_denominator should be at least 1")
+    ∨ raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive")
+    ∨ ∃ r s, returns (limitDenominatorSimplified m n l) (r, s)
+        ∧ isBestApproximation m n l r s
+```
+
+Every division after the two guards is provably safe — `a // b` is protected by the loop
+condition, `(l - q) // s` by `0 < s` — so those two `ValueError`s are the only exceptions
+reachable, and there is no input for which the function quietly returns something that is not
+the best approximation.
 
 ## Scope
 
@@ -203,17 +233,19 @@ up requires confidence in:
   [`isBestApproximation_unique`](LimitDenominator/Proofs/BestApproximation.lean) shows that
   at most one pair satisfies `isBestApproximation`, so the specification pins the answer
   down completely and cannot be met by some unintended pair as well.
-- **That `lake build` really checks the proof** of the correctness statement, which is the
-  one-line `theorem isCorrectLimitDenominator_simplified : ...` near the bottom of
-  [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean).
+- **That `lake build` really checks the proofs** of the three statements at the bottom of
+  [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean):
+  `isCorrectLimitDenominator_simplified`,
+  `limitDenominatorSimplified_raises_of_denominator_nonpos` and
+  `limitDenominatorSimplified_total`.
 - **The Lean toolchain**, including its compiler and core library. It is conceivable, if
   very unlikely, that Lean has a bug that lets it accept an invalid proof.
 
 Notably the proofs themselves do *not* need to be trusted. However gnarly they look, if
 Lean says they are valid then they are valid. So it is enough to read everything under
-[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — 159 lines including
-docstrings, comments and blank lines — plus the one-line statement, but not the proof, of
-`isCorrectLimitDenominator_simplified`.
+[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — 166 lines including
+docstrings, comments and blank lines — plus the statements, but not the proofs, of those
+three theorems.
 
 There are also empirical checks under
 [`LimitDenominator/Tests`](LimitDenominator/Tests). These are not formal proofs, but they
@@ -230,6 +262,8 @@ variables, `while` loops, exceptions — makes a close translation possible. Her
 def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   if l < 1 then
     throw <| .valueError "max_denominator should be at least 1"
+  if n ≤ 0 then
+    throw <| .valueError "denominator should be positive"
 
   let mut (a, b, p, q, r, s) := (n, ← m % n, 1, 0, ← m // n, 1)
   while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
@@ -342,8 +376,8 @@ as part of `lake build`.
 `Fraction.limit_denominator` in CPython 3.14. They cover the documentation's examples,
 unreduced targets, integer targets (which exit the loop immediately with `b = 0`, so the
 short-circuiting `and` is what stops the division by zero), negative targets, halfway ties
-at a limit of one and at larger limits, cases returning each of the two candidates, and
-the `ValueError`.
+at a limit of one and at larger limits, cases returning each of the two candidates, and both
+`ValueError`s — including which message wins when the limit and the target are both bad.
 
 **The specification, evaluated.** Expected-value vectors barely exercise a specification
 whose substance is a `∀`-quantified optimality condition, so
