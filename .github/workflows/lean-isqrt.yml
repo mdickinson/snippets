@@ -1,6 +1,11 @@
 name: Lean 4 isqrt proof
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "proofs/isqrt/**"
+      - ".github/workflows/lean-isqrt.yml"
   pull_request:
     paths:
       - "proofs/isqrt/**"
