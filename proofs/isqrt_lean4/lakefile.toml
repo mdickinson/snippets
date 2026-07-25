@@ -1,0 +1,21 @@
+name = "isqrt-lean4"
+lintDriver = "batteries/runLinter"
+defaultTargets = ["Isqrt", "IsqrtTests", "isqrt"]
+
+[leanOptions]
+autoImplicit = false
+
+[[require]]
+name = "batteries"
+git = "https://github.com/leanprover-community/batteries"
+rev = "v4.32.0"
+
+[[lean_lib]]
+name = "Isqrt"
+
+[[lean_lib]]
+name = "IsqrtTests"
+
+[[lean_exe]]
+name = "isqrt"
+root = "Main"
