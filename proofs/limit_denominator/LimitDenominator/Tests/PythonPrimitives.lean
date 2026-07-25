@@ -37,7 +37,7 @@ open scoped Python
 
 /-! ## `and` short-circuits: a false left operand never runs the right one -/
 
-#guard assertReturns (pyAnd false (do let _ ← pyFloordiv 1 0; return true)) false
-#guard assertRaisesZeroDivisionError (pyAnd true (do let _ ← pyFloordiv 1 0; return true))
-#guard assertReturns (pyAnd true (pure true)) true
-#guard assertReturns (pyAnd true (pure false)) false
+#guard assertReturns (pure false <&&> (do let _ ← pyFloordiv 1 0; return true)) false
+#guard assertRaisesZeroDivisionError (pure true <&&> (do let _ ← pyFloordiv 1 0; return true))
+#guard assertReturns (pure true <&&> (pure true : PyExcept Bool)) true
+#guard assertReturns (pure true <&&> (pure false : PyExcept Bool)) false

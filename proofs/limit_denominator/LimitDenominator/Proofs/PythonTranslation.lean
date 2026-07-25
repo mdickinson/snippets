@@ -25,8 +25,9 @@ public theorem pyMod_ok_bind {α : Type} {a b : Int} (hb : 0 < b) (f : Int → P
     (pyMod a b >>= f) = f (a % b) := by
   rw [pyMod, if_neg (by omega), Int.fmod_eq_emod_of_nonneg _ (by omega)]; rfl
 
-/-- With a false left operand, `pyAnd` short-circuits: the right operand is never run. -/
-public theorem pyAnd_false (y : PyExcept Bool) : pyAnd false y = pure false := rfl
+/-- With a false left operand, `andM` short-circuits: the right operand is never run. -/
+public theorem andM_pure_false (y : PyExcept Bool) :
+    (pure false <&&> y : PyExcept Bool) = pure false := rfl
 
-/-- With a true left operand, `pyAnd` is its right operand. -/
-public theorem pyAnd_true (y : PyExcept Bool) : pyAnd true y = y := rfl
+/-- With a true left operand, `andM` is its right operand. -/
+public theorem andM_pure_true (y : PyExcept Bool) : (pure true <&&> y : PyExcept Bool) = y := rfl

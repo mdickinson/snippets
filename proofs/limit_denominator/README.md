@@ -96,7 +96,7 @@ theorem isCorrectLimitDenominator_simplified :
 ```
 
 where `isCorrectLimitDenominator valid f` says that `f` raises `ValueError` with CPython's
-message whenever the denominator limit is below one, and otherwise returns a best
+message whenever the denominator limit is not positive, and otherwise returns a best
 approximation. The `valid` parameter carries the precondition: here, that the target's
 denominator is positive.
 
@@ -137,7 +137,7 @@ names follow that split:
 | --- | --- |
 | [`SupportLemmas.lean`](LimitDenominator/Proofs/SupportLemmas.lean) | general `Int` facts the core library lacks |
 | [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | driving a `while` loop with a measure and an invariant, monad-agnostically |
-| [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod`, `pyAnd` to plain `Int` |
+| [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
 | [`LoopInvariant.lean`](LimitDenominator/Proofs/LoopInvariant.lean) | the loop invariant, its preservation, and the residuals |
 | [`AfterLoop.lean`](LimitDenominator/Proofs/AfterLoop.lean) | the extended candidate, and the `Bracketing` facts everything downstream uses |
 | [`Bracket.lean`](LimitDenominator/Proofs/Bracket.lean) | the bracket lemma, and distance bounds for candidates outside it |
@@ -189,8 +189,10 @@ up requires confidence in:
   Python. This means reading:
   - the translation itself, in
     [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean);
-  - the Python primitives — the Lean versions of `//`, `%` and `and` — in
-    [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean);
+  - the Python primitives — the Lean versions of `//` and `%` — in
+    [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and
+    Python's `and`, which is core's `andM`, under
+    [`and` that short-circuits](#and-that-short-circuits);
   - the exception definitions in
     [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
 - **The statements of correctness** in
@@ -209,7 +211,7 @@ up requires confidence in:
 
 Notably the proofs themselves do *not* need to be trusted. However gnarly they look, if
 Lean says they are valid then they are valid. So it is enough to read everything under
-[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — 170 lines including
+[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — 159 lines including
 docstrings, comments and blank lines — plus the one-line statement, but not the proof, of
 `isCorrectLimitDenominator_simplified`.
 
@@ -230,7 +232,7 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
     throw <| .valueError "max_denominator should be at least 1"
 
   let mut (a, b, p, q, r, s) := (n, ← m % n, 1, 0, ← m // n, 1)
-  while ← pyAnd (0 < b) (do return q + (← a // b) * s ≤ l) do
+  while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
     (a, b, p, q, r, s) := (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s)
   let (t, u) := (p + (← (l - q) // s) * r, q + (← (l - q) // s) * s)
   return if 2 * b * u ≤ n then (r, s) else (t, u)
@@ -272,26 +274,38 @@ Python's `and` evaluates its right operand only if its left one is truthy. That 
 load-bearing here: with `b = 0`, `q + a // b * s` would raise, and it is only the `0 < b`
 on the left that stops it.
 
-Lean's `&&` short-circuits too, but the translation cannot use it. Lean's `do` elaborator
-hoists a nested action `←` out of the surrounding expression and evaluates it *before* the
-expression, so `0 < b && (q + (← a // b) * s ≤ l)` performs the division first — raising
-exactly where Python exits cleanly. Instead, the delayed operand is passed as a `do` block
-to a named function:
+Lean's core library has exactly this operation: `andM`, notated `<&&>`.
 
 ```lean
-def pyAnd (x : Bool) (y : PyExcept Bool) : PyExcept Bool := do
-  if x then y else return false
+def andM [Monad m] [ToBool β] (x y : m β) : m β := do
+  let b ← x
+  match toBool b with
+  | true => y
+  | false => pure b
 ```
 
-used as `pyAnd (0 < b) (do return q + (← a // b) * s ≤ l)`. Notation would be neater, but
-no notation can work: the `do` elaborator harvests `←` from the *unexpanded* syntax tree,
-so a macro that wraps its operand in `do` arrives too late. Worse, such a macro compiles
-and silently gets the semantics wrong, so `pyAnd` is applied by name, with the delay
-visible at the call site.
+It matches Python closely. The right operand is a *computation*, so it runs only in the
+truthy branch; `ToBool` is the truthiness test; and the falsy branch returns the left
+operand itself, exactly as `a and b` evaluates to `a` when `a` is falsy. Python is more
+liberal in one respect that `limit_denominator` does not need: its two operands may have
+different types, where `andM`'s must agree.
+
+On the left, `pure (0 < b : Bool)` wraps the test as a computation of its own. The
+ascription is what resolves the proposition `0 < b` to the `Bool` that `andM`'s truthiness
+test wants; without it Lean goes looking for a `ToBool Prop` instance and fails.
+
+What `<&&>` cannot do is supply the delay on the right. Lean's `do` elaborator hoists a
+nested action `←` out of the surrounding expression and evaluates it *before* the
+expression, and it works from the *unexpanded* syntax tree, so no notation can intervene:
+`pure (0 < b : Bool) <&&> pure (q + (← a // b) * s ≤ l)` performs the division first,
+raising exactly where Python exits cleanly. The right operand has to be written as an
+explicit `do` block — and since the wrong spelling compiles and silently misbehaves, the
+translation flags that in a comment at the loop. Lean's plain `&&` is no help either: it
+does short-circuit, but the `←` is hoisted out before it is ever applied.
 
 There is a test in
 [`Tests/PythonPrimitives.lean`](LimitDenominator/Tests/PythonPrimitives.lean) that pins
-the short-circuiting down, by giving `pyAnd` a right operand that divides by zero.
+the short-circuiting down, by giving `<&&>` a right operand that divides by zero.
 
 ### `while` loops and simultaneous assignment
 

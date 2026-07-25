@@ -40,16 +40,16 @@ def isBestApproximation (m n l r s : Int) : Prop :=
 
 /--
 Statement that a function has the correct behaviour on `valid` targets: raises a
-`valueError` with the expected message when the denominator limit is less than one, and
+`valueError` with the expected message when the denominator limit is not positive, and
 otherwise returns the best approximation.
 -/
 def isCorrectLimitDenominator
     (valid : Int → Int → Prop)
     (limitDenominator : Int → Int → Int → PyExcept (Int × Int)) :=
-  (∀ {m n l : Int}, l < 1 →
+  (∀ {m n l : Int}, l ≤ 0 →
       raises (limitDenominator m n l) (.valueError "max_denominator should be at least 1"))
   ∧
-  (∀ {m n l : Int}, valid m n → 1 ≤ l →
+  (∀ {m n l : Int}, valid m n → 0 < l →
       ∃ r s, returns (limitDenominator m n l) (r, s) ∧ isBestApproximation m n l r s)
 
 end

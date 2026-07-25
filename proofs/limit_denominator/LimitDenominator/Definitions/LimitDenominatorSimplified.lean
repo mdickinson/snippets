@@ -41,7 +41,8 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
     throw <| .valueError "max_denominator should be at least 1"
 
   let mut (a, b, p, q, r, s) := (n, ← m % n, 1, 0, ← m // n, 1)
-  while ← pyAnd (0 < b) (do return q + (← a // b) * s ≤ l) do
+  -- Keep the right operand a `do` block, or the division is hoisted past the `0 < b` test.
+  while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
     (a, b, p, q, r, s) := (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s)
   let (t, u) := (p + (← (l - q) // s) * r, q + (← (l - q) // s) * s)
   return if 2 * b * u ≤ n then (r, s) else (t, u)

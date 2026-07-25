@@ -63,9 +63,9 @@ public theorem denominator_residual {m n l a b p q r s : Int}
 
 /--
 The invariant holds of the initial state `(n, m % n, 1, 0, m / n, 1)`, for a positive target
-denominator and a denominator limit of at least one.
+denominator and a positive denominator limit.
 -/
-public theorem initial {m n l : Int} (hn : 0 < n) (hl : 1 ≤ l) :
+public theorem initial {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     LoopInvariant m n l n (m % n) 1 0 (m / n) 1 where
   det := .inl (by omega)
   numerator := by have := Int.mul_ediv_add_emod m n; omega
@@ -74,7 +74,7 @@ public theorem initial {m n l : Int} (hn : 0 < n) (hl : 1 ≤ l) :
   b_lt_a := Int.emod_lt_of_pos m hn
   q_nonneg := by omega
   q_le_s := by omega
-  s_le_l := hl
+  s_le_l := by omega
   s_pos := by omega
   p_eq_one_of_q_eq_zero _ := rfl
 

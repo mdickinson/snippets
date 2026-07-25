@@ -40,7 +40,7 @@ Three things, in rough order of effort.
    it is unnecessary: for a reduced target with `l < n` — which the fast path guarantees —
    `b` is positive at loop exit, since `b = 0` would give `a·r = m` and `a·s = n` with `m`
    and `n` coprime, hence `a = 1` and `n = s ≤ l`, contradicting `l < n`. With `b`
-   positive throughout, `pyAnd` is not needed in this listing.
+   positive throughout, this listing needs no short-circuiting `and` at all.
 
 Also cosmetic but worth getting right: the shipped code names its variables `p0, q0, p1,
 q1` and uses `n, d` for the running target. Whether to keep those names in the Lean

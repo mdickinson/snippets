@@ -27,7 +27,7 @@ desugars to, so `limitDenominatorSimplified_fold` folds the loop onto it by `rfl
 def loopBody (l : Int) (_u : Unit) (state : LoopState) : PyExcept (ForInStep LoopState) :=
   let ⟨a, b, p, q, r, s⟩ := state
   do
-    let cond ← pyAnd (0 < b) (do return q + (← pyFloordiv a b) * s ≤ l)
+    let cond ← pure (0 < b : Bool) <&&> (do return q + (← pyFloordiv a b) * s ≤ l)
     if cond = true then
       pure (ForInStep.yield
         (b, ← pyMod a b, r, s, p + (← pyFloordiv a b) * r, q + (← pyFloordiv a b) * s))
@@ -43,7 +43,7 @@ def afterLoop (n l : Int) (state : LoopState) : PyExcept (Int × Int) :=
     pure (if 2 * b * (q + k2 * s) ≤ n then (r, s) else (p + k1 * r, q + k2 * s))
 
 /-- `limitDenominatorSimplified` on a valid target, as a loop followed by its tail. -/
-theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 1 ≤ l) :
+theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     limitDenominatorSimplified m n l =
       forIn Lean.Loop.mk (n, m % n, 1, 0, m / n, 1) (loopBody l) >>= afterLoop n l := by
   rw [limitDenominatorSimplified, if_neg (by omega), pyMod_ok_bind hn, pyFloordiv_ok_bind hn]
@@ -57,7 +57,7 @@ never evaluated, and the loop exits.
 -/
 theorem loopBody_of_zero (l a p q r s : Int) :
     loopBody l () (a, 0, p, q, r, s) = pure (ForInStep.done (a, 0, p, q, r, s)) := by
-  rw [loopBody, show decide ((0 : Int) < 0) = false from by decide, pyAnd_false, pure_bind,
+  rw [loopBody, show decide ((0 : Int) < 0) = false from by decide, andM_pure_false, pure_bind,
     if_neg (by decide)]
 
 /-- With `b` positive, the body divides safely and the exit test is the Python condition. -/
@@ -67,7 +67,7 @@ theorem loopBody_of_pos {l a b p q r s : Int} (hb : 0 < b) :
         pure (ForInStep.yield (b, a % b, r, s, p + a / b * r, q + a / b * s))
       else
         pure (ForInStep.done (a, b, p, q, r, s)) := by
-  rw [loopBody, decide_eq_true hb, pyAnd_true, pyFloordiv_ok_bind hb, pure_bind]
+  rw [loopBody, decide_eq_true hb, andM_pure_true, pyFloordiv_ok_bind hb, pure_bind]
   simp only [decide_eq_true_eq]
   split
   · rw [pyMod_ok_bind hb, pyFloordiv_ok_bind hb, pyFloordiv_ok_bind hb]
@@ -104,16 +104,16 @@ theorem loopBody_step (m n l : Int) (state : LoopState) (hinv : loopInvariant m 
   · exact .inr ⟨_, rfl, h, .inr ⟨hb, by omega⟩⟩
 
 /--
-Correctness of `limitDenominatorSimplified`: for a denominator limit below one it raises the same
-`ValueError` as CPython, and for a target with positive denominator it returns the best
-approximation.
+Correctness of `limitDenominatorSimplified`: for a denominator limit that is not positive it
+raises the same `ValueError` as CPython, and for a target with positive denominator it returns
+the best approximation.
 -/
 public theorem isCorrectLimitDenominator_simplified :
     isCorrectLimitDenominator (fun _ n => 0 < n) limitDenominatorSimplified := by
   refine ⟨?_, ?_⟩
-  · -- A limit below one: the first guard raises, short-circuiting the `do` block.
+  · -- A nonpositive limit: the first guard raises, short-circuiting the `do` block.
     intro m n l hl
-    rw [limitDenominatorSimplified, if_pos hl]
+    rw [limitDenominatorSimplified, if_pos (show l < 1 by omega)]
     rfl
   · -- Otherwise the loop runs, never raises, and returns one of the two candidates.
     intro m n l hn hl
