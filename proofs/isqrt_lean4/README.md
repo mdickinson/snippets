@@ -119,9 +119,9 @@ build` will still pass (with warnings) if there are incomplete proofs, marked by
 
 Lean is both a proof assistant and a programming language, so the Lean definitions of
 the integer square root algorithm can be both proved correct and executed. This project
-includes Lean source for a command-line executable `isqrt` that computes integer square
-roots via the same `isqrtIterative` function that's verified correct by Lean. The
-executable can be built and executed via `lake exe isqrt`:
+includes Lean source for a standalone command-line executable `isqrt` that computes
+integer square roots via the same `isqrtIterative` function that's verified correct by
+Lean. The executable can be built and executed via `lake exe isqrt`:
 
 ```console
 $ lake exe isqrt 1729
