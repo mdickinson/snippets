@@ -252,9 +252,10 @@ up requires confidence in:
 
 Notably the proofs themselves do *not* need to be trusted. However gnarly they look, if
 Lean says they are valid then they are valid. So it is enough to read everything under
-[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — 166 lines including
-docstrings, comments and blank lines — plus the statements, but not the proofs, of those
-three theorems.
+[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — the translation, the
+Python primitives, the exceptions and the specification — plus the statements, but not the
+proofs, of those three theorems. The proof layer is several times the size of the
+definitions, and none of it has to be read.
 
 There are also empirical checks under
 [`LimitDenominator/Tests`](LimitDenominator/Tests). These are not formal proofs, but they
