@@ -138,12 +138,13 @@ the best approximation.
 
 ## Scope
 
-This project currently covers the simplified integer listing above. Extending it to the
-body of `Fraction.limit_denominator` as shipped is future work: the specification and the
-mathematics are already stated in the generality needed for both, and what remains is a
-second translation plus the loop mechanics for `while True` with a mid-loop `break`, and
-the argument (issue § "Optimization") that the `0 < b` test is unnecessary once the fast
-path guarantees `l < n` for a reduced target.
+The *proof* in this project currently covers the simplified integer listing above. The body
+of `Fraction.limit_denominator` as shipped is translated and tested, in
+[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
+but not yet proved correct. The specification and the mathematics are already stated in the
+generality needed for both, so what remains is the loop mechanics for `while True` with a
+mid-loop `break`, the fast path, and the argument (issue § "Optimization") that the `0 < b`
+test is unnecessary once that fast path guarantees `l < n` for a reduced target.
 
 ## Project structure
 

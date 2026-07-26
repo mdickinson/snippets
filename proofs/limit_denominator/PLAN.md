@@ -1,14 +1,17 @@
-# Remaining work: the stdlib listing
+# Remaining work: proving the stdlib listing
 
 The simplified integer listing is done: translated, specified, proved, tested and
-documented. [README.md](README.md) and [PROOF.md](PROOF.md) are the canonical documents
-for it, and everything this file used to say about it now lives in one of them or in a
-docstring. What is left is the second listing.
+documented. [README.md](README.md) and [PROOF.md](PROOF.md) are the canonical documents for
+it, and everything this file used to say about it now lives in one of them or in a docstring.
+
+The stdlib listing is now translated and tested, in
+[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean) and
+[`Tests/LimitDenominatorStdlib.lean`](LimitDenominator/Tests/LimitDenominatorStdlib.lean).
+What is left is its proof, and the documentation that waits on it.
 
 ## Goal
 
-Add `limitDenominatorStdlib`, a translation of the body of `Fraction.limit_denominator` as
-it appears in CPython's `Lib/fractions.py`, and prove
+Prove `limitDenominatorStdlib` correct:
 
 ```lean
 theorem isCorrectLimitDenominator_stdlib :
@@ -18,8 +21,12 @@ theorem isCorrectLimitDenominator_stdlib :
 The specification and the mathematics are already stated in the generality this needs: the
 `valid` parameter on `isCorrectLimitDenominator` carries the extra "in lowest terms"
 precondition, and `Bracketing` and everything downstream of it are independent of how the
-loop produced the state. So the work is confined to a second translation plus its
-mechanics, and an extension of README.md's overview, scope and trust sections.
+loop produced the state. So the work is confined to the loop mechanics and the fast path.
+
+Then the documentation, which still describes only the simplified listing as proved:
+README.md's overview (its closing paragraph says so outright), § Scope, § "What is proved",
+§ "What do I need to trust?" and § Testing, and a pin for the new theorem in
+[`Tests/Axioms.lean`](LimitDenominator/Tests/Axioms.lean).
 
 ## Settled: fractions stay bare `Int`s
 
@@ -56,34 +63,9 @@ before building it.
 
 ## What is different about it
 
-Here is what is being translated — the body of `Fraction.limit_denominator` from CPython
-3.14's `Lib/fractions.py`, with the docstring and the algorithm-notes comment elided:
-
-```python
-    def limit_denominator(self, max_denominator=1000000):
-        if max_denominator < 1:
-            raise ValueError("max_denominator should be at least 1")
-        if self._denominator <= max_denominator:
-            return Fraction(self)
-
-        p0, q0, p1, q1 = 0, 1, 1, 0
-        n, d = self._numerator, self._denominator
-        while True:
-            a = n//d
-            q2 = q0+a*q1
-            if q2 > max_denominator:
-                break
-            p0, q0, p1, q1 = p1, q1, p0+a*p1, q2
-            n, d = d, n-a*d
-        k = (max_denominator-q0)//q1
-
-        if 2*d*(q0+k*q1) <= self._denominator:
-            return Fraction._from_coprime_ints(p1, q1)
-        else:
-            return Fraction._from_coprime_ints(p0+k*p1, q0+k*q1)
-```
-
-Three things are different, in rough order of effort.
+The Python being translated is quoted in the module docstring of
+[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
+beside the Lean. Three things about it are different, in rough order of effort.
 
 1. **`while True` with a mid-loop `break`.** The exit is a `ForInStep.done` from the middle
    of the body rather than a false condition at the top.
@@ -142,13 +124,26 @@ So peeling one iteration with `forIn_eq_of_monadTail` should let
 restated at a new point in the body. It *has* to be peeled: at the shipped initial state the
 invariant's `s_pos`, `q_le_s` and `b_lt_a` all fail, `s` there being `q1 = 0`.
 
-## Tests to add
+## Tests
 
-- Expected-value vectors for `limitDenominatorStdlib`, including the fast path.
-- A grid cross-check `limitDenominatorStdlib m n l == limitDenominatorSimplified m n l`
-  over reduced targets, which is where the two listings' agreement gets exercised.
-- Re-run the Python differential test against `Fraction.limit_denominator` — the harness
-  is trivial to rebuild and the current run is recorded in README.md § Testing.
+Done, in [`Tests/LimitDenominatorStdlib.lean`](LimitDenominator/Tests/LimitDenominatorStdlib.lean):
+expected-value vectors including the fast path, the `ValueError`, `checkBestApproximation`
+over the reduced targets of `specCheckGrid`, and agreement with `limitDenominatorSimplified`
+over those same targets.
+
+Both grid checks are gated on `Int.gcd m n = 1`, so both could have passed vacuously. They do
+not: a clear majority of the grid's targets are reduced, and among those both tie-break clauses
+have live antecedents for negative and positive `m` alike — clause 3's being exactly the
+limit-of-one, halfway-between-integers family that § "The degenerate tie" of
+[PROOF.md](PROOF.md) shows is the only one there is. To re-derive: filter `specCheckGrid` to
+reduced targets and count those with a rival that ties on distance at a different denominator
+(clause 2) or at the same one (clause 3).
+
+Separately, and not in the build: while the translation was being written it was
+differential-tested against `Fraction.limit_denominator` in CPython 3.14 over 94,207 cases —
+reduced targets with `1 ≤ n ≤ 40`, `−80 ≤ m ≤ 80` and `1 ≤ l ≤ 24`, plus README.md's examples
+and a few wide ones — with identical output throughout. README.md § Testing's recorded run is
+a different test, of the *Python* simplified listing, and is unaffected.
 
 ## Open item
 
