@@ -1,6 +1,7 @@
 module
 
 meta import LimitDenominator.Proofs.SimplifiedCorrectness
+meta import LimitDenominator.Proofs.StdlibCorrectness
 
 /-!
 The axioms each correctness theorem rests on, pinned.
@@ -34,3 +35,10 @@ info: 'limitDenominatorSimplified_total' depends on axioms:
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms limitDenominatorSimplified_total
+
+/--
+info: 'isCorrectLimitDenominator_stdlib' depends on axioms:
+  [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms isCorrectLimitDenominator_stdlib

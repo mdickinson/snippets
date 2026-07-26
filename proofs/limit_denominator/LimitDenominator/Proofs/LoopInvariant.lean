@@ -59,6 +59,32 @@ public theorem denominator_residual {m n l a b p q r s : Int}
     (m * s - r * n) * (p * s - r * q) = b := by
   have := h.det; have := h.numerator; have := h.denominator; grind
 
+/-! ## When the residual cannot vanish -/
+
+/--
+For a target in lowest terms whose denominator exceeds the limit, the residual `b` stays
+positive — the issue's § "Optimization".
+
+Were it zero, `numerator` and `denominator` would read `a * r = m` and `a * s = n`, making `a` a
+common divisor of the two; a target in lowest terms then forces `a = 1`, and so `n = s`, within
+the limit after all. This is what lets a listing whose loop condition tests only
+`q + a/b*s ≤ l` divide by `b` safely.
+-/
+public theorem b_pos {m n l a b p q r s : Int} (h : LoopInvariant m n l a b p q r s)
+    (hgcd : Int.gcd m n = 1) (hl : l < n) : 0 < b := by
+  rcases (by have := h.b_nonneg; omega : b = 0 ∨ 0 < b) with rfl | hb
+  · have hnum := h.numerator
+    have hden := h.denominator
+    have hba := h.b_lt_a
+    have hdvd : a.natAbs ∣ Int.gcd m n :=
+      Int.dvd_gcd (Int.natAbs_dvd.mpr ⟨r, by omega⟩) (Int.natAbs_dvd.mpr ⟨s, by omega⟩)
+    rw [hgcd] at hdvd
+    have ha : a = 1 := by have := Nat.dvd_one.mp hdvd; omega
+    subst ha
+    have := h.s_le_l
+    omega
+  · exact hb
+
 /-! ## Establishing and maintaining the invariant -/
 
 /--

@@ -13,6 +13,9 @@ gets the non-strict comparison, because the code returns the loop candidate on a
 `isBestApproximation_extended` gets the strict one, which is what makes its
 loop-candidate-side cases impossible.
 
+A target already within the limit is its own best approximation, and that needs none of the
+machinery: `isBestApproximation_self` proves it from the distance being zero.
+
 Nothing about the monad, the loop or the Python listing appears here; this is the last of the
 math.
 -/
@@ -34,6 +37,35 @@ public theorem isBestApproximation_unique {m n l r₁ s₁ r₂ s₂ : Int}
   obtain ⟨hclose₂, hden₂, hnum₂⟩ := hall₂ r₁ s₁ hs₁ hl₁
   have hs : s₁ = s₂ := Int.le_antisymm (hden₁ hclose₂) (hden₂ hclose₁)
   exact ⟨Int.le_antisymm (hnum₁ hclose₂ hs) (hnum₂ hclose₁ hs.symm), hs⟩
+
+/--
+A target in lowest terms whose denominator is already within the limit is its own best
+approximation — the fast path.
+
+Its distance to itself is zero, so the first clause is immediate, and a rival at distance zero
+too is the same fraction, whose denominator is therefore a multiple of this one.
+-/
+public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)
+    (hgcd : Int.gcd m n = 1) : isBestApproximation m n l m n := by
+  have h0 : (m * n - m * n).abs = 0 := Int.abs_eq_zero.mpr (by omega)
+  refine ⟨hn, hl, hgcd, fun y z hz _ => ?_⟩
+  have h1 : 0 ≤ (m * z - y * n).abs * n := Int.mul_nonneg (Int.abs_nonneg _) (by omega)
+  have key : atLeastAsClose m n y z m n → y * n = m * z := by
+    intro hrev
+    unfold atLeastAsClose at hrev
+    rw [h0] at hrev
+    have h2 : (m * z - y * n).abs = 0 := by
+      rcases Int.mul_eq_zero.mp (show (m * z - y * n).abs * n = 0 by omega) with h | h
+      · exact h
+      · omega
+    have := Int.abs_eq_zero.mp h2
+    omega
+  refine ⟨?_, fun hrev => ?_, fun hrev hnz => ?_⟩
+  · unfold atLeastAsClose; rw [h0]; omega
+  · exact Int.le_of_mul_eq_mul_of_gcd_eq_one hgcd hz (key hrev)
+  · have := Int.eq_of_mul_eq_mul_right (show n ≠ 0 by omega)
+      (show y * n = m * n by rw [key hrev, hnz])
+    omega
 
 namespace Bracketing
 

@@ -17,6 +17,13 @@ public theorem Int.le_mul_of_one_le_left {a b : Int} (hb : 0 ≤ b) (ha : 1 ≤ 
 
 /-! ## Absolute value -/
 
+/-- The absolute value is nonnegative. -/
+public theorem Int.abs_nonneg (a : Int) : 0 ≤ a.abs := by unfold Int.abs; split <;> omega
+
+/-- Only zero has zero absolute value. -/
+public theorem Int.abs_eq_zero {a : Int} : a.abs = 0 ↔ a = 0 := by
+  unfold Int.abs; split <;> omega
+
 /-- Multiplying by `1` or `-1` never exceeds the absolute value. -/
 public theorem Int.mul_sign_le_abs {a d : Int} (hd : d = 1 ∨ d = -1) : a * d ≤ a.abs := by
   unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega
