@@ -155,9 +155,10 @@ The Lean source is organised into three subdirectories of
   exceptions, and the *statements* (but not proofs) of what correctness means.
 - [`LimitDenominator/Proofs`](LimitDenominator/Proofs) holds the correctness theorem and
   its supporting lemmas.
-- [`LimitDenominator/Tests`](LimitDenominator/Tests) holds `#guard`-based checks: the
-  Python primitives, expected-value vectors, and an executable form of the specification
-  evaluated over a grid of targets.
+- [`LimitDenominator/Tests`](LimitDenominator/Tests) holds the build-time checks:
+  `#guard`-based checks of the Python primitives, expected-value vectors, an executable form
+  of the specification evaluated over a grid of targets, and the pinned axiom sets of the
+  correctness theorems.
 
 The proof layer separates the *mechanics* — unravelling the `do` block, bridging Python's
 division to Euclidean division, driving the loop — from the *mathematics*, and the file
@@ -208,6 +209,12 @@ every step of the proofs. The stronger `lake build --wfail` turns warnings into 
 notably, plain `lake build` still passes, with warnings, in the presence of an incomplete
 proof marked `sorry`, whereas `lake build --wfail` fails.
 
+An incomplete proof is not the only way a theorem can be hollow: an axiom asserted outright
+produces no warning at all. So the build also pins what each correctness theorem depends on,
+in [`Tests/Axioms.lean`](LimitDenominator/Tests/Axioms.lean) — `propext`, `Classical.choice`
+and `Quot.sound`, which are Lean's own three and nothing else. Any addition fails the build,
+so this is checked on every run rather than being something a reader has to think to verify.
+
 ## What do I need to trust?
 
 The goal is to convince a reader that the Python listing in the overview is correct. A
@@ -237,7 +244,9 @@ up requires confidence in:
   [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean):
   `isCorrectLimitDenominator_simplified`,
   `limitDenominatorSimplified_raises_of_denominator_nonpos` and
-  `limitDenominatorSimplified_total`.
+  `limitDenominatorSimplified_total`. That they are proved rather than asserted does not have
+  to be taken on trust: their axiom sets are pinned by the build, as described under
+  [Building](#building).
 - **The Lean toolchain**, including its compiler and core library. It is conceivable, if
   very unlikely, that Lean has a bug that lets it accept an invalid proof.
 
@@ -272,7 +281,8 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   return if 2 * b * u ≤ n then (r, s) else (t, u)
 ```
 
-Line for line against the Python, with three things worth explaining.
+Line for line against the Python, with three things worth explaining, and a note on reading
+`←` for anyone new to Lean's `do` notation.
 
 ### Division that raises
 
@@ -368,7 +378,7 @@ the whole `do` block automatically. So each `←` marks a place where the Python
 
 ## Testing
 
-Two kinds of check live under [`LimitDenominator/Tests`](LimitDenominator/Tests), both run
+Three kinds of check live under [`LimitDenominator/Tests`](LimitDenominator/Tests), all run
 as part of `lake build`.
 
 **Expected values.** [`Vectors.lean`](LimitDenominator/Tests/Vectors.lean) holds
@@ -387,6 +397,14 @@ and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12` — 12,480 cases. Th
 specification are bounded, so they are enumerated; the `y` are not, so for each `z` only
 the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
 the docstring there.
+
+**The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for each of
+the three correctness theorems, that it depends on `propext`, `Classical.choice` and
+`Quot.sound` and nothing else. Unlike the other two this is not an empirical check — it is a
+statement about the proofs, and it is what closes the gap `--wfail` leaves, since an outright
+`axiom` earns no warning. Each theorem is checked in its own right rather than leaning on the
+trichotomy to cover the other two, so reworking one proof cannot quietly narrow what is
+checked.
 
 Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in

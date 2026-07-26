@@ -19,9 +19,9 @@ def raises {α : Type} (x : PyExcept α) (e : PyException) := x = .error e
 def Int.abs (a : Int) : Int := if 0 ≤ a then a else -a
 
 /--
-`(r, s)` is at least as close to `m / n` as `(y, z)` is, for positive denominators `s` and
-`z`. Both sides of `|m/n - r/s| ≤ |m/n - y/z|` are scaled by the positive quantity
-`n * s * z`.
+`(r, s)` is at least as close to `m / n` as `(y, z)` is, for a positive target denominator
+`n` and positive candidate denominators `s` and `z`. Both sides of
+`|m/n - r/s| ≤ |m/n - y/z|` are scaled by the positive quantity `n * s * z`.
 -/
 def atLeastAsClose (m n r s y z : Int) : Prop :=
   (m * s - r * n).abs * z ≤ (m * z - y * n).abs * s

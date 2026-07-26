@@ -38,6 +38,8 @@ def loopBody (l : Int) (_u : Unit) (state : LoopState) : PyExcept (ForInStep Loo
 def afterLoop (n l : Int) (state : LoopState) : PyExcept (Int × Int) :=
   let ⟨_a, b, p, q, r, s⟩ := state
   do
+    -- Two bindings for one quotient, because the Python writes `(l - q) // s` twice:
+    -- collapsing them breaks the `rfl` in `limitDenominatorSimplified_fold`.
     let k1 ← pyFloordiv (l - q) s
     let k2 ← pyFloordiv (l - q) s
     pure (if 2 * b * (q + k2 * s) ≤ n then (r, s) else (p + k1 * r, q + k2 * s))
