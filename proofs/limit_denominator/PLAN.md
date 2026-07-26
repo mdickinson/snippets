@@ -21,6 +21,36 @@ precondition, and `Bracketing` and everything downstream of it are independent o
 loop produced the state. So the work is confined to a second translation plus its
 mechanics, and an extension of README.md's overview, scope and trust sections.
 
+The theorem statement above is provisional: it presumes the target stays a bare pair of
+`Int`s. Settle the question below first, since it decides that statement's shape.
+
+## Settle first: how to represent fractions
+
+The stdlib listing is a method on a `Fraction`, so unlike the simplified listing its target
+is *always* positive-denominatored and in lowest terms, and its result is built with
+`Fraction._from_coprime_ints`. The obvious move is to make that structural rather than a
+side condition: a type bundling numerator, denominator, `0 < den` and `gcd num den = 1`, so
+the precondition is discharged at construction and cannot be forgotten at a use site. The
+proof already establishes both facts about the result, so the result could inhabit it too.
+
+Both the *how* and the *whether* are open. Points to weigh:
+
+- **What happens to `isCorrectLimitDenominator`.** Its `valid : Int → Int → Prop` parameter
+  exists precisely to carry this precondition for two listings that disagree about it. A
+  fraction type could replace that parameter, or sit alongside it, or wrap only the stdlib
+  listing's signature while the spec stays in `Int`s. These give noticeably different
+  statements, and the statement is what a reader has to check — a spec whose hypotheses are
+  invisible because they hide inside a type is not automatically the clearer one.
+- **Fidelity cuts both ways.** A `Fraction`-shaped signature is closer to the Python being
+  translated. But the *arithmetic* the listing performs is on bare integers, and bundling
+  invariants into the loop state would be a departure, not a translation.
+- **Core already has `Rat`,** with exactly these invariants (`den` positive, reduced). Reusing
+  it would come free of definitional work but drags in its own API, which is thin, and its
+  `den : Nat` differs from the `Int` the algorithm uses throughout.
+- **Where the proof obligations land.** Bundling moves them from hypotheses to construction
+  sites. That is a win at call sites and a cost inside the proof, wherever an intermediate
+  pair is not yet known to be reduced.
+
 ## What is different about it
 
 Three things, in rough order of effort.
