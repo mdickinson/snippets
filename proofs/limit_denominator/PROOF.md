@@ -31,8 +31,8 @@ further from the target than the second. Stated as an integer inequality, obtain
 ```
 
 **Best approximation** — the candidate the algorithm must return: at least as close as
-every other candidate, with ties broken towards the smaller denominator and any remaining
-tie towards the smaller fraction, in lowest terms. This is `isBestApproximation`.
+every other candidate, in lowest terms, with ties broken towards the smaller denominator,
+and a tie that survives that towards the lower value. This is `isBestApproximation`.
 
 **Loop candidate** — the candidate `(r, s)` held in the loop state, and still held on loop
 exit. One of the two candidates the final comparison chooses between. (Not "lower bound":
@@ -324,7 +324,7 @@ so the two distances are equal.
   tie, so `s ≤ z`. When the extended candidate was returned the comparison was *strict*, and
   the same reasoning yields `b·u ≤ c·s`, a contradiction — so this case cannot arise.
 
-**Clause 3 — smaller fraction.** Additionally `S = z`.
+**Clause 3 — lower value.** Additionally `S = z`.
 
 - On the returned candidate's side, the equality case again gives `y·S = R·z`; with `S = z`
   that reads `y·S = R·S`, and `0 < S` gives `y = R`.

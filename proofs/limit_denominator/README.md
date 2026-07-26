@@ -83,7 +83,7 @@ The specification is in
 [`Specification.lean`](LimitDenominator/Definitions/Specification.lean). It says that a
 returned `r / s` is in lowest terms with `0 < s ≤ l`, and that against every candidate
 `y / z` with `0 < z ≤ l` it is at least as close to the target, with ties broken towards
-the smaller denominator and any remaining tie towards the smaller fraction:
+the smaller denominator and a tie that survives that towards the lower value:
 
 ```lean
 def isBestApproximation (m n l r s : Int) : Prop :=
