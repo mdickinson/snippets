@@ -190,8 +190,41 @@ For `b ≤ c` and `0 < c`, split on how the loop exited. If `b = 0` then `c = a`
 
 Finally, `0 ≤ b = (m·s − r·n)·v` and `0 < c = (t·n − m·u)·v` say precisely that the target
 lies between the two candidates: `r/s ≤ m/n < t/u` when `v = 1`, and `t/u < m/n ≤ r/s` when
-`v = −1`. All of this is collected into the `Bracketing` structure, and nothing after that
-point mentions the loop, its state, or `p` and `q`.
+`v = −1`.
+
+### The degenerate tie
+
+One further fact is needed, and it is the only one that draws on the seventh loop invariant:
+if the two candidates share a denominator *and* are equidistant from the target, then the
+orientation is `+1`. That is, `s = u` together with `b = c` implies `v = 1`.
+
+The two hypotheses do different work. From `c = a − k·b`, the assumption `b = c` rearranges
+to
+
+```
+a = (k+1)·b
+```
+
+which forces `k ≥ 1`: if `k ≤ 0` then `(k+1)·b ≤ b`, since `b ≥ 0`, so `a ≤ b`, contradicting
+`b < a`. (It also forces `0 < b`, since `b = 0` would give `c = a` and hence `a = b = 0`,
+against `0 < a`.)
+
+The hypothesis `s = u` then does the rest. Written out it is `s = q + k·s`, and `k ≥ 1` with
+`0 < s` gives `k·s ≥ s`, so `s ≥ q + s` and therefore `q ≤ 0`; with `q ≥ 0` from the
+invariants,
+
+```
+q = 0
+```
+
+which is precisely what the seventh invariant needs. It gives `p = 1`, so the orientation
+`p·s − r·q` is just `s` — and a positive unit is `1`.
+
+The same equations pin down the rest of the configuration: `s = 1` from the orientation,
+hence `u = 1` and `k = 1`, and then `s ≤ l < s + u` forces `l = 1`.
+
+All of this is collected into the `Bracketing` structure, and nothing after that point
+mentions the loop, its state, or `p` and `q`.
 
 ## The bracket
 
@@ -233,9 +266,20 @@ b·z ≤ |m·z − y·n|·s
 which is exactly `atLeastAsClose m n r s y z`. Symmetrically, on the extended candidate's
 side the second identity gives `c·z ≤ |m·z − y·n|·u`.
 
-Each pivot is an equality, so it also says when the bound is *tight*: `b·z = |m·z − y·n|·s`
-forces `(y·s − r·z)v = 0`, hence `y·s = r·z` — the candidate equals the loop candidate as a
-value. Likewise on the other side. This is what the tie-break clauses need.
+Each pivot is an equality, so it says more than the bound: it says when the bound is
+attained. If `b·z = |m·z − y·n|·s` then the first pivot's right-hand side vanishes, so
+`(y·s − r·z)v = 0` and hence
+
+```
+y·s = r·z
+```
+
+that is, `y/z` equals the loop candidate as a *value* — though not necessarily as a pair,
+since `(y, z)` need not be in lowest terms. Symmetrically, `c·z = |m·z − y·n|·u` forces
+`t·z = y·u`. These are the **equality cases** of the two bounds
+([`eq_of_loop_le` and `eq_of_extended_le`](LimitDenominator/Proofs/Bracket.lean)), and they
+are what the tie-break clauses need: the first clause gives an inequality, and the equality
+cases are what turn "no further away" into "the same fraction".
 
 ## Choosing between the two candidates
 
@@ -271,28 +315,29 @@ nearer: from `c·z ≤ e·u` and `b·u ≤ c·s`, scaling and cancelling gives `
 **Clause 2 — smaller denominator.** Now `(y, z)` is at least as close in both directions,
 so the two distances are equal.
 
-- If `(y, z)` is on the returned candidate's side, tightness gives `y·S = R·z`. Since
+- If `(y, z)` is on the returned candidate's side, the equality case gives `y·S = R·z`. Since
   `gcd(R, S) = 1`, `S` divides `z`, and `0 < z` gives `S ≤ z`.
 - If it is on the other side, then matching one candidate's distance exactly while lying
-  beyond the other pins the comparison. When the loop candidate was returned, that forces
-  an exact tie `b·u = c·s`, and then `(y, z)` matches the extended candidate's distance
-  too; tightness there gives `t·z = y·u`, so `u ≤ z`, and `s ≤ u` on a tie, so `s ≤ z`.
-  When the extended candidate was returned the comparison was *strict*, and the same
-  reasoning yields `b·u ≤ c·s`, a contradiction — so this case cannot arise.
+  beyond the other pins the comparison. When the loop candidate was returned, that forces an
+  exact tie `b·u = c·s`, and then `(y, z)` matches the extended candidate's distance too; the
+  equality case for the extended candidate gives `t·z = y·u`, so `u ≤ z`, and `s ≤ u` on a
+  tie, so `s ≤ z`. When the extended candidate was returned the comparison was *strict*, and
+  the same reasoning yields `b·u ≤ c·s`, a contradiction — so this case cannot arise.
 
 **Clause 3 — smaller fraction.** Additionally `S = z`.
 
-- On the returned candidate's side, `y·S = R·z = R·S` with `0 < S` gives `y = R`.
+- On the returned candidate's side, the equality case again gives `y·S = R·z`; with `S = z`
+  that reads `y·S = R·S`, and `0 < S` gives `y = R`.
 - On the other side, when the extended candidate was returned the case is impossible, as
   in clause 2. When the loop candidate was returned we are in the tie situation of clause
-  2, with `u ≤ z = s ≤ u`, so `s = u = z`; then `b·u = c·s` gives `b = c`, and the seventh
-  loop invariant gives orientation `+1`, so `(t − r)·s = 1`, forcing `t = r + 1`. And
-  `t·z = y·u` with `z = u` gives `y = t = r + 1 > r`.
+  2, with `u ≤ z = s ≤ u`, so `s = u = z`; then `b·u = c·s` gives `b = c`, so § "The
+  degenerate tie" applies and the orientation is `+1`, giving `(t − r)·s = 1` and hence
+  `t = r + 1`. And `t·z = y·u` with `z = u` gives `y = t = r + 1 > r`.
 
 This is the only place the seventh invariant is used, and the only configuration in which
-the two candidates share a denominator. It requires `l = 1` and a target exactly halfway
-between two consecutive integers — for example `1/2`, where `0/1` and `1/1` are equally
-close and `0/1` is returned.
+the two candidates share a denominator: `l = 1`, with a target exactly halfway between two
+consecutive integers — for example `1/2`, where `0/1` and `1/1` are equally close and `0/1`
+is returned.
 
 ## What the informal proof needs that this one does not
 
