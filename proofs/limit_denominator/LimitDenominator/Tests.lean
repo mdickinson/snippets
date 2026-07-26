@@ -2,6 +2,7 @@ module
 
 import LimitDenominator.Tests.Axioms
 import LimitDenominator.Tests.LimitDenominatorSimplified
+import LimitDenominator.Tests.LimitDenominatorStdlib
 import LimitDenominator.Tests.PythonPrimitives
 
 /-!
