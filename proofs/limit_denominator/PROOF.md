@@ -55,6 +55,13 @@ every candidate strictly inside the bracket has denominator exceeding `l`.
 candidate's is `b`, the extended candidate's is `c`; both are nonnegative because the
 orientation is folded in.
 
+**Simplified listing** — the three-argument integer function from
+[the issue][issue], against which this argument is written. Lean:
+`limitDenominatorSimplified`.
+
+**Stdlib listing** — the body of `Fraction.limit_denominator` as shipped, which runs the same
+calculation with a fast path in front of it. Lean: `limitDenominatorStdlib`.
+
 ## The specification
 
 `isBestApproximation m n l r s` says that `r / s` is a best approximation to `m / n` with
@@ -338,6 +345,31 @@ This is the only place the seventh invariant is used, and the only configuration
 the two candidates share a denominator: `l = 1`, with a target exactly halfway between two
 consecutive integers — for example `1/2`, where `0/1` and `1/1` are equally close and `0/1`
 is returned.
+
+## What the stdlib listing adds
+
+Everything above is written for the simplified listing. The stdlib listing runs the same
+calculation on the same state — permuted, and with its unconditional first iteration doing
+the simplified listing's initialisation — so the invariants, the bracket and the tie-breaking
+carry over unchanged. Two of its differences are mathematical rather than mechanical, and
+both trade on its target being in lowest terms.
+
+**The fast path.** When the target's denominator is already within the limit, the shipped
+code returns the target itself and never reaches the loop. That answer is a best
+approximation for a reason the argument above does not supply. Its distance to the target is
+zero, so it is at least as close as every candidate, which is clause 1. And a candidate
+`y / z` also at distance zero satisfies `y·n = m·z`, so `n` divides `z` — the target being in
+lowest terms — giving `n ≤ z` for clause 2; if moreover `z = n` then `y = m`, which settles
+clause 3. This is
+[`isBestApproximation_self`](LimitDenominator/Proofs/BestApproximation.lean).
+
+**No `0 < b` test.** The shipped loop condition tests only `q2 > max_denominator`, leaving
+its division by `b` unguarded. It needs no guard: past the fast path the target is in lowest
+terms with `l < n`, and then `b` is never zero. Were it zero, the two invariants recovering
+the target would read `a·r = m` and `a·s = n`, making `a` a common divisor of `m` and `n` and
+so `a = 1`, whence `n = s ≤ l` — the fast path would have taken it. This is
+[`LoopInvariant.b_pos`](LimitDenominator/Proofs/LoopInvariant.lean), and it is the argument
+of the issue's § "Optimization".
 
 ## What the informal proof needs that this one does not
 

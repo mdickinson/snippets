@@ -25,9 +25,9 @@ or develop a chapter of theory to reach them. In 2022 the author of that code re
 targeted proof, which needs none of that machinery, in
 [python/cpython#95723][issue]. This project formalises that proof.
 
-The algorithm this project proves correct is the three-argument integer function from the
-issue, which strips the `Fraction` wrapping and the fast path away from the standard
-library version and leaves the arithmetic:
+The starting point is the three-argument integer function from the issue, which strips the
+`Fraction` wrapping and the fast path away from the standard library version and leaves the
+arithmetic:
 
 ```python
 def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
@@ -71,8 +71,8 @@ The relationship between this listing and the body of `Fraction.limit_denominato
 on an already-reduced fraction, has a fast path for fractions whose denominator is already
 within the limit, uses `while True` with a `break` from the middle rather than a test at
 the top, and names its variables `p0, q0, p1, q1` rather than `p, q, r, s`. The issue
-discusses those differences. **This project does not yet prove the standard library
-version correct** — see [Scope](#scope) below.
+discusses those differences. Both listings are translated into Lean and both are proved
+correct, against one shared specification — see [Scope](#scope) for where the proof stops.
 
 [PROOF.md](PROOF.md) is the prose companion to the Lean proof: the whole argument in
 ordinary mathematical language, with pointers into the source.
@@ -97,6 +97,8 @@ def isBestApproximation (m n l r s : Int) : Prop :=
 All three quantified clauses are promises the CPython documentation and source comments
 make. Candidates are not required to be in lowest terms, so the result has to beat
 unreduced competitors too.
+
+### The simplified listing
 
 The theorem, at the bottom of
 [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean), is:
@@ -136,26 +138,56 @@ condition, `(l - q) // s` by `0 < s` — so those two `ValueError`s are the only
 reachable, and there is no input for which the function quietly returns something that is not
 the best approximation.
 
+### The standard library listing
+
+The body of `Fraction.limit_denominator` as shipped is translated in
+[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean) and
+proved against the same specification, at the bottom of
+[`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean):
+
+```lean
+theorem isCorrectLimitDenominator_stdlib :
+    isCorrectLimitDenominator (fun m n => 0 < n ∧ Int.gcd m n = 1) limitDenominatorStdlib
+```
+
+Here `valid` carries two conditions rather than one. Being a method, the shipped code reads
+its target off a `Fraction`, which keeps its denominator positive and its ratio in lowest
+terms. The shipped code tests neither, and neither does the translation.
+
+Those hypotheses are load-bearing, and not only for the tie-break. A target that is not in
+lowest terms can drive the loop's `b` to zero, and with no `0 < b` in the shipped loop
+condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3` raises
+`ZeroDivisionError`, where the simplified listing returns `1/2`. So the shipped listing has
+no counterpart to `limitDenominatorSimplified_total` above — outside `valid` there is nothing
+to promise. Within it, the argument that the missing test costs nothing is in
+[PROOF.md](PROOF.md#what-the-stdlib-listing-adds).
+
 ## Scope
 
-The *proof* in this project currently covers the simplified integer listing above. The body
-of `Fraction.limit_denominator` as shipped is translated and tested, in
-[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
-but not yet proved correct. The specification and the mathematics are already stated in the
-generality needed for both, so what remains is the loop mechanics for `while True` with a
-mid-loop `break`, the fast path, and the argument (issue § "Optimization") that the `0 < b`
-test is unnecessary once that fast path guarantees `l < n` for a reduced target.
+What is proved is the arithmetic: both listings, as functions from integers to integers or an
+exception. What is not proved is the `Fraction` wrapping that the shipped method puts around
+that arithmetic — the `max_denominator=1000000` default, the `Fraction(self)` the fast path
+returns, and `Fraction._from_coprime_ints`, CPython's *unchecked* constructor, which the
+translation replaces with the numerator/denominator pair itself.
+
+Nor is the invariant a `Fraction` maintains proved here — that is its constructor's job, not
+this algorithm's. A positive denominator and a ratio in lowest terms are hypotheses of
+`isCorrectLimitDenominator_stdlib`, not conclusions. Bundling them into a Lean type instead
+would put a coprimality proof in the definitions layer, the one layer a reader is asked to
+read: `_from_coprime_ints` verifies nothing, so a proof field of that shape could only be
+filled at the return sites by proving there what this project proves elsewhere. A visible
+hypothesis is better than one hidden inside a type.
 
 ## Project structure
 
 The Lean source is organised into three subdirectories of
 [`LimitDenominator`](LimitDenominator):
 
-- [`LimitDenominator/Definitions`](LimitDenominator/Definitions) holds the Lean
-  translation of the algorithm, the supporting definitions of Python primitives and
+- [`LimitDenominator/Definitions`](LimitDenominator/Definitions) holds the two Lean
+  translations of the algorithm, the supporting definitions of Python primitives and
   exceptions, and the *statements* (but not proofs) of what correctness means.
-- [`LimitDenominator/Proofs`](LimitDenominator/Proofs) holds the correctness theorem and
-  its supporting lemmas.
+- [`LimitDenominator/Proofs`](LimitDenominator/Proofs) holds the correctness theorems and
+  their supporting lemmas.
 - [`LimitDenominator/Tests`](LimitDenominator/Tests) holds the build-time checks:
   `#guard`-based checks of the Python primitives, expected-value vectors, an executable form
   of the specification evaluated over a grid of targets, and the pinned axiom sets of the
@@ -168,16 +200,17 @@ names follow that split:
 | File | Role |
 | --- | --- |
 | [`SupportLemmas.lean`](LimitDenominator/Proofs/SupportLemmas.lean) | general `Int` facts the core library lacks |
-| [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | driving a `while` loop with a measure and an invariant, monad-agnostically |
+| [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | driving a `while` loop with a measure and an invariant, or peeling one iteration, monad-agnostically |
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
-| [`LoopInvariant.lean`](LimitDenominator/Proofs/LoopInvariant.lean) | the loop invariant, its preservation, and the residuals |
+| [`LoopInvariant.lean`](LimitDenominator/Proofs/LoopInvariant.lean) | the loop invariant, its preservation, and the facts derived from it |
 | [`AfterLoop.lean`](LimitDenominator/Proofs/AfterLoop.lean) | the extended candidate, and the `Bracketing` facts everything downstream uses |
 | [`Bracket.lean`](LimitDenominator/Proofs/Bracket.lean) | the bracket lemma, and distance bounds for candidates outside it |
 | [`TieBreak.lean`](LimitDenominator/Proofs/TieBreak.lean) | comparing the two candidates |
-| [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean) | the three specification clauses, for whichever candidate is returned |
+| [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean) | the three specification clauses, for whichever candidate is returned and for the fast path |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
+| [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
 
-Three root files import these: [`LimitDenominator.lean`](LimitDenominator.lean) the
+Two root files import these: [`LimitDenominator.lean`](LimitDenominator.lean) the
 definitions and proofs, and
 [`LimitDenominatorTests.lean`](LimitDenominatorTests.lean) the tests.
 
@@ -223,39 +256,40 @@ successful `lake build` says every proof Lean checked is valid. Joining those tw
 up requires confidence in:
 
 - **The faithfulness of the Python-to-Lean translation.** If the Lean function runs a
-  different algorithm from the Python listing, its correctness says little about the
-  Python. This means reading:
-  - the translation itself, in
-    [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean);
-  - the Python primitives — the Lean versions of `//` and `%` — in
-    [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and
-    Python's `and`, which is core's `andM`, under
-    [`and` that short-circuits](#and-that-short-circuits);
+  different algorithm from the Python listing, its correctness says little about the Python.
+  This means reading: - the two translations, in
+  [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean)
+  and
+  [`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
+  the latter of which quotes the shipped Python beside the Lean; - the Python primitives —
+  the Lean versions of `//` and `%` — in
+  [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and Python's
+  `and`, which is core's `andM`, under [`and` that short-circuits](#and-that-short-circuits);
   - the exception definitions in
-    [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
-- **The statements of correctness** in
-  [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
-  `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A specification
-  that is too weak would be easy to satisfy and would prove nothing interesting. One check
-  on that is proved rather than argued:
+  [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean). - **The statements of
+  correctness** in [`Specification.lean`](LimitDenominator/Definitions/Specification.lean),
+  in particular `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A
+  specification that is too weak would be easy to satisfy and would prove nothing
+  interesting. One check on that is proved rather than argued:
   [`isBestApproximation_unique`](LimitDenominator/Proofs/BestApproximation.lean) shows that
-  at most one pair satisfies `isBestApproximation`, so the specification pins the answer
-  down completely and cannot be met by some unintended pair as well.
-- **That `lake build` really checks the proofs** of the three statements at the bottom of
-  [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean):
+  at most one pair satisfies `isBestApproximation`, so the specification pins the answer down
+  completely and cannot be met by some unintended pair as well. - **That `lake build` really
+  checks the proofs** of the four correctness statements: the three at the bottom of
+  [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) —
   `isCorrectLimitDenominator_simplified`,
   `limitDenominatorSimplified_raises_of_denominator_nonpos` and
-  `limitDenominatorSimplified_total`. That they are proved rather than asserted does not have
-  to be taken on trust: their axiom sets are pinned by the build, as described under
-  [Building](#building).
-- **The Lean toolchain**, including its compiler and core library. It is conceivable, if
-  very unlikely, that Lean has a bug that lets it accept an invalid proof.
+  `limitDenominatorSimplified_total` — and `isCorrectLimitDenominator_stdlib` at the bottom
+  of [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean). That they
+  are proved rather than asserted does not have to be taken on trust: their axiom sets are
+  pinned by the build, as described under [Building](#building). - **The Lean toolchain**,
+  including its compiler and core library. It is conceivable, if very unlikely, that Lean has
+  a bug that lets it accept an invalid proof.
 
 Notably the proofs themselves do *not* need to be trusted. However gnarly they look, if
 Lean says they are valid then they are valid. So it is enough to read everything under
-[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — the translation, the
+[`LimitDenominator/Definitions`](LimitDenominator/Definitions) — the two translations, the
 Python primitives, the exceptions and the specification — plus the statements, but not the
-proofs, of those three theorems. The proof layer is several times the size of the
+proofs, of those four theorems. The proof layer is several times the size of the
 definitions, and none of it has to be read.
 
 There are also empirical checks under
@@ -267,7 +301,8 @@ comparing against expected values — see [Testing](#testing).
 
 Fidelity is the goal: a reader should be able to see that the Lean and the Python are the
 same algorithm. Lean 4's support for imperative-looking code — `do` notation, mutable
-variables, `while` loops, exceptions — makes a close translation possible. Here it is:
+variables, `while` loops, exceptions — makes a close translation possible. Here is the
+simplified listing:
 
 ```lean
 def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
@@ -283,7 +318,7 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   return if 2 * b * u ≤ n then (r, s) else (t, u)
 ```
 
-Line for line against the Python, with three things worth explaining, and a note on reading
+Line for line against the Python, with four things worth explaining, and a note on reading
 `←` for anyone new to Lean's `do` notation.
 
 ### Division that raises
@@ -369,6 +404,32 @@ side mentions the old `a`, `b`, `p`, `q`, `r` and `s` — and Lean's `let mut (a
 r, s) := …` and six-way reassignment `(a, b, p, q, r, s) := …` translate it directly,
 with the same simultaneity.
 
+### `while True` with a `break`
+
+The shipped listing loops the other way round, with `while True` and a `break` from the
+middle. In Lean that is `repeat`:
+
+```lean
+  repeat
+    let a ← n // d
+    let q2 := q0 + a * q1
+    if q2 > maxDenominator then
+      break
+    (p0, q0, p1, q1) := (p1, q1, p0 + a * p1, q2)
+    (n, d) := (d, n - a * d)
+```
+
+`repeat body` is `for _ in Loop.mk do body`, so it elaborates to the same `Lean.Loop.forIn`
+that a `while` does and the same loop lemmas apply; the `break` is a `ForInStep.done`
+carrying the state out. `while true do` would also run correctly, but `while c do body` is a
+macro for `repeat if c then body else break`, so that spelling puts a test in the elaborated
+term that the Python does not have.
+
+That translation keeps the shipped variable names, `n` and `d` for the running target among
+them — so in that one listing `n` is a numerator, where everywhere else in this project it is
+the target's denominator. The Python is quoted beside the Lean in the module docstring for
+reading them against each other, and the proof layer renames the state back.
+
 ### Reading `←`
 
 For readers new to Lean's `do` notation: `←` unwraps a computation that might raise. In
@@ -384,12 +445,14 @@ Three kinds of check live under [`LimitDenominator/Tests`](LimitDenominator/Test
 as part of `lake build`.
 
 **Expected values.** [`Vectors.lean`](LimitDenominator/Tests/Vectors.lean) holds
-`(m, n, l, r, s)` tuples, every one of them checked against
-`Fraction.limit_denominator` in CPython 3.14. They cover the documentation's examples,
-unreduced targets, integer targets (which exit the loop immediately with `b = 0`, so the
-short-circuiting `and` is what stops the division by zero), negative targets, halfway ties
-at a limit of one and at larger limits, cases returning each of the two candidates, and both
-`ValueError`s — including which message wins when the limit and the target are both bad.
+`(m, n, l, r, s)` tuples, one list per listing, every one of them checked against
+`Fraction.limit_denominator` in CPython 3.14. Both lists cover the documentation's examples,
+integer targets, negative targets, halfway ties at a limit of one and at larger limits, and
+cases returning each of the two candidates. The simplified listing's adds unreduced targets
+and both `ValueError`s — including which message wins when the limit and the target are both
+bad — and its integer targets exit the loop immediately with `b = 0`, so the short-circuiting
+`and` is what stops the division by zero there. The shipped listing's adds the fast path, on
+its boundary and one below.
 
 **The specification, evaluated.** Expected-value vectors barely exercise a specification
 whose substance is a `∀`-quantified optimality condition, so
@@ -400,8 +463,12 @@ specification are bounded, so they are enumerated; the `y` are not, so for each 
 the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
 the docstring there.
 
+Both listings are checked that way. The shipped one is checked over the grid's targets that
+are in lowest terms, which are the only ones it promises anything about, and over those it is
+also checked to agree with the simplified listing outright.
+
 **The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for each of
-the three correctness theorems, that it depends on `propext`, `Classical.choice` and
+the four correctness theorems, that it depends on `propext`, `Classical.choice` and
 `Quot.sound` and nothing else. Unlike the other two this is not an empirical check — it is a
 statement about the proofs, and it is what closes the gap `--wfail` leaves, since an outright
 `axiom` earns no warning. Each theorem is checked in its own right rather than leaning on the
@@ -411,7 +478,10 @@ checked.
 Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in
 1…39, `m` in −80…80, `l` in 1…24) with no mismatches, asserting `gcd(r, s) = 1` and
-`0 < s ≤ l` throughout.
+`0 < s ≤ l` throughout. `limitDenominatorStdlib` was differential-tested against the same
+function in the same way, over 94,207 cases: targets in lowest terms with `1 ≤ n ≤ 40`,
+`−80 ≤ m ≤ 80` and `1 ≤ l ≤ 24`, plus this README's examples and a few wide ones, again with
+identical output throughout.
 
 [batteries]: https://github.com/leanprover-community/batteries
 [do-unchained]: https://lean-lang.org/papers/do.pdf
