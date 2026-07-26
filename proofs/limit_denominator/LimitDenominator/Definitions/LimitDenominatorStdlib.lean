@@ -7,8 +7,8 @@ public import LimitDenominator.Definitions.PythonPrimitives
 Lean translation of the body of `Fraction.limit_denominator` as shipped in CPython's
 `Lib/fractions.py`.
 
-Here's the Python code that we'll translate, with the docstring and the algorithm-notes
-comment elided.
+Here's the Python code that we'll translate, with the docstring and both explanatory comments
+elided: the algorithm notes, and the note on the final comparison.
 
     def limit_denominator(self, max_denominator=1000000):
         if max_denominator < 1:

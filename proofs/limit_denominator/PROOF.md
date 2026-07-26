@@ -77,10 +77,11 @@ def isBestApproximation (m n l r s : Int) : Prop :=
     ∧ (atLeastAsClose m n y z r s → s = z → r ≤ y)
 ```
 
-All three of the quantified clauses are documented CPython promises: closest, then
-smallest denominator, then smallest fraction. The second and third are conditioned on the
-competitor being at least as close *in the other direction*, so together with the first
-clause they only bite where the two distances are exactly equal.
+All three of the quantified clauses are CPython promises, though not all documented ones:
+*closest* is the docstring's, while *smaller denominator* and *the lower value* come from the
+algorithm-notes comment in the source. The second and third are conditioned on the competitor
+being at least as close *in the other direction*, so together with the first clause they only
+bite where the two distances are exactly equal.
 
 Together the three clauses pin the answer down completely: if two pairs both satisfy
 `isBestApproximation`, each is at least as close as the other, so the second clause equates
@@ -107,8 +108,9 @@ from the code, and the invariant clause becomes the plain disjunction
 p·s − r·q = 1  or  p·s − r·q = −1
 ```
 
-with no existential and no extra variable. That is why the Python listing in
-[README.md](README.md) differs from the one in the issue by exactly this omission.
+with no existential and no extra variable. That is one of the two ways the Python listing in
+[README.md](README.md) differs from the one in the issue; the other is that the issue's two
+stated preconditions, `0 < l` and `0 < n`, are enforced there rather than assumed.
 
 ## Loop invariants
 
@@ -176,7 +178,7 @@ Then, directly from the definitions and the loop invariants
 
 ```
 t·s − r·u = p·s − r·q = v          (extending does not change the orientation)
-c·r + b·t = m
+c·r + b·t = m                      (not formalised; shown for symmetry with the next)
 c·s + b·u = n
 (t·n − m·u)·v = c
 ```
@@ -188,7 +190,8 @@ From the definition of the floor, `k ≤ (l − q)/s < k + 1`; scaling by `s` gi
 u ≤ l < u + s
 ```
 
-and hence `0 < u`, since `u = 0` would give `l < s ≤ l`.
+and hence `0 < u`: it is nonnegative, since `q ≥ 0` and `k ≥ 0` — the latter because
+`q ≤ s ≤ l` makes `l − q` nonnegative — and `u = 0` would give `l < s ≤ l`.
 
 For `b ≤ c` and `0 < c`, split on how the loop exited. If `b = 0` then `c = a`, and
 `0 < a` from `0 ≤ b < a`. Otherwise `0 < b` and `l < q + ⌊a/b⌋·s`, so
@@ -317,7 +320,8 @@ that unit.
 **Clause 1 — closest.** `(y, z)` lies on one side of the bracket or the other. On the
 returned candidate's side, the bound is the one read off above. On the other side, the
 bound is against the *other* candidate, and transfers because the returned one is the
-nearer: from `c·z ≤ e·u` and `b·u ≤ c·s`, scaling and cancelling gives `b·z ≤ e·s`.
+nearer: from `c·z ≤ |m·z − y·n|·u` and `b·u ≤ c·s`, scaling and cancelling gives
+`b·z ≤ |m·z − y·n|·s`.
 
 **Clause 2 — smaller denominator.** Now `(y, z)` is at least as close in both directions,
 so the two distances are equal.
@@ -366,8 +370,9 @@ clause 3. This is
 **No `0 < b` test.** The shipped loop condition tests only `q2 > max_denominator`, leaving
 its division by `b` unguarded. It needs no guard: past the fast path the target is in lowest
 terms with `l < n`, and then `b` is never zero. Were it zero, the two invariants recovering
-the target would read `a·r = m` and `a·s = n`, making `a` a common divisor of `m` and `n` and
-so `a = 1`, whence `n = s ≤ l` — the fast path would have taken it. This is
+the target would read `a·r = m` and `a·s = n`, making `a` a common divisor of `m` and `n`, so
+`a = ±1`; and `0 ≤ b < a` forces `a` positive, so `a = 1`, whence `n = s ≤ l` — the fast path
+would have taken it. This is
 [`LoopInvariant.b_pos`](LimitDenominator/Proofs/LoopInvariant.lean), and it is the argument
 of the issue's § "Optimization".
 

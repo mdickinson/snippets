@@ -28,7 +28,11 @@ def checkCandidate (m n r s y z : Int) : Bool :=
 
 `isBestApproximation` quantifies over every candidate `(y, z)` with `0 < z ≤ l`. The `z` are
 bounded, so those are enumerated; the `y` are not, so for each `z` only the two integers
-bracketing `m * z / n` are checked. That suffices:
+bracketing `m * z / n` are checked.
+
+Both of those steps need `0 < n`, which the grid supplies: it is what makes `m * z / n` the
+floor, Lean's `Int` division agreeing with the floor only for a positive divisor, and it is
+what confines `m * z % n` to `[0, n)` below. Given that, the two `y` suffice:
 
 * `|m*z - y*n|` is smallest at those two `y`, taking the values `t` and `n - t` where
   `t = m*z % n`, and every other `y` gives at least `n + min(t, n - t)`.

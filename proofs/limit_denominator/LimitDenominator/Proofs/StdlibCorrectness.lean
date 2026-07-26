@@ -34,19 +34,25 @@ abbrev StdlibLoopState := Int × Int × Int × Int × Int × Int
 /--
 The loop body, named. This is definitionally what `limitDenominatorStdlib`'s `do` block
 desugars to, so `limitDenominatorStdlib_fold` folds the loop onto it by `rfl`. The `break` is
-the `ForInStep.done`.
+the `ForInStep.done`, carrying the state out unchanged.
 -/
 def stdlibLoopBody (l : Int) (_u : Unit) (state : StdlibLoopState) :
     PyExcept (ForInStep StdlibLoopState) :=
   let ⟨p, q, r, s, a, b⟩ := state
   do
     let k ← pyFloordiv a b
-    if q + k * s > l then
-      pure (ForInStep.done (p, q, r, s, a, b))
+    let q2 := q + k * s
+    if q2 > l then
+      pure (ForInStep.done state)
     else
-      pure (ForInStep.yield (r, s, p + k * r, q + k * s, b, a - k * b))
+      pure (ForInStep.yield (r, s, p + k * r, q2, b, a - k * b))
 
-/-- The tail of the `do` block, named likewise: the extended candidate and the final choice. -/
+/--
+The tail of the `do` block, named likewise: the extended candidate and the final choice.
+
+Here `n` is the *target's* denominator, the shipped code's `self._denominator`. The Python's
+own `n` is the running numerator, which is this state's `_a`, and is unused past the loop.
+-/
 def stdlibAfterLoop (n l : Int) (state : StdlibLoopState) : PyExcept (Int × Int) :=
   let ⟨p, q, r, s, _a, b⟩ := state
   do
@@ -107,6 +113,8 @@ theorem stdlibLoopBody_step {m n l : Int} (hgcd : Int.gcd m n = 1) (hn : l < n)
   have hb : 0 < b := h.b_pos hgcd hn
   have hmod : a - a / b * b = a % b := by have := Int.mul_ediv_add_emod a b; grind
   rw [stdlibLoopBody, pyFloordiv_ok_bind hb, hmod]
+  -- Beta-reduce the `q2` binding, which `split` cannot see past.
+  simp only []
   split
   · exact .inr ⟨_, rfl, h, hb, by omega⟩
   · exact .inl ⟨_, rfl, h.step hb (by omega),

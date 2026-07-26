@@ -58,13 +58,13 @@ which does not affect the result. `v` turns out to equal `p*s - r*q` throughout,
 proof recovers it from the state rather than tracking it, and the listing drops it. See
 [PROOF.md](PROOF.md) for that step.
 
-The second change is the `n <= 0` check. The issue's listing states `n > 0` as a
-precondition and does not test it; here it is enforced, which is what lets the proof say
-that *every* input either gets a correct answer or an exception. Without the check, a
-negative `n` returns a plausible-looking wrong answer: `m = 22, n = -7, l = 5` gives `-4/1`,
-which is out by `6/7`, where the best approximation to `22/-7` with denominator at most `5`
-is `-16/5`, out by `2/35`. The `ValueError` message is this project's own; the other one is
-CPython's, verbatim.
+The second change is the two guards. The issue's listing states a positive `l` and a
+positive `n` as preconditions in its docstring and tests neither; here both are enforced,
+which is what lets the proof say that *every* input either gets a correct answer or an
+exception. Without the `n` check, a negative `n` returns a plausible-looking wrong answer:
+`m = 22, n = -7, l = 5` gives `-4/1`, which is out by `6/7`, where the best approximation
+to `22/-7` with denominator at most `5` is `-16/5`, out by `2/35`. The message for the `n`
+guard is this project's own; the `l` guard's is CPython's, verbatim.
 
 The relationship between this listing and the body of `Fraction.limit_denominator` in
 `Lib/fractions.py` is close but not line-for-line: the standard library version operates
@@ -94,9 +94,9 @@ def isBestApproximation (m n l r s : Int) : Prop :=
     ∧ (atLeastAsClose m n y z r s → s = z → r ≤ y)
 ```
 
-All three quantified clauses are promises the CPython documentation and source comments
-make. Candidates are not required to be in lowest terms, so the result has to beat
-unreduced competitors too.
+All three quantified clauses are promises CPython makes — the first in its documentation, the
+other two in the algorithm notes in its source. Candidates are not required to be in lowest
+terms, so the result has to beat unreduced competitors too.
 
 ### The simplified listing
 
@@ -257,33 +257,37 @@ up requires confidence in:
 
 - **The faithfulness of the Python-to-Lean translation.** If the Lean function runs a
   different algorithm from the Python listing, its correctness says little about the Python.
-  This means reading: - the two translations, in
-  [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean)
-  and
-  [`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
-  the latter of which quotes the shipped Python beside the Lean; - the Python primitives —
-  the Lean versions of `//` and `%` — in
-  [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and Python's
-  `and`, which is core's `andM`, under [`and` that short-circuits](#and-that-short-circuits);
+  This means reading:
+  - the two translations, in
+    [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean)
+    and
+    [`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
+    the latter of which quotes the shipped Python beside the Lean;
+  - the Python primitives — the Lean versions of `//` and `%` — in
+    [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and
+    Python's `and`, which is core's `andM`, under
+    [`and` that short-circuits](#and-that-short-circuits);
   - the exception definitions in
-  [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean). - **The statements of
-  correctness** in [`Specification.lean`](LimitDenominator/Definitions/Specification.lean),
-  in particular `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A
-  specification that is too weak would be easy to satisfy and would prove nothing
-  interesting. One check on that is proved rather than argued:
+    [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
+- **The statements of correctness** in
+  [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
+  `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A specification
+  that is too weak would be easy to satisfy and would prove nothing interesting. One check on
+  that is proved rather than argued:
   [`isBestApproximation_unique`](LimitDenominator/Proofs/BestApproximation.lean) shows that
   at most one pair satisfies `isBestApproximation`, so the specification pins the answer down
-  completely and cannot be met by some unintended pair as well. - **That `lake build` really
-  checks the proofs** of the four correctness statements: the three at the bottom of
+  completely and cannot be met by some unintended pair as well.
+- **That `lake build` really checks the proofs** of the four correctness statements: the
+  three at the bottom of
   [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) —
   `isCorrectLimitDenominator_simplified`,
   `limitDenominatorSimplified_raises_of_denominator_nonpos` and
   `limitDenominatorSimplified_total` — and `isCorrectLimitDenominator_stdlib` at the bottom
   of [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean). That they
   are proved rather than asserted does not have to be taken on trust: their axiom sets are
-  pinned by the build, as described under [Building](#building). - **The Lean toolchain**,
-  including its compiler and core library. It is conceivable, if very unlikely, that Lean has
-  a bug that lets it accept an invalid proof.
+  pinned by the build, as described under [Building](#building).
+- **The Lean toolchain**, including its compiler and core library. It is conceivable, if very
+  unlikely, that Lean has a bug that lets it accept an invalid proof.
 
 Notably the proofs themselves do *not* need to be trusted. However gnarly they look, if
 Lean says they are valid then they are valid. So it is enough to read everything under
@@ -441,24 +445,35 @@ the whole `do` block automatically. So each `←` marks a place where the Python
 
 ## Testing
 
-Three kinds of check live under [`LimitDenominator/Tests`](LimitDenominator/Tests), all run
+Four kinds of check live under [`LimitDenominator/Tests`](LimitDenominator/Tests), all run
 as part of `lake build`.
+
+**The Python primitives.**
+[`PythonPrimitives.lean`](LimitDenominator/Tests/PythonPrimitives.lean) checks `pyFloordiv`
+and `pyMod` against CPython over all four sign combinations, a zero numerator and a zero
+divisor, that the `//` and `%` notation agrees with the primitives it abbreviates, and that
+`<&&>` short-circuits — a falsy left operand leaves a division by zero on the right unrun,
+while a truthy one raises.
 
 **Expected values.** [`Vectors.lean`](LimitDenominator/Tests/Vectors.lean) holds
 `(m, n, l, r, s)` tuples, one list per listing, every one of them checked against
 `Fraction.limit_denominator` in CPython 3.14. Both lists cover the documentation's examples,
 integer targets, negative targets, halfway ties at a limit of one and at larger limits, and
-cases returning each of the two candidates. The simplified listing's adds unreduced targets
-and both `ValueError`s — including which message wins when the limit and the target are both
-bad — and its integer targets exit the loop immediately with `b = 0`, so the short-circuiting
-`and` is what stops the division by zero there. The shipped listing's adds the fast path, on
-its boundary and one below.
+cases returning each of the two candidates. The simplified listing's adds unreduced targets,
+and its integer targets exit the loop immediately with `b = 0`, so the short-circuiting `and`
+is what stops the division by zero there. The shipped listing's adds the fast path, on its
+boundary and one below.
+
+The exception cases sit beside each listing's other checks rather than in the vectors, which
+hold returned values only: both `ValueError`s for the simplified listing, including which
+message wins when the limit and the target are both bad, and for the shipped listing the
+limit's alone, that being the only exception a valid target can provoke.
 
 **The specification, evaluated.** Expected-value vectors barely exercise a specification
 whose substance is a `∀`-quantified optimality condition, so
 [`SpecCheck.lean`](LimitDenominator/Tests/SpecCheck.lean) defines a `Bool`-valued bounded
 form of `isBestApproximation` and checks it over every target `m / n` with `1 ≤ n ≤ 16`
-and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12` — 12,480 cases. The `z` in the
+and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12`. The `z` in the
 specification are bounded, so they are enumerated; the `y` are not, so for each `z` only
 the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
 the docstring there.
@@ -469,11 +484,11 @@ also checked to agree with the simplified listing outright.
 
 **The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for each of
 the four correctness theorems, that it depends on `propext`, `Classical.choice` and
-`Quot.sound` and nothing else. Unlike the other two this is not an empirical check — it is a
-statement about the proofs, and it is what closes the gap `--wfail` leaves, since an outright
-`axiom` earns no warning. Each theorem is checked in its own right rather than leaning on the
-trichotomy to cover the other two, so reworking one proof cannot quietly narrow what is
-checked.
+`Quot.sound` and nothing else. Unlike the other three this is not an empirical check — it is
+a statement about the proofs, and it is what closes the gap `--wfail` leaves, since an
+outright `axiom` earns no warning. Each theorem is checked in its own right rather than
+leaning on the trichotomy to cover the other two, so reworking one proof cannot quietly
+narrow what is checked.
 
 Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in

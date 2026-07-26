@@ -28,6 +28,10 @@ public structure Bracketing (m n l b c r s t u : Int) : Prop where
   extended_residual : (t * n - m * u) * (t * s - r * u) = c
   /-- The two distances make up the target's denominator. -/
   denominator : c * s + b * u = n
+  /--
+  Implied by `denominator` together with `c_pos`, `s_pos`, `b_nonneg` and `u_pos`; kept as a
+  field so that the lemmas downstream can cite it by name.
+  -/
   n_pos : 0 < n
   b_nonneg : 0 ≤ b
   c_pos : 0 < c

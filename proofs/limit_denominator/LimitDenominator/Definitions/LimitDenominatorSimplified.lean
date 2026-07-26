@@ -8,9 +8,9 @@ Lean translation of the simplified integer form of the `limit_denominator` algor
 
 Here's the Python code that we'll translate. It is the listing from cpython#95723 with two
 changes. The orientation variable `v` is removed: it is a derived quantity, equal to
-`p*s - r*q` throughout, so the proofs recover it rather than carry it. And the precondition
-`0 < n` is enforced rather than assumed, so that every input either gets an answer or an
-exception, and none gets a wrong answer.
+`p*s - r*q` throughout, so the proofs recover it rather than carry it. And the two
+preconditions its docstring states, `0 < l` and `0 < n`, are enforced rather than assumed, so
+that every input either gets an answer or an exception, and none gets a wrong answer.
 
     def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
         """
