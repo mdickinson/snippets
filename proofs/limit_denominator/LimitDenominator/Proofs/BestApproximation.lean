@@ -31,12 +31,53 @@ unintended pair as well.
 public theorem isBestApproximation_unique {m n l r₁ s₁ r₂ s₂ : Int}
     (h₁ : isBestApproximation m n l r₁ s₁) (h₂ : isBestApproximation m n l r₂ s₂) :
     r₁ = r₂ ∧ s₁ = s₂ := by
-  obtain ⟨hs₁, hl₁, -, hall₁⟩ := h₁
-  obtain ⟨hs₂, hl₂, -, hall₂⟩ := h₂
+  obtain ⟨hs₁, hl₁, hall₁⟩ := h₁
+  obtain ⟨hs₂, hl₂, hall₂⟩ := h₂
   obtain ⟨hclose₁, hden₁, hnum₁⟩ := hall₁ r₂ s₂ hs₂ hl₂
   obtain ⟨hclose₂, hden₂, hnum₂⟩ := hall₂ r₁ s₁ hs₁ hl₁
   have hs : s₁ = s₂ := Int.le_antisymm (hden₁ hclose₂) (hden₂ hclose₁)
   exact ⟨Int.le_antisymm (hnum₁ hclose₂ hs) (hnum₂ hclose₁ hs.symm), hs⟩
+
+/--
+The result is in lowest terms, and that is a consequence of the specification rather than a
+part of it.
+
+Were `r` and `s` to share a factor `g > 1`, the reduced pair `(r / g, s / g)` would be a
+candidate in its own right: its denominator is positive and strictly smaller, so still within
+the limit. It is also *exactly* as close to the target, because scaling a pair down by `g`
+scales its residual `m * s - r * n` down by `g` too, which cancels against the `s` on the
+other side of `atLeastAsClose`. The second clause applied to that candidate would then give
+`s ≤ s / g`, which is false. So minimality of the denominator already forces lowest terms.
+-/
+public theorem isBestApproximation.gcd_eq_one {m n l r s : Int}
+    (h : isBestApproximation m n l r s) : Int.gcd r s = 1 := by
+  obtain ⟨hs, hsl, hall⟩ := h
+  obtain ⟨g, hgdef⟩ : ∃ g : Int, ((Int.gcd r s : Nat) : Int) = g := ⟨_, rfl⟩
+  have hgr : g ∣ r := hgdef ▸ Int.gcd_dvd_left r s
+  have hgs : g ∣ s := hgdef ▸ Int.gcd_dvd_right r s
+  have hne : Int.gcd r s ≠ 0 := by
+    intro h0; have := Int.gcd_eq_zero_iff.mp h0; omega
+  rcases (by omega : Int.gcd r s = 1 ∨ 2 ≤ Int.gcd r s) with hone | hg2n
+  · exact hone
+  exfalso
+  have hg2 : 2 ≤ g := by omega
+  obtain ⟨s', hs'⟩ := hgs
+  obtain ⟨r', hr'⟩ := hgr
+  have hs'pos : 0 < s' := by
+    rcases (by omega : s' ≤ 0 ∨ 0 < s') with hle | hlt
+    · have : g * s' ≤ 0 := Int.mul_nonpos_of_nonneg_of_nonpos (by omega) hle
+      omega
+    · exact hlt
+  have hs'lt : s' < s := by
+    have : 2 * s' ≤ g * s' := Int.mul_le_mul_of_nonneg_right hg2 (by omega)
+    omega
+  have hres : m * s - r * n = g * (m * s' - r' * n) := by rw [hs', hr']; grind
+  have hclose : atLeastAsClose m n r' s' r s := by
+    unfold atLeastAsClose
+    rw [hres, Int.abs_mul_of_pos (by omega : (0 : Int) < g), hs']
+    grind
+  have := (hall r' s' hs'pos (by omega)).2.1 hclose
+  omega
 
 /--
 A target in lowest terms whose denominator is already within the limit is its own best
@@ -48,7 +89,7 @@ too is the same fraction, whose denominator is therefore a multiple of this one.
 public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)
     (hgcd : Int.gcd m n = 1) : isBestApproximation m n l m n := by
   have h0 : (m * n - m * n).abs = 0 := Int.abs_eq_zero.mpr (by omega)
-  refine ⟨hn, hl, hgcd, fun y z hz _ => ?_⟩
+  refine ⟨hn, hl, fun y z hz _ => ?_⟩
   have h1 : 0 ≤ (m * z - y * n).abs * n := Int.mul_nonneg (Int.abs_nonneg _) (by omega)
   have key : atLeastAsClose m n y z m n → y * n = m * z := by
     intro hrev
@@ -74,7 +115,7 @@ variable {m n l b c r s t u : Int}
 /-- The loop candidate is a best approximation when it is the nearer of the two. -/
 public theorem isBestApproximation_loop (h : Bracketing m n l b c r s t u)
     (hnearer : b * u ≤ c * s) : isBestApproximation m n l r s := by
-  refine ⟨h.s_pos, h.s_le_l, h.gcd_loop, fun y z hz hzl => ?_⟩
+  refine ⟨h.s_pos, h.s_le_l, fun y z hz hzl => ?_⟩
   have habs := h.abs_loop
   have hside := h.outside (y := y) (z := z) hzl
   -- The closeness clause: read off on the loop candidate's side, transferred on the other.
@@ -124,7 +165,7 @@ public theorem isBestApproximation_loop (h : Bracketing m n l b c r s t u)
 /-- The extended candidate is a best approximation when it is strictly the nearer of the two. -/
 public theorem isBestApproximation_extended (h : Bracketing m n l b c r s t u)
     (hnearer : c * s < b * u) : isBestApproximation m n l t u := by
-  refine ⟨h.u_pos, h.u_le_l, h.gcd_extended, fun y z hz hzl => ?_⟩
+  refine ⟨h.u_pos, h.u_le_l, fun y z hz hzl => ?_⟩
   have habs := h.abs_extended
   have hside := h.outside (y := y) (z := z) hzl
   have hclose : c * z ≤ (m * z - y * n).abs * u := by

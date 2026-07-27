@@ -30,11 +30,16 @@ def atLeastAsClose (m n r s y z : Int) : Prop :=
 
 /--
 What it means for `r / s` to be the best approximation to `m / n` with denominator at most
-`l`: closest, in lowest terms, with ties broken towards the smaller denominator. A tie that
-survives that is broken towards the lower value.
+`l`: closest, with ties broken towards the smaller denominator. A tie that survives that is
+broken towards the lower value.
+
+Being in lowest terms is deliberately *not* stipulated here. It follows from these clauses
+alone, because an unreduced pair is beaten on the second one by its own reduction — see
+`isBestApproximation.gcd_eq_one` in `LimitDenominator.Proofs.BestApproximation`. So the three
+clauses below pin down the representation as well as the value.
 -/
 def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧ Int.gcd r s = 1 ∧
+  0 < s ∧ s ≤ l ∧
   ∀ y z : Int, 0 < z → z ≤ l →
     atLeastAsClose m n r s y z
     ∧ (atLeastAsClose m n y z r s → s ≤ z)

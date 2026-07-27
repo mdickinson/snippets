@@ -81,13 +81,13 @@ ordinary mathematical language, with pointers into the source.
 
 The specification is in
 [`Specification.lean`](LimitDenominator/Definitions/Specification.lean). It says that a
-returned `r / s` is in lowest terms with `0 < s ≤ l`, and that against every candidate
-`y / z` with `0 < z ≤ l` it is at least as close to the target, with ties broken towards
-the smaller denominator and a tie that survives that towards the lower value:
+returned `r / s` has `0 < s ≤ l`, and that against every candidate `y / z` with `0 < z ≤ l`
+it is at least as close to the target, with ties broken towards the smaller denominator and a
+tie that survives that towards the lower value:
 
 ```lean
 def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧ Int.gcd r s = 1 ∧
+  0 < s ∧ s ≤ l ∧
   ∀ y z : Int, 0 < z → z ≤ l →
     atLeastAsClose m n r s y z
     ∧ (atLeastAsClose m n y z r s → s ≤ z)
@@ -97,6 +97,13 @@ def isBestApproximation (m n l r s : Int) : Prop :=
 All three quantified clauses are promises CPython makes — the first in its documentation, the
 other two in the algorithm notes in its source. Candidates are not required to be in lowest
 terms, so the result has to beat unreduced competitors too.
+
+CPython's fourth promise, that the result *is* in lowest terms, is deliberately absent: it
+follows from the three clauses rather than having to be asked for. An unreduced pair is
+beaten on the second clause by its own reduction, which is the same value at the same
+distance but with a smaller denominator. That is
+[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/BestApproximation.lean), and it is
+why the specification pins down the representation and not merely the value.
 
 ### The simplified listing
 
@@ -244,10 +251,11 @@ notably, plain `lake build` still passes, with warnings, in the presence of an i
 proof marked `sorry`, whereas `lake build --wfail` fails.
 
 An incomplete proof is not the only way a theorem can be hollow: an axiom asserted outright
-produces no warning at all. So the build also pins what each correctness theorem depends on,
-in [`Tests/Axioms.lean`](LimitDenominator/Tests/Axioms.lean) — `propext`, `Classical.choice`
-and `Quot.sound`, which are Lean's own three and nothing else. Any addition fails the build,
-so this is checked on every run rather than being something a reader has to think to verify.
+produces no warning at all. So the build also pins the axioms of each theorem the trust
+argument leans on, in [`Tests/Axioms.lean`](LimitDenominator/Tests/Axioms.lean) — `propext`,
+`Classical.choice` and `Quot.sound`, which are Lean's own three and nothing else. Any
+addition fails the build, so this is checked on every run rather than being something a
+reader has to think to verify.
 
 ## What do I need to trust?
 
@@ -272,20 +280,25 @@ up requires confidence in:
 - **The statements of correctness** in
   [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
   `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A specification
-  that is too weak would be easy to satisfy and would prove nothing interesting. One check on
-  that is proved rather than argued:
+  that is too weak would be easy to satisfy and would prove nothing interesting. Two checks
+  on that are proved rather than argued:
   [`isBestApproximation_unique`](LimitDenominator/Proofs/BestApproximation.lean) shows that
-  at most one pair satisfies `isBestApproximation`, so the specification pins the answer down
-  completely and cannot be met by some unintended pair as well.
+  at most one pair satisfies `isBestApproximation` — among all pairs with `0 < z ≤ l`,
+  reduced or not — so the specification pins the answer down completely and cannot be met by
+  some unintended pair as well; and
+  [`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/BestApproximation.lean) shows
+  that whichever pair satisfies it is necessarily in lowest terms, so that promise is earned
+  rather than asked for.
 - **That `lake build` really checks the proofs** of the four correctness statements: the
   three at the bottom of
   [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) —
   `isCorrectLimitDenominator_simplified`,
   `limitDenominatorSimplified_raises_of_denominator_nonpos` and
   `limitDenominatorSimplified_total` — and `isCorrectLimitDenominator_stdlib` at the bottom
-  of [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean). That they
-  are proved rather than asserted does not have to be taken on trust: their axiom sets are
-  pinned by the build, as described under [Building](#building).
+  of [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean); and of
+  `isBestApproximation.gcd_eq_one`, which on its own carries the lowest-terms promise. That
+  they are proved rather than asserted does not have to be taken on trust: their axiom sets
+  are pinned by the build, as described under [Building](#building).
 - **The Lean toolchain**, including its compiler and core library. It is conceivable, if very
   unlikely, that Lean has a bug that lets it accept an invalid proof.
 
@@ -293,8 +306,8 @@ Notably the proofs themselves do *not* need to be trusted. However gnarly they l
 Lean says they are valid then they are valid. So it is enough to read everything under
 [`LimitDenominator/Definitions`](LimitDenominator/Definitions) — the two translations, the
 Python primitives, the exceptions and the specification — plus the statements, but not the
-proofs, of those four theorems. The proof layer is several times the size of the
-definitions, and none of it has to be read.
+proofs, of those theorems. The proof layer is several times the size of the definitions, and
+none of it has to be read.
 
 There are also empirical checks under
 [`LimitDenominator/Tests`](LimitDenominator/Tests). These are not formal proofs, but they
@@ -483,12 +496,12 @@ are in lowest terms, which are the only ones it promises anything about, and ove
 also checked to agree with the simplified listing outright.
 
 **The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for each of
-the four correctness theorems, that it depends on `propext`, `Classical.choice` and
-`Quot.sound` and nothing else. Unlike the other three this is not an empirical check — it is
-a statement about the proofs, and it is what closes the gap `--wfail` leaves, since an
-outright `axiom` earns no warning. Each theorem is checked in its own right rather than
-leaning on the trichotomy to cover the other two, so reworking one proof cannot quietly
-narrow what is checked.
+the four correctness theorems and for `isBestApproximation.gcd_eq_one`, that it depends on
+`propext`, `Classical.choice` and `Quot.sound` and nothing else. Unlike the other three this
+is not an empirical check — it is a statement about the proofs, and it is what closes the gap
+`--wfail` leaves, since an outright `axiom` earns no warning. Each theorem is checked in its
+own right rather than leaning on the trichotomy to cover the other two, so reworking one
+proof cannot quietly narrow what is checked.
 
 Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in

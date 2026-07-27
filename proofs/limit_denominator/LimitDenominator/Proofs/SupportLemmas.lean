@@ -24,6 +24,14 @@ public theorem Int.abs_nonneg (a : Int) : 0 ≤ a.abs := by unfold Int.abs; spli
 public theorem Int.abs_eq_zero {a : Int} : a.abs = 0 ↔ a = 0 := by
   unfold Int.abs; split <;> omega
 
+/-- A positive factor comes out of the absolute value. -/
+public theorem Int.abs_mul_of_pos {a b : Int} (ha : 0 < a) : (a * b).abs = a * b.abs := by
+  unfold Int.abs
+  rcases (by omega : 0 ≤ b ∨ b < 0) with hb | hb
+  · rw [if_pos (Int.mul_nonneg (by omega) hb), if_pos hb]
+  · rw [if_neg (by have := Int.mul_neg_of_pos_of_neg ha hb; omega), if_neg (by omega)]
+    grind
+
 /-- Multiplying by `1` or `-1` never exceeds the absolute value. -/
 public theorem Int.mul_sign_le_abs {a d : Int} (hd : d = 1 ∨ d = -1) : a * d ≤ a.abs := by
   unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega

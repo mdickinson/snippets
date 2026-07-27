@@ -40,6 +40,10 @@ what confines `m * z % n` to `[0, n)` below. Given that, the two `y` suffice:
   it holds *strictly*.
 * The two tie-break clauses are conditioned on the closeness inequality holding in reverse, so
   wherever the closeness clause holds strictly they are vacuous.
+
+The `Int.gcd r s == 1` conjunct below goes beyond `isBestApproximation`, which does not stipulate
+lowest terms. It is kept as an independent empirical check of
+`isBestApproximation.gcd_eq_one`, which derives it from the three clauses instead.
 -/
 def checkBestApproximation (m n l r s : Int) : Bool :=
   0 < s && s ≤ l && Int.gcd r s == 1

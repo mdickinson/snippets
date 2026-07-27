@@ -31,8 +31,9 @@ further from the target than the second. Stated as an integer inequality, obtain
 ```
 
 **Best approximation** — the candidate the algorithm must return: at least as close as
-every other candidate, in lowest terms, with ties broken towards the smaller denominator,
-and a tie that survives that towards the lower value. This is `isBestApproximation`.
+every other candidate, with ties broken towards the smaller denominator, and a tie that
+survives that towards the lower value. This is `isBestApproximation`. Being in lowest terms
+is not part of it, but follows from it.
 
 **Loop candidate** — the candidate `(r, s)` held in the loop state, and still held on loop
 exit. One of the two candidates the final comparison chooses between. (Not "lower bound":
@@ -70,7 +71,7 @@ denominator at most `l`. Written out
 
 ```lean
 def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧ Int.gcd r s = 1 ∧
+  0 < s ∧ s ≤ l ∧
   ∀ y z : Int, 0 < z → z ≤ l →
     atLeastAsClose m n r s y z
     ∧ (atLeastAsClose m n y z r s → s ≤ z)
@@ -87,7 +88,17 @@ Together the three clauses pin the answer down completely: if two pairs both sat
 `isBestApproximation`, each is at least as close as the other, so the second clause equates
 their denominators and the third then equates their numerators. That is
 `isBestApproximation_unique`, in
-[`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean).
+[`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean). Note that this
+quantifies over all pairs with a positive denominator within the limit, reduced or not.
+
+Lowest terms is a *consequence* of these clauses, not one of them. If `r` and `s` shared a
+factor `g > 1`, the reduced pair `(r/g, s/g)` would be a candidate too — positive
+denominator, strictly smaller, so still within the limit — and exactly as close, since
+scaling a pair down by `g` scales its residual `m·s − r·n` down by `g`, which cancels
+against the `s` on the other side of the closeness relation. The second clause applied to it
+would give `s ≤ s/g`, which is false. So the specification pins down the representation and
+not merely the value, and CPython's `gcd(r, s) = 1` is earned rather than asked for. That is
+`isBestApproximation.gcd_eq_one`, in the same file.
 
 The behaviour for `n ≤ 0` is not left unspecified: the listing tests for it and raises a
 `ValueError`, which is what lets `limitDenominatorSimplified_total` state that every input
@@ -313,9 +324,13 @@ is the smaller, since `c·s = b·u ≤ c·u` (as `0 < u` and `b ≤ c`) gives `s
 Let `(R, S)` be whichever candidate is returned, and let `(y, z)` be any candidate. The
 argument is in [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean).
 
-**Positivity, the limit, lowest terms.** `0 < S ≤ l` is in `Bracketing`, and
-`gcd(R, S) = 1` follows from `t·s − r·u = ±1`: any common divisor of `R` and `S` divides
-that unit.
+**Positivity and the limit.** `0 < S ≤ l` is in `Bracketing`.
+
+Coprimality of `R` and `S` is not a clause to discharge any more, but it is still needed
+*inside* clauses 2 and 3, where it turns "equal to the returned candidate as a value" into a
+divisibility statement. Here it comes from `t·s − r·u = ±1`: any common divisor of `R` and
+`S` divides that unit. That route is independent of `isBestApproximation.gcd_eq_one`, which
+goes the other way — from the specification to coprimality — so there is no circularity.
 
 **Clause 1 — closest.** `(y, z)` lies on one side of the bracket or the other. On the
 returned candidate's side, the bound is the one read off above. On the other side, the
