@@ -69,9 +69,10 @@ The Lean source code is organised into three subdirectories of [`Isqrt`](Isqrt):
   those statements.
 - [`Isqrt/Proofs`](Isqrt/Proofs) contains proofs of the correctness statements, along
   with supporting lemmas.
-- [`Isqrt/Tests`](Isqrt/Tests) contains direct tests of the two `isqrt` implementations
-  and supporting definitions using Lean's `#guard` command, passing in inputs and
-  checking that the outputs are as expected.
+- [`Isqrt/Tests`](Isqrt/Tests) contains the build-time checks: direct tests of the two
+  `isqrt` implementations and supporting definitions using Lean's `#guard` command,
+  passing in inputs and checking that the outputs are as expected, plus the pinned axiom
+  sets in [`Isqrt/Tests/Axioms.lean`](Isqrt/Tests/Axioms.lean).
 
 In addition to the files under [`Isqrt`](Isqrt), there are three root files:
 
@@ -114,6 +115,13 @@ Lean was able to mechanically check every step of the proofs, and that the proof
 correct. The stronger `lake build --wfail` turns warnings into errors. Notably, `lake
 build` will still pass (with warnings) if there are incomplete proofs, marked by a
 `sorry` placeholder in Lean. `lake build --wfail` will fail in the presence of `sorry`s.
+
+An incomplete proof isn't the only way a theorem can be hollow: an axiom asserted
+outright produces no warning at all. So the build also pins the axioms that each
+correctness theorem and each definition depends on, in
+[`Isqrt/Tests/Axioms.lean`](Isqrt/Tests/Axioms.lean), which is where those sets are
+recorded and explained. Any change to one fails the build, so this is checked on every
+run rather than being something a reader has to think to verify.
 
 ## Running the algorithm
 
@@ -161,7 +169,8 @@ needs to have confidence in:
   correctness statement. That proof lives right at the bottom of
   [`Isqrt.Proofs.IterativeCorrectness`](Isqrt/Proofs/IterativeCorrectness.lean). The
   statement is simply: `theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt
-  isqrtIterative := ...`
+  isqrtIterative := ...` That it is proved rather than asserted needn't be taken on trust
+  either: its axiom set is [pinned by the build](#building-the-project).
 - The Lean toolchain itself, including the compiler and standard library. It's
   conceivable (but highly unlikely) that Lean itself has bugs that mean that it reports
   validity of a proof that is actually invalid.
