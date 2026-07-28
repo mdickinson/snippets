@@ -130,7 +130,7 @@ public theorem isBestApproximation_loop (h : Bracketing m n l b c r s t u)
     rcases hside with hloop | hextended
     · -- The candidate equals the loop candidate as a value, so its denominator is a multiple.
       have hval : y * s = r * z := h.eq_of_loop_le hloop hrev
-      refine ⟨Int.le_of_mul_eq_mul_of_gcd_eq_one h.gcd_loop hz hval, fun hseq => ?_⟩
+      refine ⟨h.s_le_of_loop_eq hz hval, fun hseq => ?_⟩
       have hys : y * s = r * s := by rw [hval, ← hseq]
       have := Int.eq_of_mul_eq_mul_right (show s ≠ 0 by have := h.s_pos; omega) hys
       omega
@@ -140,8 +140,7 @@ public theorem isBestApproximation_loop (h : Bracketing m n l b c r s t u)
           (h.extended_nearer_of_match hz (h.extended_le_of_side hextended) hmatch)
       have hmatch' : c * z = (m * z - y * n).abs * u := h.extended_match_of_tie htie hmatch
       have hval : t * z = y * u := h.eq_of_extended_le hextended (by omega)
-      have huz : u ≤ z :=
-        Int.le_of_mul_eq_mul_of_gcd_eq_one (y := y) h.gcd_extended hz (by omega)
+      have huz : u ≤ z := h.u_le_of_extended_eq hz hval
       refine ⟨by have := h.s_le_u_of_tie htie; omega, fun hseq => ?_⟩
       -- `s = z` squeezes `s = u = z`, so the two candidates coincide in the tie configuration
       -- where both denominators are one and the loop candidate is the lower bound.
@@ -180,8 +179,7 @@ public theorem isBestApproximation_extended (h : Bracketing m n l b c r s t u)
       -- distance would make the loop candidate the nearer.
       exact absurd (h.loop_nearer_of_match hz (h.loop_le_of_side hloop) hmatch) (by omega)
     · have hval : t * z = y * u := h.eq_of_extended_le hextended hrev
-      refine ⟨Int.le_of_mul_eq_mul_of_gcd_eq_one (y := y) h.gcd_extended hz (by omega),
-        fun hueq => ?_⟩
+      refine ⟨h.u_le_of_extended_eq hz hval, fun hueq => ?_⟩
       have hty : t = y :=
         Int.eq_of_mul_eq_mul_right (show u ≠ 0 by have := h.u_pos; omega)
           (show t * u = y * u by grind)

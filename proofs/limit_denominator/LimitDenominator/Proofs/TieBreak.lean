@@ -35,16 +35,6 @@ public theorem s_le_u_of_tie (h : Bracketing m n l b c r s t u) (htie : b * u = 
   have h1 : b * u ≤ c * u := Int.mul_le_mul_of_nonneg_right h.b_le_c (by have := h.u_pos; omega)
   exact Int.le_of_mul_le_mul_left (by omega) h.c_pos
 
-/-! ## Coprimality of the two candidates -/
-
-/-- The loop candidate is in lowest terms. -/
-public theorem gcd_loop (h : Bracketing m n l b c r s t u) : Int.gcd r s = 1 :=
-  Int.gcd_eq_one_of_det h.det
-
-/-- The extended candidate is in lowest terms. -/
-public theorem gcd_extended (h : Bracketing m n l b c r s t u) : Int.gcd t u = 1 :=
-  Int.gcd_eq_one_of_det (r := t) (s := u) (t := r) (u := s) (by have := h.det; omega)
-
 /-! ## Transferring closeness to the nearer candidate -/
 
 /--

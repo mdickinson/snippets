@@ -5,7 +5,8 @@ public import LimitDenominator.Definitions.Specification
 /-!
 General `Int` facts missing from the core library: monotonicity of multiplication in the
 shape the bracket argument needs, basic properties of the specification's `Int.abs`, and the
-two divisibility facts that unit determinants buy us.
+two divisibility facts the fast path needs, lowest terms being what makes its rival's
+denominator a multiple of the target's.
 -/
 
 /-! ## Multiplication and order -/
@@ -60,22 +61,7 @@ public theorem Int.abs_eq_of_mul_sign {a b d : Int}
     (hd : d = 1 ∨ d = -1) (hb : 0 ≤ b) (h : a * d = b) : a.abs = b := by
   unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega
 
-/-! ## Consequences of a unit determinant -/
-
-/--
-A unit determinant against any other pair implies coprimality: if `t * s - r * u` is `±1`
-then `r` and `s` are coprime, since any common divisor of `r` and `s` divides that unit.
--/
-public theorem Int.gcd_eq_one_of_det {r s t u : Int}
-    (h : t * s - r * u = 1 ∨ t * s - r * u = -1) : Int.gcd r s = 1 := by
-  obtain ⟨c, hc⟩ := Int.gcd_dvd_right r s
-  obtain ⟨e, he⟩ := Int.gcd_dvd_left r s
-  have hdvd : ((Int.gcd r s : Nat) : Int) ∣ t * s - r * u := ⟨t * c - e * u, by grind⟩
-  have hone : ((Int.gcd r s : Nat) : Int) = 1 := by
-    rcases h with h | h <;> rw [h] at hdvd
-    · exact Int.eq_one_of_dvd_one (by omega) hdvd
-    · exact Int.eq_one_of_dvd_one (by omega) (Int.dvd_neg.mp hdvd)
-  omega
+/-! ## Lowest terms and divisibility -/
 
 /--
 If `y / z` equals `r / s` as a value and `r / s` is in lowest terms, then `s` divides `z`.

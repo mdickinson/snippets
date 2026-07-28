@@ -155,4 +155,48 @@ public theorem eq_of_extended_le (h : Bracketing m n l b c r s t u)
   have := eq_of_mul_pivot_eq_zero h.n_pos h.det (w := t * z - y * u) (by omega)
   omega
 
+/-! ## An equal value needs at least the same denominator -/
+
+/--
+A candidate equal to the loop candidate as a value has at least its denominator.
+
+This is the bracket identity again, with one of its two terms killed by the hypothesis: `z`
+collapses to a single multiple of `s`, and a positive multiple of a positive number is at least
+one times it. So denominator-minimality comes from the *determinant*, exactly as the bracket
+does, and needs nothing about divisibility — coprimality of the loop candidate would serve here
+too, but only because it is itself a consequence of the determinant.
+-/
+public theorem s_le_of_loop_eq (h : Bracketing m n l b c r s t u) (hz : 0 < z)
+    (hval : y * s = r * z) : s ≤ z := by
+  have hid := bracket_identity r s t u y z h.det
+  have hzero : (y * s - r * z) * (t * s - r * u) * u = 0 := by
+    rw [show y * s - r * z = 0 from by omega]; grind
+  have hs := h.s_pos
+  have hcof : 1 ≤ (t * z - y * u) * (t * s - r * u) := by
+    rcases (by omega : (t * z - y * u) * (t * s - r * u) ≤ 0
+        ∨ 1 ≤ (t * z - y * u) * (t * s - r * u)) with hle | hge
+    · have := Int.mul_le_mul_of_nonneg_right hle (show (0 : Int) ≤ s by omega)
+      omega
+    · exact hge
+  have := Int.le_mul_of_one_le_left (a := (t * z - y * u) * (t * s - r * u)) (b := s)
+    (by omega) hcof
+  omega
+
+/-- Symmetrically, against the extended candidate: the other term of the identity vanishes. -/
+public theorem u_le_of_extended_eq (h : Bracketing m n l b c r s t u) (hz : 0 < z)
+    (hval : t * z = y * u) : u ≤ z := by
+  have hid := bracket_identity r s t u y z h.det
+  have hzero : (t * z - y * u) * (t * s - r * u) * s = 0 := by
+    rw [show t * z - y * u = 0 from by omega]; grind
+  have hu := h.u_pos
+  have hcof : 1 ≤ (y * s - r * z) * (t * s - r * u) := by
+    rcases (by omega : (y * s - r * z) * (t * s - r * u) ≤ 0
+        ∨ 1 ≤ (y * s - r * z) * (t * s - r * u)) with hle | hge
+    · have := Int.mul_le_mul_of_nonneg_right hle (show (0 : Int) ≤ u by omega)
+      omega
+    · exact hge
+  have := Int.le_mul_of_one_le_left (a := (y * s - r * z) * (t * s - r * u)) (b := u)
+    (by omega) hcof
+  omega
+
 end Bracketing

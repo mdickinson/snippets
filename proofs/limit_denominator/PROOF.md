@@ -267,6 +267,12 @@ That is [`Bracketing.lt_of_inside`](LimitDenominator/Proofs/Bracket.lean). Contr
 candidate within the denominator limit lies on one side or the other:
 `(y·s − r·z)v ≤ 0` or `(t·z − y·u)v ≤ 0`.
 
+The identity does further work in the tie-break clauses below. There one of the two
+cross-products *vanishes* rather than being positive, and what is left exhibits `z` as a
+positive multiple of a single one of the two denominators — which is how a rival that equals
+a candidate in value is shown to need at least its denominator, with no appeal to
+divisibility.
+
 ### Candidates outside the bracket are no closer
 
 Two pivot identities turn "on this side" into a distance bound. Writing
@@ -326,11 +332,10 @@ argument is in [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximat
 
 **Positivity and the limit.** `0 < S ≤ l` is in `Bracketing`.
 
-Coprimality of `R` and `S` is not a clause to discharge any more, but it is still needed
-*inside* clauses 2 and 3, where it turns "equal to the returned candidate as a value" into a
-divisibility statement. Here it comes from `t·s − r·u = ±1`: any common divisor of `R` and
-`S` divides that unit. That route is independent of `isBestApproximation.gcd_eq_one`, which
-goes the other way — from the specification to coprimality — so there is no circularity.
+Coprimality of `R` and `S` plays no part in this section at all. It is not a clause to
+discharge — it follows from the specification, as § "The specification" describes — and the
+denominator comparisons below do not need it either: they run on the *determinant*, which is
+what coprimality would itself have followed from. So nothing here reasons about divisibility.
 
 **Clause 1 — closest.** `(y, z)` lies on one side of the bracket or the other. On the
 returned candidate's side, the bound is the one read off above. On the other side, the
@@ -341,14 +346,17 @@ nearer: from `c·z ≤ |m·z − y·n|·u` and `b·u ≤ c·s`, scaling and canc
 **Clause 2 — smaller denominator.** Now `(y, z)` is at least as close in both directions,
 so the two distances are equal.
 
-- If `(y, z)` is on the returned candidate's side, the equality case gives `y·S = R·z`. Since
-  `gcd(R, S) = 1`, `S` divides `z`, and `0 < z` gives `S ≤ z`.
+- If `(y, z)` is on the returned candidate's side, the equality case gives `y·S = R·z` — the
+  rival is the same value. The bracket identity then gives `S ≤ z` directly: the vanishing
+  cross-product kills one of its two terms, leaving `z = (t·z − y·u)v·S`, which exhibits `z`
+  as a positive multiple of `S`. That is `Bracketing.s_le_of_loop_eq`.
 - If it is on the other side, then matching one candidate's distance exactly while lying
   beyond the other pins the comparison. When the loop candidate was returned, that forces an
   exact tie `b·u = c·s`, and then `(y, z)` matches the extended candidate's distance too; the
-  equality case for the extended candidate gives `t·z = y·u`, so `u ≤ z`, and `s ≤ u` on a
-  tie, so `s ≤ z`. When the extended candidate was returned the comparison was *strict*, and
-  the same reasoning yields `b·u ≤ c·s`, a contradiction — so this case cannot arise.
+  equality case for the extended candidate gives `t·z = y·u`, so `u ≤ z` by the same collapse
+  of the identity — the other term this time — and `s ≤ u` on a tie, so `s ≤ z`. When the
+  extended candidate was returned the comparison was *strict*, and the same reasoning yields
+  `b·u ≤ c·s`, a contradiction — so this case cannot arise.
 
 **Clause 3 — lower value.** Additionally `S = z`.
 
