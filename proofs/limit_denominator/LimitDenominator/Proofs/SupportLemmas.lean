@@ -4,9 +4,10 @@ public import LimitDenominator.Definitions.Specification
 
 /-!
 General `Int` facts missing from the core library: monotonicity of multiplication in the
-shape the bracket argument needs, basic properties of the specification's `Int.abs`, and the
-two divisibility facts the fast path needs, lowest terms being what makes its rival's
-denominator a multiple of the target's.
+shape the bracket argument needs, basic properties of the specification's `Int.abs`, the
+cancellation that removes the orientation from an inequality, and the two divisibility facts
+the fast path needs, lowest terms being what makes its rival's denominator a multiple of the
+target's.
 -/
 
 /-! ## Multiplication and order -/
@@ -33,33 +34,59 @@ public theorem Int.abs_mul_of_pos {a b : Int} (ha : 0 < a) : (a * b).abs = a * b
   · rw [if_neg (by have := Int.mul_neg_of_pos_of_neg ha hb; omega), if_neg (by omega)]
     grind
 
-/-- Multiplying by `1` or `-1` never exceeds the absolute value. -/
-public theorem Int.mul_sign_le_abs {a d : Int} (hd : d = 1 ∨ d = -1) : a * d ≤ a.abs := by
-  unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega
+/-- Negating leaves the absolute value alone. -/
+public theorem Int.abs_neg (a : Int) : (-a).abs = a.abs := by unfold Int.abs; split <;> omega
 
-/-- Negating too: `-(a * d)` never exceeds the absolute value either. -/
-public theorem Int.neg_mul_sign_le_abs {a d : Int} (hd : d = 1 ∨ d = -1) : -(a * d) ≤ a.abs := by
-  unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega
+/-- `Int.abs` is `Int.natAbs`, which is what makes it multiplicative. -/
+private theorem Int.abs_eq_natAbs (a : Int) : a.abs = a.natAbs := by unfold Int.abs; split <;> omega
+
+/-- The absolute value is multiplicative. -/
+private theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by
+  rw [Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.natAbs_mul]; rfl
+
+/-! ## Cancelling the orientation -/
 
 /--
-The scaled form of `Int.mul_sign_le_abs`. Both this and `Int.neg_mul_sign_mul_le_abs_mul` are
-stated with the scaling already applied, so that `omega` sees the same product atoms as the
-pivot identities do.
+Rewriting the two ends of an oriented chain so that a factor of `|v|` stands on each side. The
+lower end is an equality because it is nonnegative, the upper end only an inequality.
 -/
-public theorem Int.mul_sign_mul_le_abs_mul {a d e : Int} (hd : d = 1 ∨ d = -1) (he : 0 ≤ e) :
-    a * d * e ≤ a.abs * e :=
-  Int.mul_le_mul_of_nonneg_right (Int.mul_sign_le_abs hd) he
+private theorem Int.abs_chain {x y v z w : Int} (hz : 0 < z) (hw : 0 < w)
+    (hnonneg : 0 ≤ x * v * z) :
+    x.abs * z * v.abs = x * v * z ∧ y * v * w ≤ y.abs * w * v.abs := by
+  refine ⟨?_, ?_⟩
+  · rw [← show (x * v * z).abs = x * v * z from by unfold Int.abs; omega,
+      Int.abs_mul, Int.abs_mul, show z.abs = z from by unfold Int.abs; omega]
+    grind
+  · have h1 : y * v * w ≤ (y * v * w).abs := by unfold Int.abs; omega
+    rw [Int.abs_mul, Int.abs_mul, show w.abs = w from by unfold Int.abs; omega] at h1
+    grind
 
-/-- The scaled form of `Int.neg_mul_sign_le_abs`. -/
-public theorem Int.neg_mul_sign_mul_le_abs_mul {a d e : Int} (hd : d = 1 ∨ d = -1) (he : 0 ≤ e) :
-    -(a * d * e) ≤ a.abs * e := by
-  have h := Int.mul_le_mul_of_nonneg_right (Int.neg_mul_sign_le_abs (a := a) hd) he
-  rwa [Int.neg_mul] at h
+/--
+Cancelling the orientation, with the equality case every caller wants alongside it. An inequality
+between two oriented scaled distances, the lower end nonnegative, becomes the same inequality on
+absolute values with the orientation gone; and a candidate matching the bound afterwards matched
+it before, the chain being squeezed between equal ends.
 
-/-- If `a * d = b` with `d` a sign and `b` nonnegative, then `b` is the absolute value of `a`. -/
-public theorem Int.abs_eq_of_mul_sign {a b d : Int}
-    (hd : d = 1 ∨ d = -1) (hb : 0 ≤ b) (h : a * d = b) : a.abs = b := by
-  unfold Int.abs; rcases hd with rfl | rfl <;> split <;> omega
+Taking absolute values puts a factor of `|v|` on both sides, and a nonzero `|v|` is positive, so
+it cancels. That needs only `v ≠ 0` — never that `v` is a unit.
+-/
+public theorem Int.abs_cancel {x y v z w : Int} (hv : v ≠ 0) (hz : 0 < z) (hw : 0 < w)
+    (hnonneg : 0 ≤ x * v * z) (hle : x * v * z ≤ y * v * w) :
+    x.abs * z ≤ y.abs * w ∧ (y.abs * w ≤ x.abs * z → x * v * z = y * v * w) := by
+  obtain ⟨hx, hy⟩ := Int.abs_chain (y := y) (w := w) hz hw hnonneg
+  refine ⟨Int.le_of_mul_le_mul_right (by omega) (show 0 < v.abs by unfold Int.abs; omega), ?_⟩
+  intro hrev
+  have := Int.mul_le_mul_of_nonneg_right hrev (Int.abs_nonneg v)
+  omega
+
+/-- The strict form, which is just the equality case read as a trichotomy. -/
+public theorem Int.abs_lt_abs_of_mul_lt_mul {x y v z w : Int} (hv : v ≠ 0) (hz : 0 < z)
+    (hw : 0 < w) (hnonneg : 0 ≤ x * v * z) (hlt : x * v * z < y * v * w) :
+    x.abs * z < y.abs * w := by
+  obtain ⟨hle, heq⟩ := Int.abs_cancel (y := y) hv hz hw hnonneg (by omega)
+  rcases (by omega : x.abs * z < y.abs * w ∨ y.abs * w ≤ x.abs * z) with hlt' | hrev
+  · exact hlt'
+  · have := heq hrev; omega
 
 /-! ## Lowest terms and divisibility -/
 

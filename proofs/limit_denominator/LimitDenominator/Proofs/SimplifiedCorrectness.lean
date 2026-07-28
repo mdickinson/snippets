@@ -13,8 +13,8 @@ This file is the mechanics: it names the two halves of the `do` block — `loopB
 `afterLoop` — folds the translation onto them, drives the loop with `forIn_loop_invariant`, and
 reads the result off. All of the mathematics has already happened, in `BestApproximation`.
 
-The six-tuple state appears only here. `LoopInvariant` and `Bracketing` take six and nine plain
-`Int` arguments respectively, and never project out of a tuple.
+The six-tuple state appears only here. `LoopInvariant` and `Bracketing` take plain `Int`
+arguments and never project out of a tuple.
 -/
 
 /-- The mutable state of the loop: `(a, b, p, q, r, s)`. -/

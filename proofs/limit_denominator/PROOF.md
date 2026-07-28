@@ -45,8 +45,8 @@ time.)
 limit allows: `t = p + k·r` and `u = q + k·s`, where `k = ⌊(l − q)/s⌋`.
 
 **Orientation** — the value `±1` recording which side of the target the loop candidate
-lies on. During the loop it is `p·s − r·q`; after the loop it is `t·s − r·u`, and the two
-agree. It is a *derived* quantity, not state — see below.
+lies on, written `v`. During the loop it is `p·s − r·q`; after the loop it is `t·s − r·u`,
+and the two agree. It is a *derived* quantity, not state — see below.
 
 **Bracket** — the property that the target lies between the loop candidate and the
 extended candidate, inclusive on the loop candidate's side only. The heart of the proof:
@@ -122,6 +122,24 @@ p·s − r·q = 1  or  p·s − r·q = −1
 with no existential and no extra variable. That is one of the two ways the Python listing in
 [README.md](README.md) differs from the one in the issue; the other is that the issue's two
 stated preconditions, `0 < l` and `0 < n`, are enforced there rather than assumed.
+
+The *proof* names it again once the loop is over. `Bracketing` (§ "After the loop") takes `v`
+as a parameter and records the informal proof's equation verbatim:
+
+```
+(t·s − r·u)·v = 1
+```
+
+Over the integers that single equation says both that `v` is a unit and that it agrees with
+the determinant, and between them those are everything the orientation is ever asked for:
+
+- it collapses the two bracket identities, where `v` meets its own determinant;
+- it makes `v` nonzero, which is all that cancelling `v` out of an inequality takes.
+
+Nothing below ever needs `v = ±1` on its own, so the proof never derives it. What naming `v`
+buys is legibility: the statements of § "The bracket" would otherwise spell the orientation
+out as `t·s − r·u` throughout, which also drags `t` and `u` into statements that do not
+depend on them.
 
 ## Loop invariants
 
@@ -238,40 +256,61 @@ invariants,
 q = 0
 ```
 
-which is precisely what the seventh invariant needs. It gives `p = 1`, so the orientation
-`p·s − r·q` is just `s` — and a positive unit is `1`.
+which is precisely what the seventh invariant needs: it gives `p = 1`. And with `q` gone,
+`s = u` reads `s = k·s`, which for positive `s` leaves no room for a second step, so `k = 1`
+and
 
-The same equations pin down the rest of the configuration: `s = 1` from the orientation,
-hence `u = 1` and `k = 1`, and then `s ≤ l < s + u` forces `l = 1`.
+```
+t = p + k·r = r + 1
+```
+
+The two candidates are consecutive integers, in that order. That is the form the fact is
+recorded in, as `Bracketing`'s `t_eq_of_tie`, because it is the form the third clause uses;
+the orientation does not appear in it at all. The same equations pin down the rest of the
+configuration — `s = 1` from the orientation, hence `u = 1`, and then `s ≤ l < s + u` forces
+`l = 1` — but nothing needs those, so they are not derived.
 
 All of this is collected into the `Bracketing` structure, and nothing after that point
 mentions the loop, its state, or `p` and `q`.
 
 ## The bracket
 
-Any candidate `y / z` strictly between `r/s` and `t/u` has `z > l`. The identity is
+Two identities split a candidate's numerator and denominator along the same pair of
+cross-products. Multiplying out either right-hand side leaves the left-hand side times
+`(t·s − r·u)·v`, which is `1`:
 
 ```
-z = z·(t·s − r·u)·v = (t·z − y·u)v·s + (y·s − r·z)v·u
+y = (t·z − y·u)v·r + (y·s − r·z)v·t
+z = (t·z − y·u)v·s + (y·s − r·z)v·u
 ```
 
-Strictly inside the bracket, both `(t·z − y·u)v` and `(y·s − r·z)v` are positive — whichever
-way round the two candidates lie, the orientation flips both signs together — so both are
-at least `1`, and
+The second closes the bracket. A candidate `y / z` strictly between `r/s` and `t/u` has both
+`(t·z − y·u)v` and `(y·s − r·z)v` positive — whichever way round the two candidates lie, the
+orientation flips both signs together — so both are at least `1`, and
 
 ```
 z ≥ s + u > l
 ```
 
-That is [`Bracketing.lt_of_inside`](LimitDenominator/Proofs/Bracket.lean). Contraposed, every
-candidate within the denominator limit lies on one side or the other:
-`(y·s − r·z)v ≤ 0` or `(t·z − y·u)v ≤ 0`.
+That is [`Bracketing.lt_of_inside`](LimitDenominator/Proofs/Bracket.lean). Read the other
+way, the same identity says a candidate with `z > 0` has at least one cross-product positive,
+since two nonpositive ones would make `z` nonpositive. Together, every candidate the
+specification quantifies over lies strictly beyond *exactly one* of the two candidates:
 
-The identity does further work in the tie-break clauses below. There one of the two
-cross-products *vanishes* rather than being positive, and what is left exhibits `z` as a
-positive multiple of a single one of the two denominators — which is how a rival that equals
-a candidate in value is shown to need at least its denominator, with no appeal to
-divisibility.
+```
+(y·s − r·z)v ≤ 0 < (t·z − y·u)v      or      (t·z − y·u)v ≤ 0 < (y·s − r·z)v
+```
+
+That is `Bracketing.cases`, and it is the only case split in the rest of the argument. The
+first alternative is the loop candidate's side of the bracket, the second the extended
+candidate's.
+
+Both identities do further work in the tie-break clauses below. There one cross-product
+*vanishes* rather than being positive, and the denominator identity is left exhibiting `z` as
+a positive multiple of a single one of the two denominators — which is how a rival is shown
+to need at least that candidate's denominator, with no appeal to divisibility. If its
+denominator matches exactly, the surviving cross-product is forced to `1`, and the numerator
+identity then reads the rival's numerator straight off.
 
 ### Candidates outside the bracket are no closer
 
@@ -283,30 +322,51 @@ b·z − F·s = n·(y·s − r·z)v
 c·z + F·u = n·(t·z − y·u)v
 ```
 
-On the loop candidate's side the right-hand side of the first is `≤ 0`, so `b·z ≤ F·s`,
-and `F ≤ |m·z − y·n|` gives
+Neither pivot needs the determinant: each is a ring identity in an arbitrary `v`, given only
+the residual that defines `b` or `c`.
+
+On the loop candidate's side the right-hand side of the first is `≤ 0`, so `b·z ≤ F·s`, and
+`b ≥ 0` makes that a chain with a nonnegative lower end. Unfolding the two abbreviations,
 
 ```
-b·z ≤ |m·z − y·n|·s
+0 ≤ (m·s − r·n)v·z ≤ (m·z − y·n)v·s
 ```
 
-which is exactly `atLeastAsClose m n r s y z`. Symmetrically, on the extended candidate's
-side the second identity gives `c·z ≤ |m·z − y·n|·u`.
-
-Each pivot is an equality, so it says more than the bound: it says when the bound is
-attained. If `b·z = |m·z − y·n|·s` then the first pivot's right-hand side vanishes, so
-`(y·s − r·z)v = 0` and hence
+and this is where the specification's absolute values are reached — at the end of the chain,
+and in one step. Taking absolute values of the two ends puts a factor of `|v|` on each side:
+the lower end is nonnegative, so it *equals* its absolute value `|m·s − r·n|·z·|v|`, and the
+upper end is at most `|m·z − y·n|·s·|v|`. Cancelling the positive `|v|` leaves
 
 ```
-y·s = r·z
+|m·s − r·n|·z ≤ |m·z − y·n|·s
 ```
 
-that is, `y/z` equals the loop candidate as a *value* — though not necessarily as a pair,
-since `(y, z)` need not be in lowest terms. Symmetrically, `c·z = |m·z − y·n|·u` forces
-`t·z = y·u`. These are the **equality cases** of the two bounds
-([`eq_of_loop_le` and `eq_of_extended_le`](LimitDenominator/Proofs/Bracket.lean)), and they
-are what the tie-break clauses need: the first clause gives an inequality, and the equality
-cases are what turn "no further away" into "the same fraction".
+which is exactly `atLeastAsClose m n r s y z`. This is the only thing the orientation is
+needed for anywhere in the proof, and it takes only `v ≠ 0`: nothing here asks whether `v` is
+`1` or `−1`, and nothing has to rewrite `|m·s − r·n|` to `b`. The cancellation is
+`Int.abs_cancel` in [`SupportLemmas.lean`](LimitDenominator/Proofs/SupportLemmas.lean).
+
+Symmetrically, the second identity gives `|m·u − t·n|·z ≤ |m·z − y·n|·u` on the extended
+candidate's side, cancelling the orientation `−v` — the one that makes *that* candidate's
+residual nonnegative.
+
+The chain says more than the bound: it says when the bound is attained. A candidate whose
+absolute-value bound is an equality had the oriented inequality as an equality already,
+because the chain is then squeezed between two equal ends. The first pivot's right-hand side
+therefore vanishes, giving
+
+```
+(y·s − r·z)v = 0
+```
+
+and symmetrically `(t·z − y·u)v = 0` on the other side. These are the **equality cases** of
+the two bounds, and each is returned by the same lemma that gives its bound
+([`Bracket.lean`](LimitDenominator/Proofs/Bracket.lean)), the two sharing a chain. They are
+what the tie-break clauses need: the first clause gives an inequality, and the equality cases
+turn "no further away" into a vanishing cross-product. Since `v` is nonzero, a vanishing
+cross-product says `y·s = r·z` — that `y/z` equals the loop candidate as a *value*, though
+not necessarily as a pair, since `(y, z)` need not be in lowest terms. The proof never takes
+that step, using the vanishing directly in the two identities instead.
 
 ## Choosing between the two candidates
 
@@ -319,6 +379,11 @@ comparison is
 b·u ≤ c·s
 ```
 
+That reading of `b·u ≤ c·s` is why the code's test is the right test, but it is motivation
+rather than a step: the proof reaches the specification's absolute values through the pivots
+of the previous section, and never through this paragraph's appeal to `|v| = 1`. What it does
+formalise is the arithmetic below.
+
 Adding `b·u` to both sides and using `c·s + b·u = n` makes this `2·b·u ≤ n`, which is what
 the code computes ([`Bracketing.loop_nearer_iff`](LimitDenominator/Proofs/TieBreak.lean)).
 
@@ -327,51 +392,47 @@ is the smaller, since `c·s = b·u ≤ c·u` (as `0 < u` and `b ≤ c`) gives `s
 
 ## Discharging the three clauses
 
-Let `(R, S)` be whichever candidate is returned, and let `(y, z)` be any candidate. The
-argument is in [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean).
+Let `(y, z)` be any candidate. The argument is in
+[`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean). It splits once,
+on `Bracketing.cases`, and then reads all three clauses off on each side; with the two
+choices of returned candidate that is four subcases, each a short chain of the pieces above.
 
-**Positivity and the limit.** `0 < S ≤ l` is in `Bracketing`.
+**Positivity and the limit.** `0 < S ≤ l` is in `Bracketing`, for either candidate.
 
 Coprimality of `R` and `S` plays no part in this section at all. It is not a clause to
 discharge — it follows from the specification, as § "The specification" describes — and the
 denominator comparisons below do not need it either: they run on the *determinant*, which is
 what coprimality would itself have followed from. So nothing here reasons about divisibility.
 
-**Clause 1 — closest.** `(y, z)` lies on one side of the bracket or the other. On the
-returned candidate's side, the bound is the one read off above. On the other side, the
-bound is against the *other* candidate, and transfers because the returned one is the
-nearer: from `c·z ≤ |m·z − y·n|·u` and `b·u ≤ c·s`, scaling and cancelling gives
-`b·z ≤ |m·z − y·n|·s`.
+**The loop candidate is returned**, the comparison being `b·u ≤ c·s`.
 
-**Clause 2 — smaller denominator.** Now `(y, z)` is at least as close in both directions,
-so the two distances are equal.
+- *On the loop candidate's side*, the bound of § "Candidates outside the bracket" is clause 1
+  as it stands. A rival matching it has `(y·s − r·z)v = 0`, so the denominator identity
+  collapses to `z = (t·z − y·u)v·s` with a positive cofactor, giving `s ≤ z` — clause 2. If
+  moreover `s = z`, that cofactor is `1`, and the numerator identity gives `y = r` — clause
+  3.
+- *On the extended candidate's side*, clause 1 needs the comparison. The extended pivot
+  scaled by `s`, and `b·u ≤ c·s` scaled by `z`, chain into `0 ≤ (m·s − r·n)v·(u·z) ≤ −(m·z −
+  y·n)v·(u·s)`; cancelling `|v|` and then the common `u` gives the bound. A rival matching it
+  makes both steps of that chain equalities, so the comparison is an exact tie `b·u = c·s`
+  *and* `(t·z − y·u)v = 0`. The vanishing gives `u ≤ z`, the tie gives `s ≤ u` (§ "Choosing
+  between the two candidates"), so `s ≤ z` — clause 2. If `s = z`, those squeeze `s = u = z`,
+  whence `b = c`; § "The degenerate tie" then gives `t = r + 1`, while the numerator identity
+  gives `y = t`. So `y = r + 1 > r` — clause 3.
 
-- If `(y, z)` is on the returned candidate's side, the equality case gives `y·S = R·z` — the
-  rival is the same value. The bracket identity then gives `S ≤ z` directly: the vanishing
-  cross-product kills one of its two terms, leaving `z = (t·z − y·u)v·S`, which exhibits `z`
-  as a positive multiple of `S`. That is `Bracketing.s_le_of_loop_eq`.
-- If it is on the other side, then matching one candidate's distance exactly while lying
-  beyond the other pins the comparison. When the loop candidate was returned, that forces an
-  exact tie `b·u = c·s`, and then `(y, z)` matches the extended candidate's distance too; the
-  equality case for the extended candidate gives `t·z = y·u`, so `u ≤ z` by the same collapse
-  of the identity — the other term this time — and `s ≤ u` on a tie, so `s ≤ z`. When the
-  extended candidate was returned the comparison was *strict*, and the same reasoning yields
-  `b·u ≤ c·s`, a contradiction — so this case cannot arise.
+**The extended candidate is returned**, the comparison being strict, `c·s < b·u`.
 
-**Clause 3 — lower value.** Additionally `S = z`.
+- *On the extended candidate's side*, the bound is read off directly, and its equality case
+  gives `(t·z − y·u)v = 0`, hence `u ≤ z` and, when `u = z`, `y = t`.
+- *On the loop candidate's side*, the loop pivot scaled by `u` and the strict comparison
+  scaled by `z` give a *strict* bound, `|m·u − t·n|·z < |m·z − y·n|·u`. Clause 1 follows, and
+  both tie-break clauses are vacuous: no rival on that side can be at least as close in both
+  directions.
 
-- On the returned candidate's side, the equality case again gives `y·S = R·z`; with `S = z`
-  that reads `y·S = R·S`, and `0 < S` gives `y = R`.
-- On the other side, when the extended candidate was returned the case is impossible, as
-  in clause 2. When the loop candidate was returned we are in the tie situation of clause
-  2, with `u ≤ z = s ≤ u`, so `s = u = z`; then `b·u = c·s` gives `b = c`, so § "The
-  degenerate tie" applies and the orientation is `+1`, giving `(t − r)·s = 1` and hence
-  `t = r + 1`. And `t·z = y·u` with `z = u` gives `y = t = r + 1 > r`.
-
-This is the only place the seventh invariant is used, and the only configuration in which
-the two candidates share a denominator: `l = 1`, with a target exactly halfway between two
-consecutive integers — for example `1/2`, where `0/1` and `1/1` are equally close and `0/1`
-is returned.
+The seventh invariant is used in exactly one of those four subcases, and only for the one
+configuration in which the two candidates share a denominator: `l = 1`, with a target exactly
+halfway between two consecutive integers — for example `1/2`, where `0/1` and `1/1` are
+equally close and `0/1` is returned.
 
 ## What the stdlib listing adds
 

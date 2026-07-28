@@ -14,18 +14,22 @@ the tie-breaking both read off `Bracketing` alone.
 The facts about the loop candidate `r / s` and the extended candidate `t / u` on which the
 final comparison rests.
 
-`t * s - r * u` is the orientation: a unit whose sign says which of the two candidates lies
-above the target. The two residuals are the scaled distances from the target to each candidate,
-oriented so as to be nonnegative — which is what makes the absolute values in the
-specification collapse.
+`v` is the **orientation**, the `v` of the informal proof: the sign saying which candidate lies
+above the target. It is not state — the loop does not carry it — but naming it here lets the rest
+of the proof write `v` instead of spelling out the determinant it equals. One equation, `det`,
+introduces it: over the integers `(t*s - r*u) * v = 1` says both that `v` is a unit and that it
+agrees with the determinant, and nothing below needs more than that product.
+
+The two residuals are the scaled distances from the target to each candidate, oriented by `v` so
+as to be nonnegative.
 -/
-public structure Bracketing (m n l b c r s t u : Int) : Prop where
-  /-- The two candidates have unit determinant. -/
-  det : t * s - r * u = 1 ∨ t * s - r * u = -1
+public structure Bracketing (m n l b c r s t u v : Int) : Prop where
+  /-- The orientation against the two candidates' determinant. -/
+  det : (t * s - r * u) * v = 1
   /-- Oriented scaled distance from the target to the loop candidate. -/
-  loop_residual : (m * s - r * n) * (t * s - r * u) = b
+  loop_residual : (m * s - r * n) * v = b
   /-- Oriented scaled distance from the target to the extended candidate. -/
-  extended_residual : (t * n - m * u) * (t * s - r * u) = c
+  extended_residual : (t * n - m * u) * v = c
   /-- The two distances make up the target's denominator. -/
   denominator : c * s + b * u = n
   /--
@@ -43,12 +47,12 @@ public structure Bracketing (m n l b c r s t u : Int) : Prop where
   /-- Between them the two denominators exceed the limit: this is what closes the bracket. -/
   l_lt_add : l < s + u
   /--
-  The orientation is positive in the single degenerate configuration where both candidates
-  have the same denominator and are equidistant from the target. This is the one place the
-  proof needs to know that the loop candidate is the *lower* bound rather than the upper one,
-  and it descends from `LoopInvariant.p_eq_one_of_q_eq_zero`.
+  In the single degenerate configuration where both candidates have the same denominator and
+  are equidistant from the target, they are consecutive integers in this order. This is the one
+  place the proof needs to know that the loop candidate is the *lower* bound rather than the
+  upper one, and it descends from `LoopInvariant.p_eq_one_of_q_eq_zero`.
   -/
-  det_eq_one_of_tie : s = u → b = c → t * s - r * u = 1
+  t_eq_of_tie : s = u → b = c → t = r + 1
 
 namespace LoopInvariant
 
@@ -63,7 +67,7 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
     (h : LoopInvariant m n l a b p q r s)
     (hexit : b = 0 ∨ (0 < b ∧ l < q + a / b * s))
     (hk : k = (l - q) / s) (ht : t = p + k * r) (hu : u = q + k * s) (hc : c = a - k * b) :
-    Bracketing m n l b c r s t u := by
+    Bracketing m n l b c r s t u (p * s - r * q) := by
   have hres_num := h.numerator_residual
   have hres_den := h.denominator_residual
   obtain ⟨hdet, hnum, hden, hb, hba, hq, hqs, hsl, hs, hp⟩ := h
@@ -87,9 +91,9 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
       have h3 : (k + 1) * b = k * b + b := by grind
       omega
   exact {
-    det := horient ▸ hdet
-    loop_residual := by rw [horient]; exact hres_den
-    extended_residual := by rw [horient]; grind
+    det := by rw [horient]; have := hdet; grind
+    loop_residual := hres_den
+    extended_residual := by grind
     denominator := by grind
     n_pos := by
       have := Int.mul_pos (show (0 : Int) < a by omega) hs
@@ -103,9 +107,8 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
     u_pos := by omega
     u_le_l := by omega
     l_lt_add := by omega
-    det_eq_one_of_tie := by
+    t_eq_of_tie := by
       intro htie hbc_eq
-      rw [horient]
       -- A tie with equal denominators forces `(k + 1) * b = a`, hence `0 < b` and `1 ≤ k`.
       have hb_pos : 0 < b := by
         rcases (by omega : b = 0 ∨ 0 < b) with rfl | hb_pos
@@ -120,8 +123,13 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
       -- Then `s = q + k*s` with `s ≤ k*s` forces `q = 0`, and so `p = 1`.
       have hks : s ≤ k * s := Int.le_mul_of_one_le_left (by omega) hk_one
       have hq_zero : q = 0 := by omega
-      -- The orientation is now `p * s = s`, and a positive unit is one.
-      rw [hp hq_zero, hq_zero] at hdet ⊢
+      -- With `q` gone, `s = k*s` leaves no room for a second step: `k` is one.
+      have hk_eq : k = 1 := by
+        rcases (by omega : k = 1 ∨ 2 ≤ k) with hk_eq | hk_two
+        · exact hk_eq
+        · have := Int.mul_le_mul_of_nonneg_right hk_two (show (0 : Int) ≤ s by omega)
+          omega
+      rw [ht, hk_eq, hp hq_zero]
       omega
   }
 
