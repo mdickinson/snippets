@@ -77,6 +77,10 @@ correct, against one shared specification — see [Scope](#scope) for where the 
 [PROOF.md](PROOF.md) is the prose companion to the Lean proof: the whole argument in
 ordinary mathematical language, with pointers into the source.
 
+The Lean translation can be run as well as proved, and the project builds a small
+command-line executable around the simplified listing — see
+[Running the algorithm](#running-the-algorithm).
+
 ## What is proved
 
 The specification is in
@@ -219,7 +223,8 @@ names follow that split:
 
 Two root files import these: [`LimitDenominator.lean`](LimitDenominator.lean) the
 definitions and proofs, and
-[`LimitDenominatorTests.lean`](LimitDenominatorTests.lean) the tests.
+[`LimitDenominatorTests.lean`](LimitDenominatorTests.lean) the tests. Alongside them,
+[`Main.lean`](Main.lean) is the source of the command-line executable.
 
 The project does not depend on [Mathlib][mathlib]: its proofs, definitions and tests use
 only Lean's core library. The sole external dependency is [Batteries][batteries], and that
@@ -240,9 +245,10 @@ this README. The first `lake` invocation downloads the toolchain version pinned 
 [`lean-toolchain`](lean-toolchain).
 
 ```
-lake build            # build the project - definitions, proofs and tests
-lake build --wfail    # build, failing on warnings too (matches CI)
-lake lint             # check for style issues
+lake build                          # definitions, proofs, tests and executable
+lake build --wfail                  # build, failing on warnings too (matches CI)
+lake exe limit_denominator 22 7 5   # run the executable (should print 16/5)
+lake lint                           # check for style issues
 ```
 
 A successful `lake build` (exit code 0, no error messages) means Lean mechanically checked
@@ -256,6 +262,33 @@ argument leans on, in [`Tests/Axioms.lean`](LimitDenominator/Tests/Axioms.lean) 
 `Classical.choice` and `Quot.sound`, which are Lean's own three and nothing else. Any
 addition fails the build, so this is checked on every run rather than being something a
 reader has to think to verify.
+
+## Running the algorithm
+
+Lean is a programming language as well as a proof assistant, so the translated algorithm can
+be run. [`Main.lean`](Main.lean) wraps the simplified listing in a command-line executable
+that takes a target `m n l` and prints the closest fraction as `r/s`:
+
+```console
+$ lake exe limit_denominator 3141592653589793 1000000000000000 100
+311/99
+```
+
+Bad input gets the algorithm's own `ValueError`, on stderr and with a nonzero exit status:
+
+```console
+$ lake exe limit_denominator 22 0 5
+ValueError: denominator should be positive
+```
+
+The executable calls `limitDenominatorSimplified` rather than reimplementing it, so what runs
+is the proved function; parsing the arguments and formatting the answer are all that
+`Main.lean` adds. It also *uses* the proof.
+[`limitDenominatorSimplified_total`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) says
+those two `ValueError`s are the only exceptions reachable, and that is what lets `Main.lean`
+dismiss `ZeroDivisionError` as impossible instead of inventing behaviour for a case that
+cannot arise. Dismissing it is a proof obligation, so `lake build` checks it; the proof is
+then erased from the compiled binary.
 
 ## What do I need to trust?
 

@@ -1,6 +1,6 @@
 name = "limit_denominator"
 lintDriver = "batteries/runLinter"
-defaultTargets = ["LimitDenominator", "LimitDenominatorTests"]
+defaultTargets = ["LimitDenominator", "LimitDenominatorTests", "limit_denominator"]
 
 [leanOptions]
 autoImplicit = false
@@ -15,3 +15,7 @@ name = "LimitDenominator"
 
 [[lean_lib]]
 name = "LimitDenominatorTests"
+
+[[lean_exe]]
+name = "limit_denominator"
+root = "Main"
