@@ -131,11 +131,8 @@ public theorem isCorrectLimitDenominator_simplified :
     rw [afterLoop, pyFloordiv_ok_bind hinv.s_pos, pyFloordiv_ok_bind hinv.s_pos]
     have hbracket := hinv.bracketing hexit rfl rfl rfl rfl
     split <;> rename_i hchoice
-    · exact ⟨r, s, rfl,
-        hbracket.isBestApproximation_loop (hbracket.loop_nearer_iff.mp hchoice)⟩
-    · exact ⟨_, _, rfl,
-        hbracket.isBestApproximation_extended
-          (by have := hbracket.loop_nearer_iff; omega)⟩
+    · exact ⟨r, s, rfl, hbracket.isBestApproximation_loop_of_test hchoice⟩
+    · exact ⟨_, _, rfl, hbracket.isBestApproximation_extended_of_test hchoice⟩
 
 /--
 A target denominator that is not positive raises a `ValueError`. The denominator limit is

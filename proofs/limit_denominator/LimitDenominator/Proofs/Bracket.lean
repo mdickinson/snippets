@@ -34,6 +34,18 @@ private theorem denominator_identity (r s t u v y z : Int) (hdet : (t * s - r * 
     z = (t * z - y * u) * v * s + (y * s - r * z) * v * u := by
   grind
 
+/--
+What the identities buy once one cross-product vanishes, the same either way round: a rival that is
+a positive multiple of one denominator needs at least that denominator, and at exactly that
+denominator the multiplier is `1`, which reads its numerator off too.
+-/
+private theorem le_of_eq_mul {A R S y z : Int} (hA : 0 < A) (hS : 0 < S)
+    (hy : y = A * R) (hz : z = A * S) : S ≤ z ∧ (S = z → y = R) := by
+  have := Int.le_mul_of_one_le_left (a := A) (b := S) (by omega) (by omega)
+  refine ⟨by omega, fun hSz => ?_⟩
+  rw [Int.eq_of_mul_eq_mul_right (show S ≠ 0 by omega) (show A * S = 1 * S by omega)] at hy
+  omega
+
 /-! ## The two pivot identities -/
 
 /--
@@ -48,6 +60,26 @@ private theorem loop_pivot (m n b r s v y z : Int) (hres : (m * s - r * n) * v =
 private theorem extended_pivot (m n c t u v y z : Int) (hres : (t * n - m * u) * v = c) :
     c * z + (m * z - y * n) * v * u = n * ((t * z - y * u) * v) := by
   grind
+
+/-! ## From a pivot to the specification's absolute values -/
+
+/--
+The step the two sides share: a pivot identity with a nonpositive right-hand side, cancelled down
+to absolute values.
+
+Only the orientation `V` differs between them — `v` on the loop candidate's side, `-v` on the
+extended candidate's — together with which cross-product plays `X`. The rival's own
+`m * z - y * n` is the same `g` either way, and that is what lets one lemma serve both.
+-/
+private theorem abs_le_of_pivot {n x g V z S X : Int} (hn : 0 < n) (hV : V ≠ 0) (hz : 0 < z)
+    (hS : 0 < S) (hnonneg : 0 ≤ x * V) (hX : X ≤ 0)
+    (hpivot : x * V * z - g * V * S = n * X) :
+    x.abs * z ≤ g.abs * S ∧ (g.abs * S ≤ x.abs * z → X = 0) := by
+  have hnX : n * X ≤ 0 := Int.mul_nonpos_of_nonneg_of_nonpos (by omega) hX
+  obtain ⟨hle, heq⟩ := Int.abs_cancel (y := g) hV hz hS
+    (Int.mul_nonneg hnonneg (by omega)) (by omega)
+  exact ⟨hle, fun hrev => Int.eq_of_mul_eq_mul_left (show n ≠ 0 by omega)
+    (show n * X = n * 0 by have := heq hrev; omega)⟩
 
 namespace Bracketing
 
@@ -124,20 +156,10 @@ that bound squeezes the loop pivot's right-hand side to zero, so the cross-produ
 public theorem loop_le_of_loop_side (h : Bracketing m n l b c r s t u v) (hz : 0 < z)
     (hside : (y * s - r * z) * v ≤ 0) :
     (m * s - r * n).abs * z ≤ (m * z - y * n).abs * s
-      ∧ ((m * z - y * n).abs * s ≤ (m * s - r * n).abs * z → (y * s - r * z) * v = 0) := by
-  have hpivot := loop_pivot m n b r s v y z h.loop_residual
-  have hnonpos : n * ((y * s - r * z) * v) ≤ 0 :=
-    Int.mul_nonpos_of_nonneg_of_nonpos (by have := h.n_pos; omega) hside
-  obtain ⟨hle, heq⟩ := Int.abs_cancel (x := m * s - r * n) (y := m * z - y * n)
-    h.v_ne_zero hz h.s_pos
-    (by rw [h.loop_residual]; exact Int.mul_nonneg h.b_nonneg (by omega))
-    (by rw [h.loop_residual]; omega)
-  refine ⟨hle, fun hrev => ?_⟩
-  have hchain := heq hrev
-  rw [h.loop_residual] at hchain
-  rcases Int.mul_eq_zero.mp (show n * ((y * s - r * z) * v) = 0 by omega) with hn | hzero
-  · have := h.n_pos; omega
-  · exact hzero
+      ∧ ((m * z - y * n).abs * s ≤ (m * s - r * n).abs * z → (y * s - r * z) * v = 0) :=
+  abs_le_of_pivot h.n_pos h.v_ne_zero hz h.s_pos
+    (by rw [h.loop_residual]; exact h.b_nonneg) hside
+    (by rw [h.loop_residual]; exact loop_pivot m n b r s v y z h.loop_residual)
 
 /-! ## The extended candidate's side -/
 
@@ -148,20 +170,12 @@ makes *that* candidate's residual nonnegative.
 public theorem extended_le_of_extended_side (h : Bracketing m n l b c r s t u v) (hz : 0 < z)
     (hside : (t * z - y * u) * v ≤ 0) :
     (m * u - t * n).abs * z ≤ (m * z - y * n).abs * u
-      ∧ ((m * z - y * n).abs * u ≤ (m * u - t * n).abs * z → (t * z - y * u) * v = 0) := by
-  have hpivot := extended_pivot m n c t u v y z h.extended_residual
-  have hnonpos : n * ((t * z - y * u) * v) ≤ 0 :=
-    Int.mul_nonpos_of_nonneg_of_nonpos (by have := h.n_pos; omega) hside
-  obtain ⟨hle, heq⟩ := Int.abs_cancel (x := m * u - t * n) (y := m * z - y * n) (v := -v)
-    (by have := h.v_ne_zero; omega) hz h.u_pos
-    (by rw [h.extended_residual_neg]; exact Int.mul_nonneg (by have := h.c_pos; omega) (by omega))
-    (by rw [h.extended_residual_neg]; grind)
-  refine ⟨hle, fun hrev => ?_⟩
-  have hchain := heq hrev
-  rw [h.extended_residual_neg] at hchain
-  rcases Int.mul_eq_zero.mp (show n * ((t * z - y * u) * v) = 0 by grind) with hn | hzero
-  · have := h.n_pos; omega
-  · exact hzero
+      ∧ ((m * z - y * n).abs * u ≤ (m * u - t * n).abs * z → (t * z - y * u) * v = 0) :=
+  abs_le_of_pivot (V := -v) h.n_pos (by have := h.v_ne_zero; omega) hz h.u_pos
+    (by rw [h.extended_residual_neg]; have := h.c_pos; omega) hside
+    (by rw [h.extended_residual_neg]
+        have := extended_pivot m n c t u v y z h.extended_residual
+        grind)
 
 /-! ## Across the comparison -/
 
@@ -199,12 +213,11 @@ public theorem loop_le_of_extended_side (h : Bracketing m n l b c r s t u v) (hz
   have e1 : b * u * z = -((m * z - y * n) * v * u) * s := by grind
   have e2 : c * z * s = c * s * z := by grind
   have htie : b * u * z = c * s * z := by omega
-  refine ⟨Int.eq_of_mul_eq_mul_right (show z ≠ 0 by omega) htie, ?_⟩
   have h3 : c * z = -((m * z - y * n) * v * u) :=
     Int.eq_of_mul_eq_mul_right (show s ≠ 0 by omega) (by omega)
-  rcases Int.mul_eq_zero.mp (show n * ((t * z - y * u) * v) = 0 by omega) with hn | hzero
-  · have := h.n_pos; omega
-  · exact hzero
+  exact ⟨Int.eq_of_mul_eq_mul_right (show z ≠ 0 by omega) htie,
+    Int.eq_of_mul_eq_mul_left (show n ≠ 0 by have := h.n_pos; omega)
+      (show n * ((t * z - y * u) * v) = n * 0 by omega)⟩
 
 /--
 And on the loop candidate's side the *extended* candidate is strictly closer when the comparison
@@ -235,26 +248,17 @@ public theorem extended_lt_of_loop_side (h : Bracketing m n l b c r s t u v) (hz
 /-! ## What a vanishing cross-product buys -/
 
 /--
-A vanishing loop cross-product collapses the denominator identity onto a positive multiple of
-`s`, so the candidate needs at least the loop candidate's denominator; at exactly that
-denominator the multiplier is `1` and the numerator identity makes it the same candidate.
+A vanishing loop cross-product collapses both identities onto the loop candidate's `r` and `s`.
 
 So denominator-minimality comes from the *determinant*, not from any divisibility argument.
 -/
 public theorem s_le_of_loop_vanishes (h : Bracketing m n l b c r s t u v)
     (hextended : 0 < (t * z - y * u) * v) (hzero : (y * s - r * z) * v = 0) :
     s ≤ z ∧ (s = z → y = r) := by
-  have hs := h.s_pos
   have hid := denominator_identity r s t u v y z h.det
   have hnum := numerator_identity r s t u v y z h.det
   rw [hzero] at hid hnum
-  refine ⟨?_, fun hzs => ?_⟩
-  · have := Int.le_mul_of_one_le_left (a := (t * z - y * u) * v) (b := s) (by omega) (by omega)
-    omega
-  · -- With `s = z` the surviving multiplier is `1`, and the numerator identity reads off `y`.
-    rw [Int.eq_of_mul_eq_mul_right (show s ≠ 0 by omega)
-      (show (t * z - y * u) * v * s = 1 * s by omega)] at hnum
-    omega
+  exact le_of_eq_mul hextended h.s_pos (by omega) (by omega)
 
 /--
 Symmetrically for a vanishing extended cross-product.
@@ -262,15 +266,9 @@ Symmetrically for a vanishing extended cross-product.
 public theorem u_le_of_extended_vanishes (h : Bracketing m n l b c r s t u v)
     (hloop : 0 < (y * s - r * z) * v) (hzero : (t * z - y * u) * v = 0) :
     u ≤ z ∧ (u = z → y = t) := by
-  have hu := h.u_pos
   have hid := denominator_identity r s t u v y z h.det
   have hnum := numerator_identity r s t u v y z h.det
   rw [hzero] at hid hnum
-  refine ⟨?_, fun hzu => ?_⟩
-  · have := Int.le_mul_of_one_le_left (a := (y * s - r * z) * v) (b := u) (by omega) (by omega)
-    omega
-  · rw [Int.eq_of_mul_eq_mul_right (show u ≠ 0 by omega)
-      (show (y * s - r * z) * v * u = 1 * u by omega)] at hnum
-    omega
+  exact le_of_eq_mul hloop h.u_pos (by omega) (by omega)
 
 end Bracketing

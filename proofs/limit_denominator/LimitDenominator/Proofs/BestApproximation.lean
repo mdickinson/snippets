@@ -166,4 +166,19 @@ public theorem isBestApproximation_extended (h : Bracketing m n l b c r s t u v)
     · have := (h.u_le_of_extended_vanishes hpos (hvanishes hrev)).2 hueq
       omega
 
+/-! ## Against the comparison the code computes -/
+
+/--
+The two theorems above against `2 * b * u ≤ n`, the comparison the code computes, so that the
+correctness proofs need only split on the `if`; `loop_nearer_iff` identifies the two.
+-/
+public theorem isBestApproximation_loop_of_test (h : Bracketing m n l b c r s t u v)
+    (htest : 2 * b * u ≤ n) : isBestApproximation m n l r s :=
+  h.isBestApproximation_loop (h.loop_nearer_iff.mp htest)
+
+/-- The other arm of the same `if`, where the comparison comes out strict. -/
+public theorem isBestApproximation_extended_of_test (h : Bracketing m n l b c r s t u v)
+    (htest : ¬2 * b * u ≤ n) : isBestApproximation m n l t u :=
+  h.isBestApproximation_extended (by have := h.loop_nearer_iff; omega)
+
 end Bracketing

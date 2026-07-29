@@ -26,16 +26,11 @@ public theorem Int.abs_nonneg (a : Int) : 0 ≤ a.abs := by unfold Int.abs; spli
 public theorem Int.abs_eq_zero {a : Int} : a.abs = 0 ↔ a = 0 := by
   unfold Int.abs; split <;> omega
 
-/-- A positive factor comes out of the absolute value. -/
-public theorem Int.abs_mul_of_pos {a b : Int} (ha : 0 < a) : (a * b).abs = a * b.abs := by
-  unfold Int.abs
-  rcases (by omega : 0 ≤ b ∨ b < 0) with hb | hb
-  · rw [if_pos (Int.mul_nonneg (by omega) hb), if_pos hb]
-  · rw [if_neg (by have := Int.mul_neg_of_pos_of_neg ha hb; omega), if_neg (by omega)]
-    grind
-
 /-- Negating leaves the absolute value alone. -/
 public theorem Int.abs_neg (a : Int) : (-a).abs = a.abs := by unfold Int.abs; split <;> omega
+
+/-- A nonnegative integer is its own absolute value. -/
+private theorem Int.abs_of_nonneg {a : Int} (ha : 0 ≤ a) : a.abs = a := by unfold Int.abs; omega
 
 /-- `Int.abs` is `Int.natAbs`, which is what makes it multiplicative. -/
 private theorem Int.abs_eq_natAbs (a : Int) : a.abs = a.natAbs := by unfold Int.abs; split <;> omega
@@ -44,22 +39,11 @@ private theorem Int.abs_eq_natAbs (a : Int) : a.abs = a.natAbs := by unfold Int.
 private theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by
   rw [Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.natAbs_mul]; rfl
 
-/-! ## Cancelling the orientation -/
+/-- A positive factor comes out of the absolute value. -/
+public theorem Int.abs_mul_of_pos {a b : Int} (ha : 0 < a) : (a * b).abs = a * b.abs := by
+  rw [Int.abs_mul, Int.abs_of_nonneg (by omega : (0 : Int) ≤ a)]
 
-/--
-Rewriting the two ends of an oriented chain so that a factor of `|v|` stands on each side. The
-lower end is an equality because it is nonnegative, the upper end only an inequality.
--/
-private theorem Int.abs_chain {x y v z w : Int} (hz : 0 < z) (hw : 0 < w)
-    (hnonneg : 0 ≤ x * v * z) :
-    x.abs * z * v.abs = x * v * z ∧ y * v * w ≤ y.abs * w * v.abs := by
-  refine ⟨?_, ?_⟩
-  · rw [← show (x * v * z).abs = x * v * z from by unfold Int.abs; omega,
-      Int.abs_mul, Int.abs_mul, show z.abs = z from by unfold Int.abs; omega]
-    grind
-  · have h1 : y * v * w ≤ (y * v * w).abs := by unfold Int.abs; omega
-    rw [Int.abs_mul, Int.abs_mul, show w.abs = w from by unfold Int.abs; omega] at h1
-    grind
+/-! ## Cancelling the orientation -/
 
 /--
 Cancelling the orientation, with the equality case every caller wants alongside it. An inequality
@@ -73,7 +57,15 @@ it cancels. That needs only `v ≠ 0` — never that `v` is a unit.
 public theorem Int.abs_cancel {x y v z w : Int} (hv : v ≠ 0) (hz : 0 < z) (hw : 0 < w)
     (hnonneg : 0 ≤ x * v * z) (hle : x * v * z ≤ y * v * w) :
     x.abs * z ≤ y.abs * w ∧ (y.abs * w ≤ x.abs * z → x * v * z = y * v * w) := by
-  obtain ⟨hx, hy⟩ := Int.abs_chain (y := y) (w := w) hz hw hnonneg
+  -- A factor of `|v|` onto each end: the lower one is an equality, being nonnegative.
+  have hx : x.abs * z * v.abs = x * v * z := by
+    rw [← Int.abs_of_nonneg hnonneg, Int.abs_mul, Int.abs_mul,
+      Int.abs_of_nonneg (by omega : (0 : Int) ≤ z)]
+    grind
+  have hy : y * v * w ≤ y.abs * w * v.abs := by
+    have h1 : y * v * w ≤ (y * v * w).abs := by unfold Int.abs; omega
+    rw [Int.abs_mul, Int.abs_mul, Int.abs_of_nonneg (by omega : (0 : Int) ≤ w)] at h1
+    grind
   refine ⟨Int.le_of_mul_le_mul_right (by omega) (show 0 < v.abs by unfold Int.abs; omega), ?_⟩
   intro hrev
   have := Int.mul_le_mul_of_nonneg_right hrev (Int.abs_nonneg v)

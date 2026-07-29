@@ -79,6 +79,8 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
     have : ((l - q) / s + 1) * s = k * s + s := by grind
     omega
   have hks_nonneg : 0 ≤ k * s := Int.mul_nonneg hk_nonneg (by omega)
+  -- omega takes each product as an atom, so the two `k + 1` steps below need this by name.
+  have hkb : (k + 1) * b = k * b + b := by grind
   -- Extending does not change the orientation.
   have horient : t * s - r * u = p * s - r * q := by grind
   -- `b ≤ c` and `0 < c`, by cases on how the loop exited.
@@ -88,7 +90,6 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
     · have hk_lt_quot : k < a / b := hk ▸ (Int.ediv_lt_iff_lt_mul hs).mpr (by omega)
       have h1 : (k + 1) * b ≤ a / b * b := Int.mul_le_mul_of_nonneg_right (by omega) hb
       have h2 : a / b * b ≤ a := (Int.le_ediv_iff_mul_le hb_pos).mp (Int.le_refl (a / b))
-      have h3 : (k + 1) * b = k * b + b := by grind
       omega
   exact {
     det := by rw [horient]; have := hdet; grind
@@ -117,7 +118,6 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
       have hk_one : 1 ≤ k := by
         rcases (by omega : k ≤ 0 ∨ 1 ≤ k) with hk_le_zero | hk_one
         · have h1 : (k + 1) * b ≤ 1 * b := Int.mul_le_mul_of_nonneg_right (by omega) hb
-          have h2 : (k + 1) * b = k * b + b := by grind
           omega
         · exact hk_one
       -- Then `s = q + k*s` with `s ≤ k*s` forces `q = 0`, and so `p = 1`.
