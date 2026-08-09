@@ -19,14 +19,9 @@ theorem Int.abs_of_nonpos {a : Int} (ha : a ≤ 0) : a.abs = -a := by grind only
 theorem Int.abs_pos_of_ne_zero {a : Int} : a ≠ 0 → 0 < a.abs := by grind only [Int.abs]
 theorem Int.abs_ne_zero_of_ne_zero {a : Int} : a ≠ 0 → a.abs ≠ 0 := by grind only [Int.abs]
 theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by
-  rcases Int.le_total 0 a with h1 | h2 <;> rcases Int.le_total 0 b with h3 | h4
-  · rw [Int.abs_of_nonneg h1, Int.abs_of_nonneg h3, Int.abs_of_nonneg (Int.mul_nonneg h1 h3)]
-  · rw [Int.abs_of_nonneg h1, Int.abs_of_nonpos h4, Int.abs_of_nonpos (Int.mul_nonpos_of_nonneg_of_nonpos h1 h4)]
-    grind only
-  · rw [Int.abs_of_nonpos h2, Int.abs_of_nonneg h3, Int.abs_of_nonpos (Int.mul_nonpos_of_nonpos_of_nonneg h2 h3)]
-    grind only
-  · rw [Int.abs_of_nonpos h2, Int.abs_of_nonpos h4, Int.abs_of_nonneg (Int.mul_nonneg_of_nonpos_of_nonpos h2 h4)]
-    grind only
+  cases Int.le_total 0 a <;> cases Int.le_total 0 b <;> grind only [Int.abs_of_nonneg,
+  Int.abs_of_nonpos, Int.mul_nonneg, Int.mul_nonpos_of_nonneg_of_nonpos,
+  Int.mul_nonpos_of_nonpos_of_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos]
 
 /-- A fraction, minus the lowest terms hypothesis. -/
 structure FractionPair where (num : Int) {den : Int} (pos : 0 < den)
