@@ -117,26 +117,14 @@ variable {ef gh ij : FractionPair}
 theorem lev_trans (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
   gh.of_le_by_den (by grind only [ij.le_by_den h1, ef.le_by_den h2])
 
-theorem disteq_trans (h1 : st.disteq ef gh) (h2 : st.disteq gh ij) : st.disteq ef ij :=
-  gh.of_eq_by_den (by grind only [ij.eq_by_den h1, ef.eq_by_den h2])
-
-theorem closer_of_closer_of_disteq
-    (h1 : st.closer ef gh) (h2 : st.disteq gh ij) : st.closer ef ij :=
-  gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.eq_by_den h2])
-
-theorem closer_of_disteq_of_closer
-    (h1 : st.disteq ef gh) (h2 : st.closer gh ij) : st.closer ef ij :=
-  gh.of_lt_by_den (by grind only [ij.eq_by_den h1, ef.lt_by_den h2])
-
-theorem closer_trans (h1 : st.closer ef gh) (h2 : st.closer gh ij) : st.closer ef ij :=
-  gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.lt_by_den h2])
-
+/-- "At least as good as" is transitive. -/
 theorem better_trans (h1 : st.better ef gh) (h2 : st.better gh ij) : st.better ef ij := by
   rcases h1 with h1 | ⟨h1, d1⟩ <;> rcases h2 with h2 | ⟨h2, d2⟩
-  · exact .inl (st.closer_trans h1 h2)
-  · exact .inl (st.closer_of_closer_of_disteq h1 h2)
-  · exact .inl (st.closer_of_disteq_of_closer h1 h2)
-  · exact .inr ⟨st.disteq_trans h1 h2, Int.le_trans d1 d2⟩
+  · exact .inl (gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.lt_by_den h2]))
+  · exact .inl (gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.eq_by_den h2]))
+  · exact .inl (gh.of_lt_by_den (by grind only [ij.eq_by_den h1, ef.lt_by_den h2]))
+  · exact .inr ⟨gh.of_eq_by_den (by grind only [ij.eq_by_den h1, ef.eq_by_den h2]),
+      Int.le_trans d1 d2⟩
 
 /-- Distance for values ≤ m/n. -/
 theorem dist_of_lev_mn (h : st.lev ef st.mn) :
