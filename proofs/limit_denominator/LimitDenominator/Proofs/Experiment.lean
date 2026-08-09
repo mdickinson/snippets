@@ -99,13 +99,14 @@ variable (ef gh ij : FractionPair)
 /-- e/f ≤ g/h, taking into account the state orientation. -/
 def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
 
+/-- Scaled distance from e/f to st.mn. -/
+def dist := ((ef.num * st.mn.den - st.mn.num * ef.den) * st.v).abs
+
 /-- e/f is closer to st.mn than g/h is. -/
-def closer := ((ef.num * st.mn.den - st.mn.num * ef.den) * st.v).abs * gh.den
-    < ((gh.num * st.mn.den - st.mn.num * gh.den) * st.v).abs * ef.den
+def closer := st.dist ef * gh.den < st.dist gh * ef.den
 
 /-- e/f and g/h are equidistant from st.mn. -/
-def disteq := ((ef.num * st.mn.den - st.mn.num * ef.den) * st.v).abs * gh.den
-    = ((gh.num * st.mn.den - st.mn.num * gh.den) * st.v).abs * ef.den
+def disteq := st.dist ef * gh.den = st.dist gh * ef.den
 
 /- Redeclare generic fractions as implicit. -/
 variable {ef gh ij : FractionPair}
@@ -128,15 +129,15 @@ theorem closer_of_disteq_of_closer
 theorem closer_trans (h1 : st.closer ef gh) (h2 : st.closer gh ij) : st.closer ef ij :=
   gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.lt_by_den h2])
 
-theorem abs_diff_of_lev (h : st.lev ef gh) :
-    ((ef.num * gh.den - gh.num * ef.den) * st.v).abs =
-    (gh.num * ef.den - ef.num * gh.den) * st.v := by
-  grind only [lev, Int.abs_of_nonpos]
+/-- Distance for values ≤ m/n. -/
+theorem dist_of_lev_mn (h : st.lev ef st.mn) :
+    st.dist ef = (st.mn.num * ef.den - ef.num * st.mn.den) * st.v := by
+  grind only [dist, lev, Int.abs_of_nonpos]
 
-theorem abs_diff_of_lev' (h : st.lev ef gh) :
-    ((gh.num * ef.den - ef.num * gh.den) * st.v).abs =
-    (gh.num * ef.den - ef.num * gh.den) * st.v := by
-  grind only [lev, Int.abs_of_nonneg]
+/-- Distance for values ≥ m/n. -/
+theorem dist_of_mn_lev (h : st.lev st.mn ef) :
+    st.dist ef = (ef.num * st.mn.den - st.mn.num * ef.den) * st.v := by
+  grind only [dist, lev, Int.abs_of_nonneg]
 
 /-- If a linear combination of s and u is positive, one of the coefficients is. -/
 theorem lc_pos {a b : Int} : 0 < a * st.rs.den + b * st.tu.den → 0 < a ∨ 0 < b := by
@@ -164,12 +165,12 @@ theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
   rcases loop_or_extended st hyz with hloop | hextended
   · rcases Int.lt_or_eq_of_le hloop with hbl | hatl
     · left
-      rw [st.abs_diff_of_lev st.rs_lev_mn]
-      rw [st.abs_diff_of_lev (st.lev_trans (Int.le_of_lt hbl) st.rs_lev_mn)]
+      rw [st.dist_of_lev_mn st.rs_lev_mn]
+      rw [st.dist_of_lev_mn (st.lev_trans (Int.le_of_lt hbl) st.rs_lev_mn)]
       grind only [st.mn.lt_by_den hbl]
     · right; left; constructor
-      · rw [st.abs_diff_of_lev st.rs_lev_mn]
-        rw [st.abs_diff_of_lev (st.lev_trans (Int.le_of_eq hatl) st.rs_lev_mn)]
+      · rw [st.dist_of_lev_mn st.rs_lev_mn]
+        rw [st.dist_of_lev_mn (st.lev_trans (Int.le_of_eq hatl) st.rs_lev_mn)]
         grind only [st.mn.eq_by_den hatl]
       · have : yz.den = (st.tu.num * yz.den - yz.num * st.tu.den) * st.v * st.rs.den := by
           grind only [yz.eq_by_den st.det, st.tu.eq_by_den hatl]
@@ -177,12 +178,12 @@ theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
           st.rs.nonneg (Int.pos_of_mul_pos_left (this ▸ yz.pos) st.rs.pos))
   · rcases Int.lt_or_eq_of_le hextended with hbe | hate
     · right; right; right
-      rw [st.abs_diff_of_lev' st.mn_lev_tu]
-      rw [st.abs_diff_of_lev' (st.lev_trans st.mn_lev_tu (Int.le_of_lt hbe))]
+      rw [st.dist_of_mn_lev st.mn_lev_tu]
+      rw [st.dist_of_mn_lev (st.lev_trans st.mn_lev_tu (Int.le_of_lt hbe))]
       grind only [st.mn.lt_by_den hbe]
     · right; right; left; constructor
-      · rw [st.abs_diff_of_lev' st.mn_lev_tu]
-        rw [st.abs_diff_of_lev' (st.lev_trans st.mn_lev_tu (Int.le_of_eq hate))]
+      · rw [st.dist_of_mn_lev st.mn_lev_tu]
+        rw [st.dist_of_mn_lev (st.lev_trans st.mn_lev_tu (Int.le_of_eq hate))]
         grind only [st.mn.eq_by_den hate]
       · have : yz.den = (yz.num * st.rs.den - st.rs.num * yz.den) * st.v * st.tu.den :=
           by grind only [yz.eq_by_den st.det, st.rs.eq_by_den hate]
@@ -199,14 +200,14 @@ theorem rv_cases :
   unfold closer disteq
   rcases Int.lt_or_le (c * st.rs.den) (b * st.tu.den) with h1 | hloop
   · right; right; refine ⟨if_neg (Int.not_le_of_gt h1), ?_⟩
-    rw [st.abs_diff_of_lev st.rs_lev_mn, st.abs_diff_of_lev' (st.mn_lev_tu)]
+    rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
     exact h1
   · rcases Int.lt_or_eq_of_le hloop with hlt | heq
     · left; refine ⟨if_pos hloop, ?_⟩
-      rw [st.abs_diff_of_lev st.rs_lev_mn, st.abs_diff_of_lev' (st.mn_lev_tu)]
+      rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
       exact hlt
     · right; left; refine ⟨if_pos hloop, ?_, ?_⟩
-      · rw [st.abs_diff_of_lev st.rs_lev_mn, st.abs_diff_of_lev' (st.mn_lev_tu)]
+      · rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
         exact heq
       · have cs_pos : 0 < c * st.rs.den := by
           grind only [st.mn.eq_by_den st.det, st.mn.pos]
@@ -234,28 +235,26 @@ theorem rv_is_best {yz : FractionPair} (hyz : yz.den ≤ st.l) :
   · left; exact st.closer_of_disteq_of_closer heq hbe
   · left; exact hbe
 
-/-- Translation into more natural definitions of closer and disteq. -/
+/- Translation into the unoriented definitions of closer and disteq. -/
 
-def closer2 (st : PostLoopState) (rs : FractionPair) (yz : FractionPair) :=
-  (rs.num * st.mn.den - st.mn.num * rs.den).abs * yz.den
-  < (yz.num * st.mn.den - st.mn.num * yz.den).abs * rs.den
+/-- Distance with the orientation dropped, matching the specification. -/
+def dist2 (ef : FractionPair) := (ef.num * st.mn.den - st.mn.num * ef.den).abs
 
-def disteq2 (st : PostLoopState) (rs : FractionPair) (yz : FractionPair) :=
-  (rs.num * st.mn.den - st.mn.num * rs.den).abs * yz.den
-  = (yz.num * st.mn.den - st.mn.num * yz.den).abs * rs.den
+/-- `closer`, on the unoriented distance. -/
+def closer2 (ef gh : FractionPair) := st.dist2 ef * gh.den < st.dist2 gh * ef.den
 
-theorem closer2_iff_closer
-    (rs : FractionPair) (yz : FractionPair) :
-    st.closer2 rs yz ↔ st.closer rs yz := by
-  unfold closer2 closer
-  simp only [Int.abs_mul, Int.mul_right_comm _ st.v.abs]
+/-- `disteq`, on the unoriented distance. -/
+def disteq2 (ef gh : FractionPair) := st.dist2 ef * gh.den = st.dist2 gh * ef.den
+
+theorem dist_eq_dist2 : st.dist ef = st.dist2 ef * st.v.abs := by
+  simp only [dist, dist2, Int.abs_mul]
+
+theorem closer2_iff_closer : st.closer2 ef gh ↔ st.closer ef gh := by
+  simp only [closer2, closer, dist_eq_dist2, Int.mul_right_comm _ st.v.abs]
   exact (Int.mul_lt_mul_right (Int.abs_pos_of_ne_zero st.v_nonzero)).symm
 
-theorem disteq2_iff_disteq
-    (rs : FractionPair) (yz : FractionPair) :
-    st.disteq2 rs yz ↔ st.disteq rs yz := by
-  unfold disteq2 disteq
-  simp only [Int.abs_mul, Int.mul_right_comm _ st.v.abs]
+theorem disteq2_iff_disteq : st.disteq2 ef gh ↔ st.disteq ef gh := by
+  simp only [disteq2, disteq, dist_eq_dist2, Int.mul_right_comm _ st.v.abs]
   exact (Int.mul_eq_mul_right_iff (Int.abs_ne_zero_of_ne_zero st.v_nonzero)).symm
 
 theorem rv_is_best2 {yz : FractionPair} (hyz : yz.den ≤ st.l) :
