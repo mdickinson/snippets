@@ -3,6 +3,7 @@ module
 import LimitDenominator.Proofs.AfterLoop
 import LimitDenominator.Proofs.BestApproximation
 import LimitDenominator.Proofs.Bracket
+import LimitDenominator.Proofs.Experiment
 import LimitDenominator.Proofs.LoopInvariant
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.SimplifiedCorrectness
