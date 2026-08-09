@@ -108,6 +108,9 @@ def closer := st.dist ef * gh.den < st.dist gh * ef.den
 /-- e/f and g/h are equidistant from st.mn. -/
 def disteq := st.dist ef * gh.den = st.dist gh * ef.den
 
+/-- e/f is at least as good an approximation as g/h: closer, or tied on a smaller denominator. -/
+def better := st.closer ef gh ∨ st.disteq ef gh ∧ ef.den ≤ gh.den
+
 /- Redeclare generic fractions as implicit. -/
 variable {ef gh ij : FractionPair}
 
@@ -128,6 +131,13 @@ theorem closer_of_disteq_of_closer
 
 theorem closer_trans (h1 : st.closer ef gh) (h2 : st.closer gh ij) : st.closer ef ij :=
   gh.of_lt_by_den (by grind only [ij.lt_by_den h1, ef.lt_by_den h2])
+
+theorem better_trans (h1 : st.better ef gh) (h2 : st.better gh ij) : st.better ef ij := by
+  rcases h1 with h1 | ⟨h1, d1⟩ <;> rcases h2 with h2 | ⟨h2, d2⟩
+  · exact .inl (st.closer_trans h1 h2)
+  · exact .inl (st.closer_of_closer_of_disteq h1 h2)
+  · exact .inl (st.closer_of_disteq_of_closer h1 h2)
+  · exact .inr ⟨st.disteq_trans h1 h2, Int.le_trans d1 d2⟩
 
 /-- Distance for values ≤ m/n. -/
 theorem dist_of_lev_mn (h : st.lev ef st.mn) :
@@ -155,20 +165,17 @@ theorem loop_or_extended {yz : FractionPair} (hyz : yz.den ≤ st.l):
   · right; grind only [lev]
   · left; grind only [lev]
 
-/-- The four possible cases for a candidate fraction pair. -/
+/-- One of the two candidates is at least as good as any candidate fraction pair. -/
 theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
-    st.closer st.rs yz
-    ∨ st.disteq st.rs yz ∧ st.rs.den ≤ yz.den
-    ∨ st.disteq st.tu yz ∧ st.tu.den ≤ yz.den
-    ∨ st.closer st.tu yz := by
-  dsimp only [closer, disteq]
+    st.better st.rs yz ∨ st.better st.tu yz := by
+  dsimp only [better, closer, disteq]
   rcases loop_or_extended st hyz with hloop | hextended
   · rcases Int.lt_or_eq_of_le hloop with hbl | hatl
-    · left
+    · left; left
       rw [st.dist_of_lev_mn st.rs_lev_mn]
       rw [st.dist_of_lev_mn (st.lev_trans (Int.le_of_lt hbl) st.rs_lev_mn)]
       grind only [st.mn.lt_by_den hbl]
-    · right; left; constructor
+    · left; right; constructor
       · rw [st.dist_of_lev_mn st.rs_lev_mn]
         rw [st.dist_of_lev_mn (st.lev_trans (Int.le_of_eq hatl) st.rs_lev_mn)]
         grind only [st.mn.eq_by_den hatl]
@@ -177,11 +184,11 @@ theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
         exact this ▸ (Int.le_mul_of_one_le_left
           st.rs.nonneg (Int.pos_of_mul_pos_left (this ▸ yz.pos) st.rs.pos))
   · rcases Int.lt_or_eq_of_le hextended with hbe | hate
-    · right; right; right
+    · right; left
       rw [st.dist_of_mn_lev st.mn_lev_tu]
       rw [st.dist_of_mn_lev (st.lev_trans st.mn_lev_tu (Int.le_of_lt hbe))]
       grind only [st.mn.lt_by_den hbe]
-    · right; right; left; constructor
+    · right; right; constructor
       · rw [st.dist_of_mn_lev st.mn_lev_tu]
         rw [st.dist_of_mn_lev (st.lev_trans st.mn_lev_tu (Int.le_of_eq hate))]
         grind only [st.mn.eq_by_den hate]
@@ -190,23 +197,21 @@ theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
         exact this ▸ (Int.le_mul_of_one_le_left
           st.tu.nonneg (Int.pos_of_mul_pos_left (this ▸ yz.pos) st.tu.pos))
 
-/-- The three possible output cases. -/
+/-- The returned pair is at least as good as the other. -/
 theorem rv_cases :
-    (st.rv = st.rs ∧ st.closer st.rs st.tu)
-    ∨ st.rv = st.rs ∧ st.disteq st.rs st.tu ∧ st.rs.den ≤ st.tu.den
-    ∨ st.rv = st.tu ∧ st.closer st.tu st.rs := by
+    st.rv = st.rs ∧ st.better st.rs st.tu ∨ st.rv = st.tu ∧ st.better st.tu st.rs := by
   let b := (st.mn.num * st.rs.den - st.rs.num * st.mn.den) * st.v
   let c := (st.tu.num * st.mn.den - st.mn.num * st.tu.den) * st.v
-  unfold closer disteq
+  unfold better closer disteq
   rcases Int.lt_or_le (c * st.rs.den) (b * st.tu.den) with h1 | hloop
-  · right; right; refine ⟨if_neg (Int.not_le_of_gt h1), ?_⟩
+  · right; refine ⟨if_neg (Int.not_le_of_gt h1), .inl ?_⟩
     rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
     exact h1
   · rcases Int.lt_or_eq_of_le hloop with hlt | heq
-    · left; refine ⟨if_pos hloop, ?_⟩
+    · left; refine ⟨if_pos hloop, .inl ?_⟩
       rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
       exact hlt
-    · right; left; refine ⟨if_pos hloop, ?_, ?_⟩
+    · left; refine ⟨if_pos hloop, .inr ⟨?_, ?_⟩⟩
       · rw [st.dist_of_lev_mn st.rs_lev_mn, st.dist_of_mn_lev st.mn_lev_tu]
         exact heq
       · have cs_pos : 0 < c * st.rs.den := by
@@ -216,24 +221,14 @@ theorem rv_cases :
         exact Int.le_of_mul_le_mul_left cs_le_cu
           (Int.pos_of_mul_pos_left cs_pos st.rs.pos)
 
-/-- The twelve combinations. -/
-theorem rv_is_best {yz : FractionPair} (hyz : yz.den ≤ st.l) :
-    st.closer st.rv yz ∨ st.disteq st.rv yz ∧ st.rv.den ≤ yz.den := by
-  rcases st.yz_cases hyz with hbl | ⟨hatl, s_le_z⟩ | ⟨hate, u_le_z⟩ | hbe
-    <;> rcases st.rv_cases with ⟨rveq, hcloser⟩ | ⟨rveq, heq, s_le_u⟩ | ⟨rveq, hcloser⟩
-    <;> rw [rveq]
-  · left; exact hbl
-  · left; exact hbl
-  · left; exact st.closer_trans hcloser hbl
-  · right; exact ⟨ hatl, s_le_z ⟩
-  · right; exact ⟨ hatl, s_le_z ⟩
-  · left; exact st.closer_of_closer_of_disteq hcloser hatl
-  · left; exact st.closer_of_closer_of_disteq hcloser hate
-  · right; exact ⟨ st.disteq_trans heq hate, Int.le_trans s_le_u u_le_z ⟩
-  · right; exact ⟨ hate, u_le_z ⟩
-  · left; exact st.closer_trans hcloser hbe
-  · left; exact st.closer_of_disteq_of_closer heq hbe
-  · left; exact hbe
+/-- The four combinations: the returned pair is at least as good as any candidate. -/
+theorem rv_is_best {yz : FractionPair} (hyz : yz.den ≤ st.l) : st.better st.rv yz := by
+  rcases st.rv_cases with ⟨rveq, hrv⟩ | ⟨rveq, hrv⟩
+    <;> rw [rveq] <;> rcases st.yz_cases hyz with h | h
+  · exact h
+  · exact st.better_trans hrv h
+  · exact st.better_trans hrv h
+  · exact h
 
 /- Translation into the unoriented definitions of closer and disteq. -/
 
