@@ -62,7 +62,6 @@ end FractionPair
 structure PostLoopState where
   mn : FractionPair
   l : Int
-  hl : 0 < l
   rs : FractionPair
   tu : FractionPair
   v : Int
