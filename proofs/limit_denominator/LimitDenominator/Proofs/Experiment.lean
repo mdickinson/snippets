@@ -66,16 +66,78 @@ def isHalfInteger := ∃ (k : Int), (2 * ef.num - ef.den) = 2 * ef.den * k
 
 end FractionPair
 
+/-! # Inputs -/
+
+/-
+The inputs to the algorithm consist of a fraction pair m/n and a denominator limit.
+In practice that limit will always be positive, but we don't yet need to assume
+that here.
+-/
+
+/-- The inputs to the algorithm: a target fraction m/n and a denominator limit. -/
+structure Inputs where
+  mn : FractionPair
+  limit : Int
+
+namespace Inputs
+
+variable (args : Inputs)
+
+abbrev m := args.mn.num
+abbrev n := args.mn.den
+
+/-- Scaled distance from e/f to m/n. -/
+def dist (ef : FractionPair) := (ef.num * args.n - args.m * ef.den).abs
+
+/-
+Given two approximations e/f and g/h to m/n, we say that e/f is *better* than g/h
+if either:
+
+- e/f is closer to m/n than g/h is, or
+- e/f and g/h are equidistant from m/n, but f ≤ h.
+
+Note the slight abuse of language: "better" suggests a non-reflexive relation, but
+our "better" relation is reflexive: e/f is better than itself.
+-/
+
+/-- e/f is a better approximation to m/n than g/h is. -/
+def better (ef gh : FractionPair) :=
+  args.dist ef * gh.den < args.dist gh * ef.den
+  ∨
+  args.dist ef * gh.den = args.dist gh * ef.den ∧ ef.den ≤ gh.den
+
+/-- The "better" relation is transitive. -/
+theorem better_trans {ef gh ij : FractionPair} (h1 : args.better ef gh)
+    (h2 : args.better gh ij) : args.better ef ij := by
+  rcases h1 with h1 | ⟨h1, d1⟩ <;> rcases h2 with h2 | ⟨h2, d2⟩
+  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.lt_mul_den h2])
+  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.eq_mul_den h2])
+  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.eq_mul_den h1, ef.lt_mul_den h2])
+  · right
+    exact ⟨gh.eq_of_eq_mul_den (by grind only [ij.eq_mul_den h1, ef.eq_mul_den h2]),
+      Int.le_trans d1 d2⟩
+
+/--
+A "best" approximation for the given inputs is an approximation e/f with denominator
+bounded by limit which is better than any other approximation g/h with denominator
+bounded by limit.
+-/
+def best (ef : FractionPair) :=
+  ef.den ≤ args.limit ∧ ∀ {gh : FractionPair}, gh.den ≤ args.limit → args.better ef gh
+
+end Inputs
+
 /-! # Post-loop analysis -/
 
 /-
 The `PostLoopState` structure represents the state of knowledge on exiting the loop: we
 have fraction pairs r/s and t/u (a Farey pair) bracketing the target fraction pair m/n;
-we know that both r/s and t/u have "small" denominator (s ≤ l and u ≤ l), but that s + u
-exceeds our denominator limit (s + u > l), and it follows that everything strictly
-between `r/s` and `t/u` has denominator exceeding `l`. (We prove the contrapositive
-of this below, as `lev_rs_or_tu_lev`: any fraction pair with denominator no larger
-than `l` must be outside the bracket, or equal to one or other of the endpoints.)
+we know that both r/s and t/u have "small" denominator (s ≤ limit and u ≤ limit), but
+that s + u exceeds our denominator limit (s + u > limit), and it follows that everything
+strictly between `r/s` and `t/u` has denominator exceeding `limit`. (We prove the
+contrapositive of this below, as `lev_rs_or_tu_lev`: any fraction pair with denominator
+no larger than `limit` must be outside the bracket, or equal to one or other of the
+endpoints.)
 
 The field `v` represents the orientation of the bracket, and from `det` it must
 be either `1` or `-1`. If `v = 1` then we have
@@ -92,25 +154,23 @@ that in fact `m/n ≤ (r + t)/(s + u)` in case `v = 1` and `(r + t)/(s + u) ≤ 
 `rs_lev_mn` and `mn_lev_mediant` are the two relevant statements. We derive the fact
 that `m/n < t/u` (`v = 1`) or `t/u < m/n` (`v = -1`) as a consequence: `mn_lev_tu`.
 
-The `tie` field records behaviour of the loop in the special case where `l = 1`
+The `tie` field records behaviour of the loop in the special case where `limit = 1`
 and `m/n` is a half integer. This is the only case where r/s and t/u can be
 equidistant from m/n with the same denominator.
 -/
 
 /-- State on exiting the loop. -/
-structure PostLoopState where
-  mn : FractionPair
+structure PostLoopState extends Inputs where
   rs : FractionPair
   tu : FractionPair
-  l : Int
   v : Int
   det : (tu.num * rs.den - rs.num * tu.den) * v = 1
-  hrs : rs.den ≤ l
-  htu : tu.den ≤ l
-  hsu : l < rs.den + tu.den
+  hrs : rs.den ≤ limit
+  htu : tu.den ≤ limit
+  hsu : limit < rs.den + tu.den
   rs_lev_mn : rs.num * mn.den * v ≤ mn.num * rs.den * v
   mn_lev_mediant : mn.num * (rs.den + tu.den) * v ≤ (rs.num + tu.num) * mn.den * v
-  tie : l = 1 ∧ mn.isHalfInteger → rs.num < tu.num
+  tie : limit = 1 ∧ mn.isHalfInteger → rs.num < tu.num
 
 namespace PostLoopState
 
@@ -119,8 +179,6 @@ We let `st` represent the post-loop state throughout this section. We also defin
 shortcuts to the various numerators and denominators and definitions for `b` and `c`.
 -/
 variable (st : PostLoopState)
-abbrev m := st.mn.num
-abbrev n := st.mn.den
 abbrev r := st.rs.num
 abbrev s := st.rs.den
 abbrev t := st.tu.num
@@ -156,53 +214,19 @@ theorem lev_trans {ef gh ij : FractionPair}
     (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
   gh.le_of_le_mul_den (by grind only [ij.le_mul_den h1, ef.le_mul_den h2])
 
-/-- Scaled distance from e/f to m/n. -/
-def dist := (ef.num * st.n - st.m * ef.den).abs
-
 /-- Distance for values ≤ m/n. -/
 theorem dist_of_lev_mn {ef : FractionPair} (h : st.lev ef st.mn) :
     st.dist ef = (st.m * ef.den - ef.num * st.n) * st.v := by
   have rhs_nonneg : 0 ≤ (st.m * ef.den - ef.num * st.n) * st.v := by
     grind only [lev, st.v_cases]
-  grind only [dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
+  grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance for values ≥ m/n. -/
 theorem dist_of_mn_lev {ef : FractionPair} (h : st.lev st.mn ef) :
     st.dist ef = (ef.num * st.n - st.m * ef.den) * st.v := by
   have rhs_nonneg : 0 ≤ (ef.num * st.n - st.m * ef.den) * st.v := by
     grind only [lev, st.v_cases]
-  grind only [dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
-
-/-
-Given two approximations e/f and g/h to m/n, we say that e/f is *better* than g/h
-if either:
-
-- e/f is closer to m/n than g/h is, or
-- e/f and g/h are equidistant from m/n, but f ≤ h.
-
-Note the slight abuse of language: "better" suggests a non-reflexive relation, but
-our "better" relation is reflexive: e/f is better than itself.
--/
-
-/-- e/f is a better approximation to m/n than g/h is. -/
-def better :=
-  st.dist ef * gh.den < st.dist gh * ef.den
-  ∨
-  st.dist ef * gh.den = st.dist gh * ef.den ∧ ef.den ≤ gh.den
-
-/- Redeclare generic fractions as implicit. -/
-variable {ef gh ij : FractionPair}
-
-/-- The "better" relation is transitive. -/
-theorem better_trans (h1 : st.better ef gh) (h2 : st.better gh ij) :
-    st.better ef ij := by
-  rcases h1 with h1 | ⟨h1, d1⟩ <;> rcases h2 with h2 | ⟨h2, d2⟩
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.lt_mul_den h2])
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.eq_mul_den h2])
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.eq_mul_den h1, ef.lt_mul_den h2])
-  · right
-    exact ⟨gh.eq_of_eq_mul_den (by grind only [ij.eq_mul_den h1, ef.eq_mul_den h2]),
-      Int.le_trans d1 d2⟩
+  grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- If a linear combination of s and u is positive, one of the coefficients is. -/
 theorem lc_pos {a b : Int} : 0 < a * st.s + b * st.u → 0 < a ∨ 0 < b := by
@@ -210,8 +234,8 @@ theorem lc_pos {a b : Int} : 0 < a * st.s + b * st.u → 0 < a ∨ 0 < b := by
   · left; exact Int.pos_of_mul_pos_left h1 st.rs.pos
   · right; exact Int.pos_of_mul_pos_left h2 st.tu.pos
 
-/-- A fraction pair with denominator ≤ l must be outside the bracket. -/
-theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ st.l):
+/-- A fraction pair with denominator ≤ limit must be outside the bracket. -/
+theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ st.limit):
     st.lev yz st.rs ∨ st.lev st.tu yz := by
   have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
       + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
@@ -221,7 +245,7 @@ theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ st.l):
   · left; grind only [lev]
 
 /-- One of the two candidates is at least as good as any candidate fraction pair. -/
-theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.l) :
+theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ st.limit) :
     st.better st.rs yz ∨ st.better st.tu yz := by
   rcases lev_rs_or_tu_lev st hyz with hrs | htu
   · rcases Int.lt_or_eq_of_le hrs with hbl | hatl
@@ -273,11 +297,12 @@ theorem rv_cases :
         exact Int.le_of_mul_le_mul_left cs_le_cu
           (Int.pos_of_mul_pos_left cs_pos st.rs.pos)
 
-/-- The returned fraction pair has denominator bounded by l. -/
-theorem rv_bounded : st.rv.den ≤ st.l := by grind only [rv, st.hrs, st.htu]
+/-- The returned fraction pair has denominator bounded by limit. -/
+theorem rv_bounded : st.rv.den ≤ st.limit := by grind only [rv, st.hrs, st.htu]
 
 /-- The returned fraction pair is better than any candidate. -/
-theorem rv_is_best {yz : FractionPair} (hyz : yz.den ≤ st.l) : st.better st.rv yz := by
+theorem rv_better {yz : FractionPair} (hyz : yz.den ≤ st.limit) :
+    st.better st.rv yz := by
   rcases st.rv_cases with ⟨rveq, hrv⟩ | ⟨rveq, hrv⟩
     <;> rw [rveq] <;> rcases st.yz_cases hyz with h | h
   · exact h
@@ -285,12 +310,15 @@ theorem rv_is_best {yz : FractionPair} (hyz : yz.den ≤ st.l) : st.better st.rv
   · exact st.better_trans hrv h
   · exact h
 
+/-- The returned fraction is a best approximation. -/
+theorem rv_is_best : st.best st.rv := ⟨st.rv_bounded, st.rv_better⟩
+
 /--
-Tie case: if r/s is better than t/u and t/u is better than r/s, then l = 1 and
+Tie case: if r/s is better than t/u and t/u is better than r/s, then limit = 1 and
 m/n is a half integer.
 -/
 theorem rv_tie_case (h1 : st.better st.rs st.tu) (h2 : st.better st.tu st.rs) :
-    st.l = 1 ∧ st.mn.isHalfInteger := by
+    st.limit = 1 ∧ st.mn.isHalfInteger := by
   /- The try omega eliminates 3 out of the 4 cases immediately as impossible. -/
   cases h1 <;> cases h2 <;> try omega
   /- We're left with the case where r/s and t/u are equidistant and s = u. -/
