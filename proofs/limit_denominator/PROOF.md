@@ -152,8 +152,8 @@ Before the loop and after every iteration, the state satisfies
 | `numerator` | `a·r + b·p = m` |
 | `denominator` | `a·s + b·q = n` |
 | | `0 ≤ b < a` |
-| | `0 ≤ q ≤ s ≤ l` |
-| | `0 < s` |
+| | `0 ≤ q` |
+| | `0 < s ≤ l` |
 | `p_eq_one_of_q_eq_zero` | `q = 0` implies `p = 1` |
 
 The first six are the informal proof's six, and each holds by inspection initially and by
@@ -219,8 +219,8 @@ From the definition of the floor, `k ≤ (l − q)/s < k + 1`; scaling by `s` gi
 u ≤ l < u + s
 ```
 
-and hence `0 < u`: it is nonnegative, since `q ≥ 0` and `k ≥ 0` — the latter because
-`q ≤ s ≤ l` makes `l − q` nonnegative — and `u = 0` would give `l < s ≤ l`.
+and hence `0 < u`, since `l < u + s` and `s ≤ l` give `u > l − s ≥ 0`. Both bounds on `u`
+come from that one display, and neither needs the sign of `k`.
 
 For `b ≤ c` and `0 < c`, split on how the loop exited. If `b = 0` then `c = a`, and
 `0 < a` from `0 ≤ b < a`. Otherwise `0 < b` and `l < q + ⌊a/b⌋·s`, so

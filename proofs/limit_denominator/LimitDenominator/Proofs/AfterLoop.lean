@@ -70,15 +70,14 @@ public theorem bracketing {m n l a b c k p q r s t u : Int}
     Bracketing m n l b c r s t u (p * s - r * q) := by
   have hres_num := h.numerator_residual
   have hres_den := h.denominator_residual
-  obtain ⟨hdet, hnum, hden, hb, hba, hq, hqs, hsl, hs, hp⟩ := h
-  -- The defining inequalities for the floor `k`, and the sign facts they need.
-  have hk_nonneg : 0 ≤ k := hk ▸ (Int.le_ediv_iff_mul_le hs).mpr (by omega)
+  obtain ⟨hdet, hnum, hden, hb, hba, hq, hsl, hs, hp⟩ := h
+  -- The defining inequalities for the floor `k`. Between them they place `u` in `(0, l]`:
+  -- the upper one directly, and the lower one against `s ≤ l`.
   have hk_le : k * s ≤ l - q := (Int.le_ediv_iff_mul_le hs).mp (by omega)
   have hk_lt : l - q < k * s + s := by
     have hfloor := Int.lt_ediv_add_one_mul_self (l - q) hs
     have : ((l - q) / s + 1) * s = k * s + s := by grind
     omega
-  have hks_nonneg : 0 ≤ k * s := Int.mul_nonneg hk_nonneg (by omega)
   -- omega takes each product as an atom, so the two `k + 1` steps below need this by name.
   have hkb : (k + 1) * b = k * b + b := by grind
   -- Extending does not change the orientation.

@@ -19,7 +19,8 @@ through by `v` gives `v = p*s - r*q`, so the invariant clause becomes the plain 
 /--
 The invariant holding before the loop and after every iteration.
 
-The six clauses of the informal proof, plus `p_eq_one_of_q_eq_zero`. That last clause
+The clauses of the informal proof that the argument uses, plus `p_eq_one_of_q_eq_zero`. That
+last clause
 formalises the informal proof's observation that `q` is zero only before the loop is entered:
 it is a fact about which states are *reachable*, not one the other clauses imply, and the
 tie-break argument needs it to know that the loop candidate is the lower of the two bounds in
@@ -35,7 +36,6 @@ public structure LoopInvariant (m n l a b p q r s : Int) : Prop where
   b_nonneg : 0 ≤ b
   b_lt_a : b < a
   q_nonneg : 0 ≤ q
-  q_le_s : q ≤ s
   s_le_l : s ≤ l
   s_pos : 0 < s
   /-- `q` is zero only in the initial state, where `p` is one. -/
@@ -99,7 +99,6 @@ public theorem initial {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
   b_nonneg := Int.emod_nonneg m (by omega)
   b_lt_a := Int.emod_lt_of_pos m hn
   q_nonneg := by omega
-  q_le_s := by omega
   s_le_l := by omega
   s_pos := by omega
   p_eq_one_of_q_eq_zero _ := rfl
@@ -121,7 +120,6 @@ public theorem step {m n l a b p q r s : Int} (h : LoopInvariant m n l a b p q r
     b_nonneg := Int.emod_nonneg a (by omega)
     b_lt_a := Int.emod_lt_of_pos a hb
     q_nonneg := by have := h.s_pos; omega
-    q_le_s := by have := h.q_nonneg; omega
     s_le_l := hcond
     s_pos := by have := h.q_nonneg; have := h.s_pos; omega
     p_eq_one_of_q_eq_zero := by have := h.s_pos; omega
