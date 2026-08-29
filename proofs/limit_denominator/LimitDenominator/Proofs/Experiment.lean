@@ -53,7 +53,7 @@ positive. These are the main data objects in the proof.
 -/
 
 /-- A fraction, minus the lowest terms hypothesis. -/
-public structure FractionPair where (num : Int) (den : Int) (pos : 0 < den)
+structure FractionPair where (num : Int) (den : Int) (pos : 0 < den)
 
 namespace FractionPair
 
@@ -100,7 +100,7 @@ denominator.
 -/
 
 /-- The inputs to the algorithm: a target fraction m/n and a denominator limit. -/
-public structure Inputs where
+structure Inputs where
   mn : FractionPair
   limit : Int
   limit_pos : 0 < limit
@@ -148,13 +148,13 @@ A "best" approximation for the given inputs is an approximation e/f with denomin
 bounded by limit which is better than any other approximation g/h with denominator
 bounded by limit.
 -/
-public def best (ef : FractionPair) :=
+def best (ef : FractionPair) :=
   ef.den ≤ args.limit ∧ ∀ {gh : FractionPair}, gh.den ≤ args.limit → args.better ef gh
 
 /--
 The ambiguous case.
 -/
-public def ambiguous := args.limit = 1 ∧ args.mn.isHalfInteger
+def ambiguous := args.limit = 1 ∧ args.mn.isHalfInteger
 
 end Inputs
 
@@ -828,7 +828,7 @@ theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
 /--
 In the ambiguous case, the only best approximations are the integers m/n and m/n + 1.
 -/
-public theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
+theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
     let k := args.mn.num / args.mn.den
     args.best yz ↔ yz = ⟨k, 1, by decide⟩ ∨ yz = ⟨k + 1, 1, by decide⟩ := by
   intro k
