@@ -1,11 +1,3 @@
-/-
-
-TODO:
-
-- look for overlaps/simplifications with the two results using yz_cases_raw
-
--/
-
 module
 
 /-! # Absolute value of an integer, Int.abs -/
@@ -306,16 +298,11 @@ variable (ef gh ij : FractionPair)
 We define `st.lev` as an orientation-aware less-than-or-equal-to relation:
 `st.lev ef gh` means `e/f ≤ g/h` if `st.v = 1`, and `g/h ≤ e/f` if `st.v = -1`.
 
-ltv and eqv are defined analogously.
+`st.eqv` is defined analogously; since `v` is nonzero, it is equality of fractions
+whichever way the bracket points.
 -/
 def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
 def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
-def ltv := ef.num * gh.den * st.v < gh.num * ef.den * st.v
-
-theorem lev_of_ltv {ef gh : FractionPair} (h : st.ltv ef gh) : st.lev ef gh :=
-  Int.le_of_lt h
-theorem lev_of_eqv {ef gh : FractionPair} (h : st.eqv ef gh) : st.lev ef gh :=
-  Int.le_of_eq h
 
 /-- The st.lev relation is reflexive. -/
 theorem lev_refl : st.lev ef ef := Int.le_refl _
@@ -375,22 +362,12 @@ def rv : FractionPair := if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
 theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
   rw [← st.heqb]; grind only [args.mn.eq_mul_den st.bracket_det]
 
-/- XXX Check whether we ever use the ≤ form directly, or whether it would
-   be enough to prove the ltv equivalent. -/
 /-- Distance for values ≤ r/s. -/
 theorem dist_of_lev_rs {ef : FractionPair} (h : st.lev ef st.rs) :
     args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v := by
   have rhs_nonneg : 0 ≤ (args.m * ef.den - ef.num * args.n) * st.v := by
     grind only [lev, st.v_cases, st.lev_trans h st.rs_lev_mn]
   grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
-
-theorem dist_of_ltv_rs {ef : FractionPair} (h : st.ltv ef st.rs) :
-    args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v :=
-  st.dist_of_lev_rs (st.lev_of_ltv h)
-
-theorem dist_of_eqv_rs {ef : FractionPair} (h : st.eqv ef st.rs) :
-    args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v :=
-  st.dist_of_lev_rs (st.lev_of_eqv h)
 
 /-- Distance of r/s. -/
 theorem dist_rs : args.dist st.rs = (args.m * st.s - st.r * args.n) * st.v :=
@@ -406,14 +383,6 @@ theorem dist_of_tu_lev {ef : FractionPair} (h : st.lev st.tu ef) :
 /-- Distance of t/u. -/
 theorem dist_tu : args.dist st.tu = (st.t * args.n - args.m * st.u) * st.v :=
   st.dist_of_tu_lev (st.lev_refl st.tu)
-
-theorem dist_of_tu_ltv {ef : FractionPair} (h : st.ltv st.tu ef) :
-    args.dist ef = (ef.num * args.n - args.m * ef.den) * st.v :=
-  st.dist_of_tu_lev (st.lev_of_ltv h)
-
-theorem dist_of_tu_eqv {ef : FractionPair} (h : st.eqv st.tu ef) :
-    args.dist ef = (ef.num * args.n - args.m * ef.den) * st.v :=
-  st.dist_of_tu_lev (st.lev_of_eqv h)
 
 /-- The tie break condition. -/
 theorem htie (h1 : args.dist st.rs = args.dist st.tu) (h2 : st.s = st.u) : st.v = 1 := by
@@ -467,30 +436,26 @@ theorem den_le_of_eqv_tu {yz : FractionPair} (yz_eqv_tu : st.eqv yz st.tu) :
     grind only [st.rs.eq_mul_den yz_eqv_tu, yz.eq_mul_den st.bracket_det]
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
-/-- two pairs of cases for y/z with bounded denominator -/
-theorem yz_cases_raw {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
-    (st.ltv yz st.rs ∨ st.eqv yz st.rs ∧ st.s ≤ yz.den)
-    ∨ (st.ltv st.tu yz ∨ st.eqv st.tu yz ∧ st.u ≤ yz.den) := by
-  rcases st.lev_rs_or_tu_lev hyz with hrs | htu
-  · left; rcases Int.lt_or_eq_of_le hrs with hlt | heq
-    · left; exact hlt
-    · right; exact ⟨heq, st.den_le_of_eqv_rs heq⟩
-  · right; rcases Int.lt_or_eq_of_le htu with hlt | heq
-    · left; exact hlt
-    · right; exact ⟨heq, st.den_le_of_eqv_tu heq.symm⟩
+/-- r/s is at least as good as anything beyond it. -/
+theorem better_rs_of_lev {yz : FractionPair} (h : st.lev yz st.rs) : args.better st.rs yz := by
+  rcases Int.lt_or_eq_of_le h with hlt | heq
+  · left; rw [st.dist_rs, st.dist_of_lev_rs h]
+    grind only [args.mn.lt_mul_den hlt]
+  · right; refine ⟨?_, st.den_le_of_eqv_rs heq⟩; rw [st.dist_rs, st.dist_of_lev_rs h]
+    grind only [args.mn.eq_mul_den heq]
+
+/-- t/u is at least as good as anything beyond it. -/
+theorem better_tu_of_lev {yz : FractionPair} (h : st.lev st.tu yz) : args.better st.tu yz := by
+  rcases Int.lt_or_eq_of_le h with hlt | heq
+  · left; rw [st.dist_tu, st.dist_of_tu_lev h]
+    grind only [args.mn.lt_mul_den hlt]
+  · right; refine ⟨?_, st.den_le_of_eqv_tu heq.symm⟩; rw [st.dist_tu, st.dist_of_tu_lev h]
+    grind only [args.mn.eq_mul_den heq]
 
 /-- One of the two candidates is at least as good as any candidate fraction pair. -/
 theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
-    args.better st.rs yz ∨ args.better st.tu yz := by
-  rcases st.yz_cases_raw hyz with (hlt | ⟨heq, hle⟩) | (hlt | ⟨heq, hle⟩)
-  · left; left; rw [st.dist_rs, st.dist_of_ltv_rs hlt]
-    grind only [args.mn.lt_mul_den hlt]
-  · left; right; refine ⟨?_, hle⟩; rw [st.dist_rs, st.dist_of_eqv_rs heq]
-    grind only [args.mn.eq_mul_den heq]
-  · right; left; rw [st.dist_tu, st.dist_of_tu_ltv hlt]
-    grind only [args.mn.lt_mul_den hlt]
-  · right; right; refine ⟨?_, hle⟩; rw [st.dist_tu, st.dist_of_tu_eqv heq]
-    grind only [args.mn.eq_mul_den heq]
+    args.better st.rs yz ∨ args.better st.tu yz :=
+  (st.lev_rs_or_tu_lev hyz).imp st.better_rs_of_lev st.better_tu_of_lev
 
 /-- The returned pair is at least as good as the other. -/
 theorem rv_cases :
@@ -531,38 +496,49 @@ theorem rv_better {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
 /-- The returned fraction is a best approximation. -/
 theorem rv_best : args.best st.rv := ⟨st.rv_bounded, st.rv_better⟩
 
-/-- Any best approximation is equal to either r/s or t/u. -/
-theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : args.best yz) :
-    yz = st.rs ∨ yz = st.tu := by
-  rcases st.yz_cases_raw yz_best.1 with (hlt | ⟨heq, hle⟩) | (hlt | ⟨heq, hle⟩)
+/-- A best approximation beyond r/s is r/s itself. -/
+theorem eq_rs_of_lev_of_best {yz : FractionPair} (h : st.lev yz st.rs) (yz_best : args.best yz) :
+    yz = st.rs := by
+  rcases Int.lt_or_eq_of_le h with hlt | heq
   · -- y/z < r/s implies dist r/s < dist y/z, which contradicts yz_best
     have : args.dist st.rs * yz.den < args.dist yz * st.rs.den := by
-      rw [st.dist_rs, st.dist_of_ltv_rs hlt]
+      rw [st.dist_rs, st.dist_of_lev_rs h]
       grind only [args.mn.lt_mul_den hlt]
     grind only [Inputs.better, yz_best.2 (gh := st.rs) st.s_le_limit]
   · -- y/z = r/s and s ≤ z
-    left
     have : args.dist st.rs * yz.den = args.dist yz * st.rs.den := by
-      rw [st.dist_rs, st.dist_of_eqv_rs heq]
+      rw [st.dist_rs, st.dist_of_lev_rs h]
       grind only [args.mn.eq_mul_den heq]
+    have hle := st.den_le_of_eqv_rs heq
     rcases yz_best.2 (gh := st.rs) st.s_le_limit with h1 | ⟨h1, d1⟩ <;> try omega
     apply FractionPair.eq_of_eq_den (by grind only)
     have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
-    exact Int.eq_of_mul_eq_mul_right v_ne_zero (by grind only [eqv])
-  · -- t/u < y/z
+    exact Int.eq_of_mul_eq_mul_right v_ne_zero heq
+
+/-- A best approximation beyond t/u is t/u itself. -/
+theorem eq_tu_of_lev_of_best {yz : FractionPair} (h : st.lev st.tu yz) (yz_best : args.best yz) :
+    yz = st.tu := by
+  rcases Int.lt_or_eq_of_le h with hlt | heq
+  · -- t/u < y/z implies dist t/u < dist y/z, which contradicts yz_best
     have : args.dist st.tu * yz.den < args.dist yz * st.tu.den := by
-      rw [st.dist_tu, st.dist_of_tu_ltv hlt]
+      rw [st.dist_tu, st.dist_of_tu_lev h]
       grind only [args.mn.lt_mul_den hlt]
     grind only [Inputs.better, yz_best.2 (gh := st.tu) st.u_le_limit]
   · -- t/u = y/z and u ≤ z
-    right
     have : args.dist st.tu * yz.den = args.dist yz * st.tu.den := by
-      rw [st.dist_tu, st.dist_of_tu_eqv heq]
+      rw [st.dist_tu, st.dist_of_tu_lev h]
       grind only [args.mn.eq_mul_den heq]
+    have hle := st.den_le_of_eqv_tu heq.symm
     rcases yz_best.2 (gh := st.tu) st.u_le_limit with h1 | ⟨h1, d1⟩ <;> try omega
     apply FractionPair.eq_of_eq_den (by grind only)
     have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
-    exact Int.eq_of_mul_eq_mul_right v_ne_zero (by grind only [eqv])
+    exact Int.eq_of_mul_eq_mul_right v_ne_zero heq.symm
+
+/-- Any best approximation is equal to either r/s or t/u. -/
+theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : args.best yz) :
+    yz = st.rs ∨ yz = st.tu :=
+  (st.lev_rs_or_tu_lev yz_best.1).imp
+    (st.eq_rs_of_lev_of_best · yz_best) (st.eq_tu_of_lev_of_best · yz_best)
 
 /--
 Tie case: if r/s is better than t/u and t/u is better than r/s, then limit = 1 and
