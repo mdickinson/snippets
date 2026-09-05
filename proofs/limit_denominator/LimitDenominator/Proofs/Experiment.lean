@@ -569,70 +569,12 @@ theorem s_eq_one_of_ambiguous (hamb : args.ambiguous) : st.s = 1 := by
 theorem u_eq_one_of_ambiguous (hamb : args.ambiguous) : st.u = 1 := by
   grind only [hamb.1, st.u_le_limit, st.u_pos]
 
-/--
-Conversely, if we're in the ambiguous case then both r/s and t/u are best
-approximations.
-XXX Proof needs cleanup!
--/
-theorem rv_tie_case_converse (hamb : args.ambiguous) : args.best st.rs ∧ args.best st.tu := by
-  have s_eq_one := st.s_eq_one_of_ambiguous hamb
-  have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  obtain ⟨lim_one, k, hk⟩ := hamb
-
-  -- r/s and t/u are equidistant from m/n
-  have : args.dist st.tu = args.dist st.rs := by
-    have : 0 < args.n := args.mn.pos
-    rw [dist_rs, dist_tu, s_eq_one, u_eq_one]
-    have h0 : st.t * st.v = st.r * st.v + 1 := by grind only [st.bracket_det]
-    have := args.mn.eq_mul_den h0
-    have h1 : st.r * args.n * st.v ≤ args.m * st.s * st.v := st.rs_lev_mn
-    have h2 : st.r * args.n * st.v ≤ args.m * st.v := by grind only [s_eq_one ▸ h1]
-    have h3 : args.m * (st.s + st.u) * st.v ≤ (st.r + st.t) * args.n * st.v := st.mn_lev_mediant
-    have h4 : 2 * args.m * st.v ≤ (st.r + st.t) * args.n * st.v := by grind only [s_eq_one ▸ h3]
-
-    -- r * v * (2 * n) ≤ 2 * m * v
-    -- so r * v ≤ 2 * m * v / (2 * n)
-    have : st.r * st.v ≤ 2 * args.m * st.v / (2 * args.n) :=
-      Int.le_ediv_of_mul_le (by omega) (by grind only)
-
-    -- 2 * m * v ≤ r * v * (2 * n) + n
-    -- so 2 * m * v < (r * v + 1) * (2 * n)
-    have : 2 * args.m * st.v / (2 * args.n) < st.r * st.v + 1 :=
-      Int.ediv_lt_of_lt_mul (by omega) (by grind only)
-    have twom_div_twon : 2 * args.m * st.v / (2 * args.n) = st.r * st.v := by omega
-    have twom_mod_twon : (2 * args.m * st.v) % (2 * args.n) = args.n := by
-      have n_mod_twon : args.n / (2 * args.n) = 0 :=
-        Int.ediv_eq_zero_of_lt args.mn.nonneg (by omega)
-
-      rcases st.v_cases with hv | hv
-      · have : 2 * args.m * st.v = 2 * args.n * k + args.n := by grind only
-        rw [this, Int.mul_add_emod_self_left, Int.emod_def, n_mod_twon]
-        grind only
-      · have : 2 * args.m * st.v = 2 * args.n * (-1 - k) + args.n := by grind only
-        rw [this, Int.mul_add_emod_self_left, Int.emod_def, n_mod_twon]
-        grind only
-    have : 2 * args.m * st.v = st.r * st.v * (2 * args.n) + args.n := by
-      grind only [Int.ediv_mul_add_emod (2 * args.m * st.v) (2 * args.n)]
-
-    grind only
-
-  rcases st.rv_cases with ⟨rv_eq_rs, _⟩ | ⟨rv_eq_tu, _⟩
-  · -- case where rs is returned, so rs is best
-    have rs_best := rv_eq_rs ▸ st.rv_best
-    refine ⟨rs_best, by grind only, fun ghlimit => args.better_trans ?_ (rs_best.2 ghlimit)⟩
-    right; grind only
-  · -- case where tu is returned, so tu is best
-    have tu_best := rv_eq_tu ▸ st.rv_best
-    refine ⟨⟨by grind only, fun ghlimit => args.better_trans ?_ (tu_best.2 ghlimit)⟩, tu_best⟩
-    right; grind only
-
-/-- If we're in the ambiguous case, then bu = cs. -/
-theorem bu_eq_cs_of_ambiguous (hamb : args.ambiguous) : st.b * st.u = st.c * st.s := by
+/-- In the ambiguous case m/n is exactly half a unit from r/s. -/
+theorem two_b_eq_n_of_ambiguous (hamb : args.ambiguous) : 2 * st.b = args.n := by
   have heqb := st.heqb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
   obtain ⟨-, k, hk⟩ := hamb
-
   have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
   have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * args.n := by grind only
   have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
@@ -643,88 +585,70 @@ theorem bu_eq_cs_of_ambiguous (hamb : args.ambiguous) : st.b * st.u = st.c * st.
     args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
   have : (2 * (k - st.r) + 1) * st.v + (2 * (st.t - k) - 1) * st.v = 2 := by grind only [st.bracket_det]
   have : (2 * (k - st.r) + 1) * st.v = 1 := by omega
-  have : 2 * st.b * st.u = args.n := by grind only
-  have : st.b * st.u + st.c * st.s = args.n := by grind only
   grind only
 
-/-- If we're in the ambiguous case then v = 1. -/
-theorem v_eq_one_of_ambiguous (hamb : args.ambiguous) : st.v = 1 := by
-  have bu_eq_cs := st.bu_eq_cs_of_ambiguous hamb
-  have s_eq_u : st.s = st.u :=
-    (st.s_eq_one_of_ambiguous hamb).trans (st.u_eq_one_of_ambiguous hamb).symm
-  apply st.htie _ s_eq_u
-  rw [st.dist_rs, st.dist_tu]
-  exact st.heqb.trans
-    (st.tu.eq_of_eq_mul_den (show st.b * st.u = st.c * st.u from s_eq_u ▸ bu_eq_cs))
-
-/-- If we're in the ambiguous case then r/s = (m/n)/1 -/
-theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) : st.rs = ⟨args.m / args.n, 1, by decide⟩ := by
-  have heqb := st.heqb
-  have v_eq_one := st.v_eq_one_of_ambiguous hamb
+/-- In the ambiguous case r/s and t/u are equidistant from m/n. -/
+theorem dist_rs_eq_dist_tu_of_ambiguous (hamb : args.ambiguous) :
+    args.dist st.rs = args.dist st.tu := by
+  have two_b_eq_n := st.two_b_eq_n_of_ambiguous hamb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  obtain ⟨-, k, hk : 2 * args.m - args.n = 2 * args.n * k⟩ := hamb
-  have : args.m / args.n = k := (Int.ediv_eq_iff_of_pos args.mn.pos).mpr (by grind only [args.mn.pos])
+  have bu_add_cs_eq_n := st.bu_add_cs_eq_n
+  rw [st.dist_rs, st.dist_tu, st.heqb]
+  show st.b = st.c
+  grind only
+
+/-- In the ambiguous case v = 1. -/
+theorem v_eq_one_of_ambiguous (hamb : args.ambiguous) : st.v = 1 :=
+  st.htie (st.dist_rs_eq_dist_tu_of_ambiguous hamb)
+    ((st.s_eq_one_of_ambiguous hamb).trans (st.u_eq_one_of_ambiguous hamb).symm)
+
+/-- In the ambiguous case r/s = (m/n)/1. -/
+theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) :
+    st.rs = ⟨args.m / args.n, 1, by decide⟩ := by
+  have heqb := st.heqb
+  have two_b_eq_n := st.two_b_eq_n_of_ambiguous hamb
+  have v_eq_one := st.v_eq_one_of_ambiguous hamb
+  have s_eq_one := st.s_eq_one_of_ambiguous hamb
   rw [FractionPair.mk.injEq]
-  refine ⟨ ?_, s_eq_one ⟩
+  refine ⟨?_, s_eq_one⟩
   show st.r = args.m / args.n
-  have v_ne_zero : st.v ≠ 0 := by omega
-  have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * args.n := by grind only
-  have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : (2 * (k - st.r) + 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : 0 ≤ (2 * (st.t - k) - 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.mn_lev_tu])
-  have : 0 ≤ (2 * (k - st.r) + 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
-  have : (2 * (k - st.r) + 1) * st.v + (2 * (st.t - k) - 1) * st.v = 2 := by grind only [st.bracket_det]
-  grind only
+  have : args.m - st.r * args.n = st.b := by grind only
+  exact ((Int.ediv_eq_iff_of_pos args.mn.pos).mpr (by grind only [args.mn.pos])).symm
 
-/-- and t/u = ((m/n) + 1)/1 -/
-theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) : st.tu = ⟨args.m / args.n + 1, 1, by decide⟩ := by
-  have heqb := st.heqb
+/-- In the ambiguous case t/u = (m/n + 1)/1. -/
+theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) :
+    st.tu = ⟨args.m / args.n + 1, 1, by decide⟩ := by
+  have r_eq_floor : st.r = args.m / args.n := congrArg FractionPair.num (st.rs_eq_floor_of_ambiguous hamb)
   have v_eq_one := st.v_eq_one_of_ambiguous hamb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  obtain ⟨-, k, hk : 2 * args.m - args.n = 2 * args.n * k⟩ := hamb
-  have : args.m / args.n = k := (Int.ediv_eq_iff_of_pos args.mn.pos).mpr (by grind only [args.mn.pos])
   rw [FractionPair.mk.injEq]
-  refine ⟨ ?_, u_eq_one ⟩
+  refine ⟨?_, u_eq_one⟩
   show st.t = args.m / args.n + 1
-  have v_ne_zero : st.v ≠ 0 := by omega
-  have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * args.n := by grind only
-  have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : (2 * (k - st.r) + 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : 0 ≤ (2 * (st.t - k) - 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.mn_lev_tu])
-  have : 0 ≤ (2 * (k - st.r) + 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
-  have : (2 * (k - st.r) + 1) * st.v + (2 * (st.t - k) - 1) * st.v = 2 := by grind only [st.bracket_det]
-  grind only
+  grind only [st.bracket_det]
 
-/-- If we're in the ambiguous case then r/s is returned. -/
-theorem rv_eq_rs_of_ambiguous (hamb : args.ambiguous) : st.rv = st.rs := by
-  have heqb := st.heqb
-  have s_eq_one := st.s_eq_one_of_ambiguous hamb
-  have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  obtain ⟨-, k, hk⟩ := hamb
-  apply if_pos
-  have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
-  have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * args.n := by grind only
-  have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : (2 * (k - st.r) + 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : 0 ≤ (2 * (st.t - k) - 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.mn_lev_tu])
-  have : 0 ≤ (2 * (k - st.r) + 1) * st.v :=
-    args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
-  have : (2 * (k - st.r) + 1) * st.v + (2 * (st.t - k) - 1) * st.v = 2 := by grind only [st.bracket_det]
-  have : (2 * (k - st.r) + 1) * st.v = 1 := by omega
-  have : 2 * st.b * st.u = args.n := by grind only
-  grind only
+/-- In the ambiguous case r/s is returned. -/
+theorem rv_eq_rs_of_ambiguous (hamb : args.ambiguous) : st.rv = st.rs :=
+  if_pos (by grind only [st.two_b_eq_n_of_ambiguous hamb, st.u_eq_one_of_ambiguous hamb])
 
-/-- If we're in the ambiguous case then the return value is the floor of m/n. -/
+/-- In the ambiguous case the return value is the floor of m/n. -/
 theorem rv_eq_floor_of_ambiguous (hamb : args.ambiguous) :
     st.rv = ⟨args.m / args.n, 1, by decide⟩ := by
   rw [st.rv_eq_rs_of_ambiguous hamb, st.rs_eq_floor_of_ambiguous hamb]
+
+/-- In the ambiguous case both r/s and t/u are best approximations. -/
+theorem rv_tie_case_converse (hamb : args.ambiguous) : args.best st.rs ∧ args.best st.tu := by
+  have tie := st.dist_rs_eq_dist_tu_of_ambiguous hamb
+  have s_eq_one := st.s_eq_one_of_ambiguous hamb
+  have u_eq_one := st.u_eq_one_of_ambiguous hamb
+  have rs_tu : args.better st.rs st.tu := .inr ⟨by grind only, by grind only⟩
+  have tu_rs : args.better st.tu st.rs := .inr ⟨by grind only, by grind only⟩
+  rcases st.rv_cases with ⟨rv_eq_rs, _⟩ | ⟨rv_eq_tu, _⟩
+  · have rs_best := rv_eq_rs ▸ st.rv_best
+    exact ⟨rs_best, st.u_le_limit, fun h => args.better_trans tu_rs (rs_best.2 h)⟩
+  · have tu_best := rv_eq_tu ▸ st.rv_best
+    exact ⟨⟨st.s_le_limit, fun h => args.better_trans rs_tu (tu_best.2 h)⟩, tu_best⟩
 
 end PostLoopState
 
