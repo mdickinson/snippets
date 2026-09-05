@@ -307,17 +307,17 @@ that `m/n < t/u` (`v = 1`) or `t/u < m/n` (`v = -1`) as a consequence: `mn_lev_t
 
 /-- State on exiting the loop. -/
 structure PostLoopState extends Inputs where
-  (rs tu : FractionPair)
-  v : Int
-  det : (tu.num * rs.den - rs.num * tu.den) * v = 1
-  hrs : rs.den ≤ limit
-  htu : tu.den ≤ limit
-  hsu : limit < rs.den + tu.den
-  rs_lev_mn : rs.num * n * v ≤ m * rs.den * v
-  mn_lev_mediant : m * (rs.den + tu.den) * v ≤ (rs.num + tu.num) * n * v
+  (r s t u v : Int)
+  s_pos : 0 < s
+  u_pos : 0 < u
+  det : (t * s - r * u) * v = 1
+  hrs : s ≤ limit
+  htu : u ≤ limit
+  hsu : limit < s + u
+  rs_lev_mn : r * n * v ≤ m * s * v
+  mn_lev_mediant : m * (s + u) * v ≤ (r + t) * n * v
   -- tie break condition
-  htie : (m * rs.den - rs.num * n) * v
-      = (tu.num * n - m * tu.den) * v → rs.den = tu.den → v = 1
+  htie : (m * s - r * n) * v = (t * n - m * u) * v → s = u → v = 1
 
 namespace PostLoopState
 
@@ -329,15 +329,15 @@ def ofLoopState (st : LoopState) (h : ¬ st.loopCondition) : PostLoopState where
   npos := st.npos
   limit := st.limit
   limit_pos := st.limit_pos
-  rs := ⟨st.r, st.s, st.hs⟩
-  tu := ⟨
-    st.p + (st.limit - st.q) / st.s * st.r,
-    st.q + (st.limit - st.q) / st.s * st.s,
-    -- s ≤ l < s + q + (limit - q) / s * s, so 0 < q + (limit - q) / s * s
-    by grind only [st.hsl, Int.lt_ediv_mul (st.limit - st.q) st.hs]
-  ⟩
+  r := st.r
+  s := st.s
+  t := st.p + (st.limit - st.q) / st.s * st.r
+  u := st.q + (st.limit - st.q) / st.s * st.s
   v := st.v
-  det := by simp only; grind only [st.det]
+  s_pos := st.hs
+  -- s ≤ l < s + q + (limit - q) / s * s, so 0 < q + (limit - q) / s * s
+  u_pos := by grind only [st.hsl, Int.lt_ediv_mul (st.limit - st.q) st.hs]
+  det := by grind only [st.det]
   hrs := st.hsl
   htu := by grind only [Int.ediv_mul_le (st.limit - st.q) (Int.ne_of_gt st.hs)]
   hsu := by grind only [Int.lt_ediv_mul (st.limit - st.q) st.hs]
@@ -351,7 +351,7 @@ def ofLoopState (st : LoopState) (h : ¬ st.loopCondition) : PostLoopState where
       · grind only [st.hab, st.hb]
     rw [← st.heqa, ← st.heqb] at this; grind only
   htie := by
-    simp; intro h1 h2
+    intro h1 h2
     let k := (st.limit - st.q) / st.s
     let t := st.p + k * st.r
     let u := st.q + k * st.s
@@ -392,14 +392,12 @@ theorem ofLoopState_limit_eq (st : LoopState) (h : ¬ st.loopCondition) :
     (ofLoopState st h).limit = st.limit := rfl
 
 /-
-We let `st` represent the post-loop state throughout this section. We also define
-shortcuts to the various numerators and denominators and definitions for `b` and `c`.
+We let `st` represent the post-loop state throughout this section. We also package the
+two bracket endpoints as fraction pairs `r/s` and `t/u`, and define `b` and `c`.
 -/
 variable (st : PostLoopState)
-abbrev r := st.rs.num
-abbrev s := st.rs.den
-abbrev t := st.tu.num
-abbrev u := st.tu.den
+abbrev rs : FractionPair := ⟨st.r, st.s, st.s_pos⟩
+abbrev tu : FractionPair := ⟨st.t, st.u, st.u_pos⟩
 
 abbrev b := (st.m * st.s - st.r * st.n) * st.v
 abbrev c := (st.t * st.n - st.m * st.u) * st.v
@@ -412,7 +410,7 @@ theorem mn_lev_tu : st.m * st.u * st.v ≤ st.t * st.n * st.v :=
   Int.le_of_mul_le_mul_right
     (by grind only [
       st.mn.pos, st.mn.eq_mul_den st.det, st.tu.le_mul_den st.mn_lev_mediant])
-    (Int.add_pos st.rs.pos st.tu.pos)
+    (Int.add_pos st.s_pos st.u_pos)
 
 /-- v must be either 1 or -1.-/
 theorem v_cases : st.v = 1 ∨ st.v = -1 := Int.eq_one_or_neg_one_of_mul_eq_one st.det
@@ -488,8 +486,8 @@ theorem dist_of_tu_eqv {ef : FractionPair} (h : st.eqv st.tu ef) :
 /-- If a linear combination of s and u is positive, one of the coefficients is. -/
 theorem lc_pos {a b : Int} : 0 < a * st.s + b * st.u → 0 < a ∨ 0 < b := by
   intro; rcases (show 0 < a * st.s ∨ 0 < b * st.u by grind only) with h1 | h2
-  · left; exact Int.pos_of_mul_pos_left h1 st.rs.pos
-  · right; exact Int.pos_of_mul_pos_left h2 st.tu.pos
+  · left; exact Int.pos_of_mul_pos_left h1 st.s_pos
+  · right; exact Int.pos_of_mul_pos_left h2 st.u_pos
 
 /-- A fraction pair with denominator ≤ limit must be outside the bracket. -/
 theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ st.limit):
@@ -504,14 +502,14 @@ theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ st.limit):
 /-- if y/z = r/s then s ≤ z (because r/s is in lowest terms). -/
 theorem den_le_of_eqv_rs {yz : FractionPair} (yz_eqv_rs : st.eqv yz st.rs) :
     st.s ≤ yz.den := by
-  have : yz.den = st.s * ((st.tu.num * yz.den - yz.num * st.tu.den) * st.v) := by
+  have : yz.den = st.s * ((st.t * yz.den - yz.num * st.u) * st.v) := by
     grind only [st.tu.eq_mul_den yz_eqv_rs, yz.eq_mul_den st.det]
   exact Int.le_of_dvd yz.pos ⟨_, this⟩
 
 /-- if y/z = t/u then u ≤ z (because t/u is in lowest terms). -/
 theorem den_le_of_eqv_tu {yz : FractionPair} (yz_eqv_tu : st.eqv yz st.tu) :
     st.u ≤ yz.den := by
-  have : yz.den = st.u * ((yz.num * st.rs.den - st.rs.num * yz.den) * st.v) := by
+  have : yz.den = st.u * ((yz.num * st.s - st.r * yz.den) * st.v) := by
     grind only [st.rs.eq_mul_den yz_eqv_tu, yz.eq_mul_den st.det]
   exact Int.le_of_dvd yz.pos ⟨_, this⟩
 
@@ -560,7 +558,7 @@ theorem rv_cases :
         have cs_le_cu : st.c * st.s ≤ st.c * st.u := by
           grind only [st.tu.le_mul_den st.mn_lev_mediant]
         exact Int.le_of_mul_le_mul_left cs_le_cu
-          (Int.pos_of_mul_pos_left cs_pos st.rs.pos)
+          (Int.pos_of_mul_pos_left cs_pos st.s_pos)
 
 /-- The returned fraction pair has denominator bounded by limit. -/
 theorem rv_bounded : st.rv.den ≤ st.limit := by grind only [rv, st.hrs, st.htu]
@@ -586,13 +584,13 @@ theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : st.best yz) :
     have : st.dist st.rs * yz.den < st.dist yz * st.rs.den := by
       rw [st.dist_rs, st.dist_of_ltv_rs hlt]
       grind only [st.mn.lt_mul_den hlt]
-    grind only [Inputs.better, yz_best.2 st.hrs]
+    grind only [Inputs.better, yz_best.2 (gh := st.rs) st.hrs]
   · -- y/z = r/s and s ≤ z
     left
     have : st.dist st.rs * yz.den = st.dist yz * st.rs.den := by
       rw [st.dist_rs, st.dist_of_eqv_rs heq]
       grind only [st.mn.eq_mul_den heq]
-    rcases yz_best.2 st.hrs with h1 | ⟨h1, d1⟩ <;> try omega
+    rcases yz_best.2 (gh := st.rs) st.hrs with h1 | ⟨h1, d1⟩ <;> try omega
     apply FractionPair.eq_of_eq_den (by grind only)
     have v_ne_zero : st.v ≠ 0 := by grind only [st.det]
     exact Int.eq_of_mul_eq_mul_right v_ne_zero (by grind only [eqv])
@@ -600,13 +598,13 @@ theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : st.best yz) :
     have : st.dist st.tu * yz.den < st.dist yz * st.tu.den := by
       rw [st.dist_tu, st.dist_of_tu_ltv hlt]
       grind only [st.mn.lt_mul_den hlt]
-    grind only [Inputs.better, yz_best.2 st.htu]
+    grind only [Inputs.better, yz_best.2 (gh := st.tu) st.htu]
   · -- t/u = y/z and u ≤ z
     right
     have : st.dist st.tu * yz.den = st.dist yz * st.tu.den := by
       rw [st.dist_tu, st.dist_of_tu_eqv heq]
       grind only [st.mn.eq_mul_den heq]
-    rcases yz_best.2 st.htu with h1 | ⟨h1, d1⟩ <;> try omega
+    rcases yz_best.2 (gh := st.tu) st.htu with h1 | ⟨h1, d1⟩ <;> try omega
     apply FractionPair.eq_of_eq_den (by grind only)
     have v_ne_zero : st.v ≠ 0 := by grind only [st.det]
     exact Int.eq_of_mul_eq_mul_right v_ne_zero (by grind only [eqv])
@@ -622,7 +620,7 @@ theorem rv_tie_case_pre (h1 : st.better st.rs st.tu) (h2 : st.better st.tu st.rs
   /- We're left with the case where r/s and t/u are equidistant and s = u. -/
   have hbc : st.b * st.s = st.c * st.u := by grind only [st.dist_rs, st.dist_tu]
   have htr : (st.t - st.r) * st.v * st.s = 1 := by grind only [st.det]
-  have hs : st.s = 1 := Int.eq_one_of_mul_eq_one_left st.rs.nonneg htr
+  have hs : st.s = 1 := Int.eq_one_of_mul_eq_one_left (Int.le_of_lt st.s_pos) htr
   refine ⟨ by grind only [st.hrs, st.htu, st.hsu], ?_ ⟩
   cases st.v_cases
   · exact ⟨st.r, by grind only⟩
@@ -639,8 +637,8 @@ XXX Proof needs cleanup!
 -/
 theorem rv_tie_case_converse (hamb : st.ambiguous) : st.best st.rs ∧ st.best st.tu := by
   obtain ⟨lim_one, k, hk⟩ := hamb
-  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.rs.pos]
-  have u_eq_one : st.u = 1 := by grind only [st.htu, st.tu.pos]
+  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.s_pos]
+  have u_eq_one : st.u = 1 := by grind only [st.htu, st.u_pos]
 
   -- r/s and t/u are equidistant from m/n
   have : st.dist st.tu = st.dist st.rs := by
@@ -693,8 +691,8 @@ theorem rv_tie_case_converse (hamb : st.ambiguous) : st.best st.rs ∧ st.best s
 theorem bu_eq_cs_of_ambiguous (hamb : st.ambiguous) : st.b * st.u = st.c * st.s := by
   obtain ⟨lim_one, k, hk⟩ := hamb
 
-  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.rs.pos]
-  have u_eq_one : st.u = 1 := by grind only [st.htu, st.tu.pos]
+  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.s_pos]
+  have u_eq_one : st.u = 1 := by grind only [st.htu, st.u_pos]
   have v_ne_zero : st.v ≠ 0 := by grind only [st.det]
   have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * st.n := by grind only
   have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
@@ -713,7 +711,7 @@ theorem bu_eq_cs_of_ambiguous (hamb : st.ambiguous) : st.b * st.u = st.c * st.s 
 theorem v_eq_one_of_ambiguous (hamb : st.ambiguous) : st.v = 1 := by
   have bu_eq_cs := st.bu_eq_cs_of_ambiguous hamb
   obtain ⟨lim_one, k, hk⟩ := hamb
-  have s_eq_u : st.s = st.u := by grind only [st.hrs, st.htu, st.rs.pos, st.tu.pos]
+  have s_eq_u : st.s = st.u := by grind only [st.hrs, st.htu, st.s_pos, st.u_pos]
   apply st.htie _ s_eq_u
   exact st.tu.eq_of_eq_mul_den (show st.b * st.u = st.c * st.u from s_eq_u ▸ bu_eq_cs)
 
@@ -722,8 +720,8 @@ theorem rs_eq_floor_of_ambiguous (hamb : st.ambiguous) : st.rs = ⟨st.m / st.n,
   have v_eq_one := st.v_eq_one_of_ambiguous hamb
   obtain ⟨lim_one, k, hk : 2 * st.m - st.n = 2 * st.n * k⟩ := hamb
   have : st.m / st.n = k := (Int.ediv_eq_iff_of_pos st.mn.pos).mpr (by grind only [st.mn.pos])
-  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.rs.pos]
-  have u_eq_one : st.u = 1 := by grind only [st.htu, st.tu.pos]
+  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.s_pos]
+  have u_eq_one : st.u = 1 := by grind only [st.htu, st.u_pos]
   rw [FractionPair.mk.injEq]
   refine ⟨ ?_, s_eq_one ⟩
   show st.r = st.m / st.n
@@ -743,8 +741,8 @@ theorem tu_eq_ceil_of_ambiguous (hamb : st.ambiguous) : st.tu = ⟨st.m / st.n +
   have v_eq_one := st.v_eq_one_of_ambiguous hamb
   obtain ⟨lim_one, k, hk : 2 * st.m - st.n = 2 * st.n * k⟩ := hamb
   have : st.m / st.n = k := (Int.ediv_eq_iff_of_pos st.mn.pos).mpr (by grind only [st.mn.pos])
-  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.rs.pos]
-  have u_eq_one : st.u = 1 := by grind only [st.htu, st.tu.pos]
+  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.s_pos]
+  have u_eq_one : st.u = 1 := by grind only [st.htu, st.u_pos]
   rw [FractionPair.mk.injEq]
   refine ⟨ ?_, u_eq_one ⟩
   show st.t = st.m / st.n + 1
@@ -763,8 +761,8 @@ theorem tu_eq_ceil_of_ambiguous (hamb : st.ambiguous) : st.tu = ⟨st.m / st.n +
 theorem rv_eq_rs_of_ambiguous (hamb : st.ambiguous) : st.rv = st.rs := by
   obtain ⟨lim_one, k, hk⟩ := hamb
   apply if_pos
-  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.rs.pos]
-  have u_eq_one : st.u = 1 := by grind only [st.htu, st.tu.pos]
+  have s_eq_one : st.s = 1 := by grind only [st.hrs, st.s_pos]
+  have u_eq_one : st.u = 1 := by grind only [st.htu, st.u_pos]
   have v_ne_zero : st.v ≠ 0 := by grind only [st.det]
   have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * st.n := by grind only
   have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
