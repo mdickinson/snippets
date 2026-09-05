@@ -172,7 +172,7 @@ structure LoopState (args : Inputs) where
   det : (p * s - r * q) * v = 1
   heqa : (p * args.n - args.m * q) * v = a
   heqb : (args.m * s - r * args.n) * v = b
-  initial_parity : q = 0 → p = 1
+  v_eq_one_of_q_eq_zero : q = 0 → v = 1
 
 namespace LoopState
 
@@ -192,7 +192,7 @@ def initialLoopState (args : Inputs) : LoopState args where
   s_le_limit := args.limit_pos
   heqa := by grind only
   heqb := by grind only [Int.mul_ediv_add_emod args.m args.n]
-  initial_parity := by grind only
+  v_eq_one_of_q_eq_zero := by grind only
 
 variable {args : Inputs} (st : LoopState args)
 
@@ -222,7 +222,7 @@ def nextLoopState (hst : st.loopCondition) : LoopState args where
   s_le_limit := hst.2
   heqa := by grind only [st.heqb]
   heqb := by grind only [st.heqa, st.heqb, Int.mul_ediv_add_emod st.a st.b]
-  initial_parity := by grind only [st.s_pos]
+  v_eq_one_of_q_eq_zero := by grind only [st.s_pos]
 
 /-- Starting from a given state, run the loop to completion. -/
 def runLoop (st : LoopState args) : LoopState args :=
@@ -344,15 +344,7 @@ theorem htie (h1 : (args.m * st.s - st.r * args.n) * st.v = (st.t * args.n - arg
   have : (1 - k) * st.s ≤ 0 := Int.mul_nonpos_of_nonpos_of_nonneg (by omega) (Int.le_of_lt st.s_pos)
   have := st.q_nonneg
   have q_eq_zero : st.q = 0 := by omega
-  -- so q = 0, so p = 1
-  have p_eq_one : st.p = 1 := st.initial_parity q_eq_zero
-  -- so sv = 1
-  have : st.s * st.v = 1 := by grind only [st.toLoopState.det]
-  -- so v = 1, since s is positive
-  rcases Int.eq_one_or_neg_one_of_mul_eq_one this with h3 | h4
-  · exact h3
-  · have := Int.mul_neg_of_pos_of_neg st.s_pos (show st.v < 0 by omega)
-    omega
+  exact st.v_eq_one_of_q_eq_zero q_eq_zero
 
 /- The two bracket endpoints, packaged as fraction pairs, and `b` and `c`. -/
 abbrev rs : FractionPair := ⟨st.r, st.s, st.s_pos⟩
