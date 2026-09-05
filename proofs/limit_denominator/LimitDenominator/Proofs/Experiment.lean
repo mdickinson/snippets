@@ -2,7 +2,6 @@
 
 TODO:
 
-- remove the dvd-using lemma
 - look for overlaps/simplifications with the two results using yz_cases_raw
 
 -/
@@ -28,7 +27,7 @@ theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by grind only [
   Int.mul_nonpos_of_nonpos_of_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos]
 theorem Int.abs_cases (a : Int) : (a.abs = a ∨ a.abs = -a) := by grind only [Int.abs]
 
-/- Another support lemma. -/
+/- More support lemmas. -/
 theorem Int.eq_one_or_neg_one_of_mul_eq_one {a b : Int} (hab : a * b = 1) :
     b = 1 ∨ b = -1 := by
   rw [← Int.abs_eq b (by decide)]
@@ -38,6 +37,22 @@ theorem Int.eq_one_or_neg_one_of_mul_eq_one {a b : Int} (hab : a * b = 1) :
 theorem Int.pos_of_mul_pos_of_nonneg_left {a b : Int} (h1 : 0 < a * b) (h2 : 0 ≤ b) :
     0 < a := by
   exact Int.lt_of_mul_lt_mul_right (show 0 * b < a * b by grind only) h2
+
+theorem Int.mul_nonneg_iff {a b : Int} : 0 ≤ a * b ↔ (0 ≤ a ∧ 0 ≤ b) ∨ (a ≤ 0 ∧ b ≤ 0) := by
+  grind only [Int.le_total 0, Int.mul_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos,
+    Int.mul_nonpos_of_nonneg_of_nonpos, Int.mul_nonpos_of_nonpos_of_nonneg,
+    Int.mul_eq_zero]
+
+theorem Int.mul_pos_iff {a b : Int} : 0 < a * b ↔ (0 < a ∧ 0 < b) ∨ (a < 0 ∧ b < 0) := by
+  grind only [Int.lt_trichotomy 0, Int.mul_pos, Int.mul_pos_of_neg_of_neg,
+    Int.mul_neg_of_pos_of_neg, Int.mul_neg_of_neg_of_pos]
+
+theorem Int.divisor_le_mul {a b : Int} (h1 : 0 < a * b) : a ≤ a * b := by
+  grind only [
+    show 0 ≤ a * (b - 1) from
+      Int.mul_nonneg_iff.mpr
+      (by rcases Int.mul_pos_iff.mp h1 with ⟨a_pos, b_pos⟩ | ⟨a_neg, b_neg⟩ <;> omega)
+  ]
 
 /-! # Fraction pairs -/
 
@@ -469,14 +484,14 @@ theorem den_le_of_eqv_rs {yz : FractionPair} (yz_eqv_rs : st.eqv yz st.rs) :
     st.s ≤ yz.den := by
   have : yz.den = st.s * ((st.t * yz.den - yz.num * st.u) * st.v) := by
     grind only [st.tu.eq_mul_den yz_eqv_rs, yz.eq_mul_den st.bracket_det]
-  exact Int.le_of_dvd yz.pos ⟨_, this⟩
+  exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- if y/z = t/u then u ≤ z (because t/u is in lowest terms). -/
 theorem den_le_of_eqv_tu {yz : FractionPair} (yz_eqv_tu : st.eqv yz st.tu) :
     st.u ≤ yz.den := by
   have : yz.den = st.u * ((yz.num * st.s - st.r * yz.den) * st.v) := by
     grind only [st.rs.eq_mul_den yz_eqv_tu, yz.eq_mul_den st.bracket_det]
-  exact Int.le_of_dvd yz.pos ⟨_, this⟩
+  exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- two pairs of cases for y/z with bounded denominator -/
 theorem yz_cases_raw {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
