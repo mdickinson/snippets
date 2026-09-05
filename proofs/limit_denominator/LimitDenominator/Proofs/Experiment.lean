@@ -554,6 +554,8 @@ theorem two_b_eq_n_of_ambiguous (hamb : args.ambiguous) : 2 * st.b = args.n := b
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
   obtain ⟨-, w, hw⟩ := hamb
+  -- m/n = w + 1/2 lies between the consecutive integers r and t, so the odd multiples
+  -- (2(w - r) + 1) v and (2(t - w) - 1) v of v are nonzero, nonnegative, and sum to 2
   have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
   have : 2 * st.b = (2 * (w - st.r) + 1) * st.v * args.n := by grind only
   have : (2 * (st.t - w) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
@@ -562,20 +564,17 @@ theorem two_b_eq_n_of_ambiguous (hamb : args.ambiguous) : 2 * st.b = args.n := b
     args.mn.le_of_le_mul_den (by grind only [lev, st.mn_lev_tu])
   have : 0 ≤ (2 * (w - st.r) + 1) * st.v :=
     args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
-  have : (2 * (w - st.r) + 1) * st.v + (2 * (st.t - w) - 1) * st.v = 2 := by grind only [st.bracket_det]
+  have : (2 * (w - st.r) + 1) * st.v + (2 * (st.t - w) - 1) * st.v = 2 := by
+    grind only [st.bracket_det]
   have : (2 * (w - st.r) + 1) * st.v = 1 := by omega
   grind only
 
 /-- In the ambiguous case r/s and t/u are equidistant from m/n. -/
 theorem dist_rs_eq_dist_tu_of_ambiguous (hamb : args.ambiguous) :
     args.dist st.rs = args.dist st.tu := by
-  have two_b_eq_n := st.two_b_eq_n_of_ambiguous hamb
-  have s_eq_one := st.s_eq_one_of_ambiguous hamb
-  have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  have bu_add_cs_eq_n := st.bu_add_cs_eq_n
   rw [st.dist_rs, st.dist_tu, st.heqb]
-  show st.b = st.c
-  grind only
+  grind only [st.two_b_eq_n_of_ambiguous hamb, st.bu_add_cs_eq_n,
+    st.s_eq_one_of_ambiguous hamb, st.u_eq_one_of_ambiguous hamb]
 
 /-- In the ambiguous case v = 1. -/
 theorem v_eq_one_of_ambiguous (hamb : args.ambiguous) : st.v = 1 :=
@@ -589,22 +588,19 @@ theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) :
   have two_b_eq_n := st.two_b_eq_n_of_ambiguous hamb
   have v_eq_one := st.v_eq_one_of_ambiguous hamb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
-  rw [FractionPair.mk.injEq]
-  refine ⟨?_, s_eq_one⟩
-  show st.r = args.m / args.n
   have : args.m - st.r * args.n = st.b := by grind only
-  exact ((Int.ediv_eq_iff_of_pos args.n_pos).mpr (by grind only [args.n_pos])).symm
+  have r_eq : args.m / args.n = st.r :=
+    (Int.ediv_eq_iff_of_pos args.n_pos).mpr (by grind only [args.n_pos])
+  grind only
 
 /-- In the ambiguous case t/u = (⌊m/n⌋ + 1)/1. -/
 theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) :
     st.tu = ⟨args.m / args.n + 1, 1, by decide⟩ := by
-  have r_eq_floor : st.r = args.m / args.n := congrArg FractionPair.num (st.rs_eq_floor_of_ambiguous hamb)
+  have r_eq_floor : st.r = args.m / args.n :=
+    congrArg FractionPair.num (st.rs_eq_floor_of_ambiguous hamb)
   have v_eq_one := st.v_eq_one_of_ambiguous hamb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  rw [FractionPair.mk.injEq]
-  refine ⟨?_, u_eq_one⟩
-  show st.t = args.m / args.n + 1
   grind only [st.bracket_det]
 
 /-- In the ambiguous case r/s is returned. -/
@@ -642,13 +638,9 @@ theorem best_rs_and_best_tu_iff_ambiguous :
     have tie := st.dist_rs_eq_dist_tu_of_ambiguous hamb
     have s_eq_one := st.s_eq_one_of_ambiguous hamb
     have u_eq_one := st.u_eq_one_of_ambiguous hamb
-    have rs_tu : args.better st.rs st.tu := .inr ⟨by grind only, by grind only⟩
     have tu_rs : args.better st.tu st.rs := .inr ⟨by grind only, by grind only⟩
-    rcases st.rv_cases with ⟨rv_eq_rs, _⟩ | ⟨rv_eq_tu, _⟩
-    · have rs_best := rv_eq_rs ▸ st.rv_best
-      exact ⟨rs_best, st.u_le_limit, fun h => args.better_trans tu_rs (rs_best.2 h)⟩
-    · have tu_best := rv_eq_tu ▸ st.rv_best
-      exact ⟨⟨st.s_le_limit, fun h => args.better_trans rs_tu (tu_best.2 h)⟩, tu_best⟩
+    have rs_best := st.rv_eq_rs_of_ambiguous hamb ▸ st.rv_best
+    exact ⟨rs_best, st.u_le_limit, fun h => args.better_trans tu_rs (rs_best.2 h)⟩
 
 end PostLoopState
 
@@ -671,8 +663,8 @@ theorem rv_best : args.best args.rv := args.postLoopState.rv_best
 If e/f and g/h are both best approximations, then either they're
 equal or we're in the ambiguous case.
 -/
-theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef) (hgh : args.best gh) :
-    ef = gh ∨ args.ambiguous := by
+theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
+    (hgh : args.best gh) : ef = gh ∨ args.ambiguous := by
   let st := args.postLoopState
   rcases st.eq_rs_or_eq_tu_of_best hef with h1 | h1
   <;> rcases st.eq_rs_or_eq_tu_of_best hgh with h2 | h2
