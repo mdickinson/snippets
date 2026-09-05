@@ -294,14 +294,17 @@ variable {args : Inputs} (st : PostLoopState args)
 
 /-! ## The bracket -/
 
-/-- The far endpoint of the bracket: `t/u` is `p/q` advanced by as many copies of `r/s`
-as the denominator limit allows. -/
-def t : Int := st.p + (args.limit - st.q) / st.s * st.r
-def u : Int := st.q + (args.limit - st.q) / st.s * st.s
+/-- How many copies of `r/s` can be added to `p/q` without the denominator exceeding
+the limit. -/
+def k : Int := (args.limit - st.q) / st.s
 
--- s ≤ l < s + q + (limit - q) / s * s, so 0 < q + (limit - q) / s * s
+/-- The far endpoint of the bracket: `t/u` is `p/q` advanced by `k` copies of `r/s`. -/
+def t : Int := st.p + st.k * st.r
+def u : Int := st.q + st.k * st.s
+
+-- s ≤ limit < s + (q + k * s), so 0 < q + k * s
 theorem u_pos : 0 < st.u := by
-  unfold u; grind only [st.s_le_limit, Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
+  unfold u k; grind only [st.s_le_limit, Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
 
 /- The two bracket endpoints, packaged as fraction pairs. -/
 abbrev rs : FractionPair := ⟨st.r, st.s, st.s_pos⟩
@@ -344,10 +347,10 @@ theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
 theorem v_cases : st.v = 1 ∨ st.v = -1 := Int.eq_one_or_neg_one_of_mul_eq_one st.bracket_det
 
 theorem u_le_limit : st.u ≤ args.limit := by
-  unfold u; grind only [Int.ediv_mul_le (args.limit - st.q) (Int.ne_of_gt st.s_pos)]
+  unfold u k; grind only [Int.ediv_mul_le (args.limit - st.q) (Int.ne_of_gt st.s_pos)]
 
 theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
-  unfold u; grind only [Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
+  unfold u k; grind only [Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
 
 theorem rs_lev_mn : st.lev st.rs args.mn := by
   grind only [lev, st.heqb, st.b_nonneg]
@@ -356,7 +359,8 @@ theorem mn_lev_mediant :
     args.m * (st.s + st.u) * st.v ≤ (st.r + st.t) * args.n * st.v := by
   unfold t u
   have exited := st.exited
-  have : ((args.limit - st.q) / st.s + 1) * st.b ≤ st.a := by
+  have : (st.k + 1) * st.b ≤ st.a := by
+    unfold k
     rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
     · exact (Int.le_ediv_iff_mul_le hlt).mp
         (Int.lt_iff_add_one_le.mp ((Int.ediv_lt_iff_lt_mul st.s_pos).mpr
@@ -408,19 +412,19 @@ theorem htie (h1 : args.dist st.rs = args.dist st.tu) (h2 : st.s = st.u) : st.v 
   rw [st.dist_rs, st.dist_tu] at h1
   unfold t u at h1
   unfold u at h2
-  let k := (args.limit - st.q) / st.s
-  have : st.a - st.b = k * st.b := by grind only [st.heqa, st.heqb]
+  have : st.a - st.b = st.k * st.b := by grind only [st.heqa, st.heqb]
   -- now 0 < a - b = kb, so both b and k are positive, so in particular 0 < k
   have := st.b_nonneg
   have := st.b_lt_a
-  have : 0 < k :=
-    Int.pos_of_mul_pos_of_nonneg_left (show 0 < k * st.b by omega) (by grind only)
+  have : 0 < st.k :=
+    Int.pos_of_mul_pos_of_nonneg_left (show 0 < st.k * st.b by omega) (by grind only)
 
   -- now s = q + ks
-  have : st.q = (1 - k) * st.s := by grind only
+  have : st.q = (1 - st.k) * st.s := by grind only
   -- but s is positive and k is positive, so q = 0
-  have : (1 - k) ≤ 0 := by omega
-  have : (1 - k) * st.s ≤ 0 := Int.mul_nonpos_of_nonpos_of_nonneg (by omega) (Int.le_of_lt st.s_pos)
+  have : (1 - st.k) ≤ 0 := by omega
+  have : (1 - st.k) * st.s ≤ 0 :=
+    Int.mul_nonpos_of_nonpos_of_nonneg (by omega) (Int.le_of_lt st.s_pos)
   have := st.q_nonneg
   have q_eq_zero : st.q = 0 := by omega
   exact st.v_eq_one_of_q_eq_zero q_eq_zero
@@ -709,12 +713,11 @@ theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
 In the ambiguous case, the only best approximations are the integers ⌊m/n⌋ and ⌊m/n⌋ + 1.
 -/
 theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
-    let k := args.m / args.n
-    args.best yz ↔ yz = ⟨k, 1, by decide⟩ ∨ yz = ⟨k + 1, 1, by decide⟩ := by
-  intro k
+    args.best yz ↔
+      yz = ⟨args.m / args.n, 1, by decide⟩ ∨ yz = ⟨args.m / args.n + 1, 1, by decide⟩ := by
   let st := args.postLoopState
-  have hrs : st.rs = ⟨k, 1, by decide⟩ := st.rs_eq_floor_of_ambiguous hamb
-  have htu : st.tu = ⟨k + 1, 1, by decide⟩ := st.tu_eq_ceil_of_ambiguous hamb
+  have hrs := st.rs_eq_floor_of_ambiguous hamb
+  have htu := st.tu_eq_ceil_of_ambiguous hamb
   obtain ⟨rs_best, tu_best⟩ := st.best_rs_and_best_tu_iff_ambiguous.mpr hamb
   constructor
   · intro hyz
