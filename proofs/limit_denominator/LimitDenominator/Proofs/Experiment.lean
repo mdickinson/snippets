@@ -540,27 +540,6 @@ theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : args.best yz) :
   (st.lev_rs_or_tu_lev yz_best.1).imp
     (st.eq_rs_of_lev_of_best · yz_best) (st.eq_tu_of_lev_of_best · yz_best)
 
-/--
-Tie case: if r/s is better than t/u and t/u is better than r/s, then limit = 1 and
-m/n is a half integer.
--/
-theorem rv_tie_case_pre (h1 : args.better st.rs st.tu) (h2 : args.better st.tu st.rs) :
-    args.ambiguous := by
-  /- The try omega eliminates 3 out of the 4 cases immediately as impossible. -/
-  cases h1 <;> cases h2 <;> try omega
-  /- We're left with the case where r/s and t/u are equidistant and s = u. -/
-  have hbc : st.b * st.s = st.c * st.u := by grind only [st.heqb, st.dist_rs, st.dist_tu]
-  have htr : (st.t - st.r) * st.v * st.s = 1 := by grind only [st.bracket_det]
-  have s_eq_one : st.s = 1 := Int.eq_one_of_mul_eq_one_left (Int.le_of_lt st.s_pos) htr
-  refine ⟨ by grind only [st.s_le_limit, st.u_le_limit, st.limit_lt_s_add_u], ?_ ⟩
-  cases st.v_cases
-  · exact ⟨st.r, by grind only [st.heqb]⟩
-  · exact ⟨st.r - 1, by grind only [st.heqb]⟩
-
-/-- If both r/s and t/u are best approximations then we're in the ambiguous case. -/
-theorem rv_tie_case (h1 : args.best st.rs) (h2 : args.best st.tu) : args.ambiguous :=
-  st.rv_tie_case_pre (h1.2 st.u_le_limit) (h2.2 st.s_le_limit)
-
 /- In the ambiguous case the limit is 1, so both endpoints of the bracket have
 denominator 1. -/
 theorem s_eq_one_of_ambiguous (hamb : args.ambiguous) : st.s = 1 := by
@@ -637,18 +616,39 @@ theorem rv_eq_floor_of_ambiguous (hamb : args.ambiguous) :
     st.rv = ⟨args.m / args.n, 1, by decide⟩ := by
   rw [st.rv_eq_rs_of_ambiguous hamb, st.rs_eq_floor_of_ambiguous hamb]
 
-/-- In the ambiguous case both r/s and t/u are best approximations. -/
-theorem rv_tie_case_converse (hamb : args.ambiguous) : args.best st.rs ∧ args.best st.tu := by
-  have tie := st.dist_rs_eq_dist_tu_of_ambiguous hamb
-  have s_eq_one := st.s_eq_one_of_ambiguous hamb
-  have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  have rs_tu : args.better st.rs st.tu := .inr ⟨by grind only, by grind only⟩
-  have tu_rs : args.better st.tu st.rs := .inr ⟨by grind only, by grind only⟩
-  rcases st.rv_cases with ⟨rv_eq_rs, _⟩ | ⟨rv_eq_tu, _⟩
-  · have rs_best := rv_eq_rs ▸ st.rv_best
-    exact ⟨rs_best, st.u_le_limit, fun h => args.better_trans tu_rs (rs_best.2 h)⟩
-  · have tu_best := rv_eq_tu ▸ st.rv_best
-    exact ⟨⟨st.s_le_limit, fun h => args.better_trans rs_tu (tu_best.2 h)⟩, tu_best⟩
+/--
+Both endpoints are best approximations exactly in the ambiguous case. Forwards: two
+best approximations are mutually better, so equidistant with `s = u`; `bracket_det` then
+forces `s = 1`, `limit_lt_s_add_u` forces `limit = 1`, and m/n sits midway between the
+consecutive integers r and t.
+-/
+theorem best_rs_and_best_tu_iff_ambiguous :
+    args.best st.rs ∧ args.best st.tu ↔ args.ambiguous := by
+  constructor
+  · rintro ⟨rs_best, tu_best⟩
+    have rs_tu : args.better st.rs st.tu := rs_best.2 st.u_le_limit
+    have tu_rs : args.better st.tu st.rs := tu_best.2 st.s_le_limit
+    /- The try omega eliminates 3 out of the 4 cases immediately as impossible. -/
+    cases rs_tu <;> cases tu_rs <;> try omega
+    /- We're left with the case where r/s and t/u are equidistant and s = u. -/
+    have hbc : st.b * st.s = st.c * st.u := by grind only [st.heqb, st.dist_rs, st.dist_tu]
+    have htr : (st.t - st.r) * st.v * st.s = 1 := by grind only [st.bracket_det]
+    have s_eq_one : st.s = 1 := Int.eq_one_of_mul_eq_one_left (Int.le_of_lt st.s_pos) htr
+    refine ⟨by grind only [st.s_le_limit, st.u_le_limit, st.limit_lt_s_add_u], ?_⟩
+    cases st.v_cases
+    · exact ⟨st.r, by grind only [st.heqb]⟩
+    · exact ⟨st.r - 1, by grind only [st.heqb]⟩
+  · intro hamb
+    have tie := st.dist_rs_eq_dist_tu_of_ambiguous hamb
+    have s_eq_one := st.s_eq_one_of_ambiguous hamb
+    have u_eq_one := st.u_eq_one_of_ambiguous hamb
+    have rs_tu : args.better st.rs st.tu := .inr ⟨by grind only, by grind only⟩
+    have tu_rs : args.better st.tu st.rs := .inr ⟨by grind only, by grind only⟩
+    rcases st.rv_cases with ⟨rv_eq_rs, _⟩ | ⟨rv_eq_tu, _⟩
+    · have rs_best := rv_eq_rs ▸ st.rv_best
+      exact ⟨rs_best, st.u_le_limit, fun h => args.better_trans tu_rs (rs_best.2 h)⟩
+    · have tu_best := rv_eq_tu ▸ st.rv_best
+      exact ⟨⟨st.s_le_limit, fun h => args.better_trans rs_tu (tu_best.2 h)⟩, tu_best⟩
 
 end PostLoopState
 
@@ -677,8 +677,8 @@ theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
   rcases st.eq_rs_or_eq_tu_of_best hef with h1 | h1
   <;> rcases st.eq_rs_or_eq_tu_of_best hgh with h2 | h2
   · left; grind only
-  · right; exact st.rv_tie_case (h1 ▸ hef) (h2 ▸ hgh)
-  · right; exact st.rv_tie_case (h2 ▸ hgh) (h1 ▸ hef)
+  · right; exact st.best_rs_and_best_tu_iff_ambiguous.mp ⟨h1 ▸ hef, h2 ▸ hgh⟩
+  · right; exact st.best_rs_and_best_tu_iff_ambiguous.mp ⟨h2 ▸ hgh, h1 ▸ hef⟩
   · left; grind only
 
 /--
@@ -691,7 +691,7 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
   let st := args.postLoopState
   have hrs : st.rs = ⟨k, 1, by decide⟩ := st.rs_eq_floor_of_ambiguous hamb
   have htu : st.tu = ⟨k + 1, 1, by decide⟩ := st.tu_eq_ceil_of_ambiguous hamb
-  obtain ⟨rs_best, tu_best⟩ := st.rv_tie_case_converse hamb
+  obtain ⟨rs_best, tu_best⟩ := st.best_rs_and_best_tu_iff_ambiguous.mpr hamb
   constructor
   · intro hyz
     rcases st.eq_rs_or_eq_tu_of_best hyz with h | h
