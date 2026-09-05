@@ -582,7 +582,7 @@ theorem v_eq_one_of_ambiguous (hamb : args.ambiguous) : st.v = 1 :=
   st.htie (st.dist_rs_eq_dist_tu_of_ambiguous hamb)
     ((st.s_eq_one_of_ambiguous hamb).trans (st.u_eq_one_of_ambiguous hamb).symm)
 
-/-- In the ambiguous case r/s = (m/n)/1. -/
+/-- In the ambiguous case r/s = ⌊m/n⌋/1. -/
 theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) :
     st.rs = ⟨args.m / args.n, 1, by decide⟩ := by
   have heqb := st.heqb
@@ -595,7 +595,7 @@ theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) :
   have : args.m - st.r * args.n = st.b := by grind only
   exact ((Int.ediv_eq_iff_of_pos args.mn.pos).mpr (by grind only [args.mn.pos])).symm
 
-/-- In the ambiguous case t/u = (m/n + 1)/1. -/
+/-- In the ambiguous case t/u = (⌊m/n⌋ + 1)/1. -/
 theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) :
     st.tu = ⟨args.m / args.n + 1, 1, by decide⟩ := by
   have r_eq_floor : st.r = args.m / args.n := congrArg FractionPair.num (st.rs_eq_floor_of_ambiguous hamb)
@@ -611,7 +611,7 @@ theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) :
 theorem rv_eq_rs_of_ambiguous (hamb : args.ambiguous) : st.rv = st.rs :=
   if_pos (by grind only [st.two_b_eq_n_of_ambiguous hamb, st.u_eq_one_of_ambiguous hamb])
 
-/-- In the ambiguous case the return value is the floor of m/n. -/
+/-- In the ambiguous case ⌊m/n⌋ is returned. -/
 theorem rv_eq_floor_of_ambiguous (hamb : args.ambiguous) :
     st.rv = ⟨args.m / args.n, 1, by decide⟩ := by
   rw [st.rv_eq_rs_of_ambiguous hamb, st.rs_eq_floor_of_ambiguous hamb]
@@ -672,7 +672,7 @@ If e/f and g/h are both best approximations, then either they're
 equal or we're in the ambiguous case.
 -/
 theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef) (hgh : args.best gh) :
-    ef = gh ∨ args.limit = 1 ∧ args.mn.isHalfInteger := by
+    ef = gh ∨ args.ambiguous := by
   let st := args.postLoopState
   rcases st.eq_rs_or_eq_tu_of_best hef with h1 | h1
   <;> rcases st.eq_rs_or_eq_tu_of_best hgh with h2 | h2
@@ -682,10 +682,10 @@ theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
   · left; grind only
 
 /--
-In the ambiguous case, the only best approximations are the integers m/n and m/n + 1.
+In the ambiguous case, the only best approximations are the integers ⌊m/n⌋ and ⌊m/n⌋ + 1.
 -/
 theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
-    let k := args.mn.num / args.mn.den
+    let k := args.m / args.n
     args.best yz ↔ yz = ⟨k, 1, by decide⟩ ∨ yz = ⟨k + 1, 1, by decide⟩ := by
   intro k
   let st := args.postLoopState
@@ -701,9 +701,9 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
     · exact hrs ▸ rs_best
     · exact htu ▸ tu_best
 
-/-- In the ambiguous case, m/n is returned. -/
+/-- In the ambiguous case, ⌊m/n⌋ is returned. -/
 theorem ambiguous_rv (hamb : args.ambiguous) :
-    args.rv = ⟨args.m / args.n, 1, show 0 < 1 by decide⟩ :=
+    args.rv = ⟨args.m / args.n, 1, by decide⟩ :=
   args.postLoopState.rv_eq_floor_of_ambiguous hamb
 
 end Inputs
