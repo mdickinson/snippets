@@ -89,8 +89,8 @@ theorem eq_of_eq_den {ef gh : FractionPair}
   rw [FractionPair.mk.injEq]
   exact ⟨Int.eq_of_mul_eq_mul_right ef.ne_zero (h_deneq ▸ heq), h_deneq⟩
 
-/-- A fraction pair is a half integer if it has the form k + 1/2 for some k. -/
-def isHalfInteger := ∃ (k : Int), (2 * ef.num - ef.den) = 2 * ef.den * k
+/-- A fraction pair is a half integer if it has the form w + 1/2 for some integer w. -/
+def isHalfInteger := ∃ (w : Int), (2 * ef.num - ef.den) = 2 * ef.den * w
 
 end FractionPair
 
@@ -581,17 +581,17 @@ theorem two_b_eq_n_of_ambiguous (hamb : args.ambiguous) : 2 * st.b = args.n := b
   have heqb := st.heqb
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
-  obtain ⟨-, k, hk⟩ := hamb
+  obtain ⟨-, w, hw⟩ := hamb
   have v_ne_zero : st.v ≠ 0 := by grind only [st.bracket_det]
-  have : 2 * st.b = (2 * (k - st.r) + 1) * st.v * args.n := by grind only
-  have : (2 * (st.t - k) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : (2 * (k - st.r) + 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
-  have : 0 ≤ (2 * (st.t - k) - 1) * st.v :=
+  have : 2 * st.b = (2 * (w - st.r) + 1) * st.v * args.n := by grind only
+  have : (2 * (st.t - w) - 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
+  have : (2 * (w - st.r) + 1) * st.v ≠ 0 := Int.mul_ne_zero (by omega) v_ne_zero
+  have : 0 ≤ (2 * (st.t - w) - 1) * st.v :=
     args.mn.le_of_le_mul_den (by grind only [lev, st.mn_lev_tu])
-  have : 0 ≤ (2 * (k - st.r) + 1) * st.v :=
+  have : 0 ≤ (2 * (w - st.r) + 1) * st.v :=
     args.mn.le_of_le_mul_den (by grind only [lev, st.rs_lev_mn])
-  have : (2 * (k - st.r) + 1) * st.v + (2 * (st.t - k) - 1) * st.v = 2 := by grind only [st.bracket_det]
-  have : (2 * (k - st.r) + 1) * st.v = 1 := by omega
+  have : (2 * (w - st.r) + 1) * st.v + (2 * (st.t - w) - 1) * st.v = 2 := by grind only [st.bracket_det]
+  have : (2 * (w - st.r) + 1) * st.v = 1 := by omega
   grind only
 
 /-- In the ambiguous case r/s and t/u are equidistant from m/n. -/
