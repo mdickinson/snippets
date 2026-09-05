@@ -101,16 +101,20 @@ denominator.
 
 /-- The inputs to the algorithm: a target fraction m/n and a denominator limit. -/
 structure Inputs where
-  mn : FractionPair
-  limit : Int
+  (m n limit : Int)
+  npos : 0 < n
   limit_pos : 0 < limit
+
+/-- Inputs agreeing on m, n and limit are equal: the remaining fields are proofs. -/
+theorem Inputs.ext {args args' : Inputs} (hm : args.m = args'.m) (hn : args.n = args'.n)
+    (hlimit : args.limit = args'.limit) : args = args' := by
+  cases args; cases args'; cases hm; cases hn; cases hlimit; rfl
 
 namespace Inputs
 
 variable (args : Inputs)
 
-abbrev m := args.mn.num
-abbrev n := args.mn.den
+abbrev mn : FractionPair := ⟨args.m, args.n, args.npos⟩
 
 /-- Scaled distance from e/f to m/n. -/
 def dist (ef : FractionPair) := (ef.num * args.n - args.m * ef.den).abs
@@ -162,21 +166,23 @@ end Inputs
 
 structure LoopState extends Inputs where
   (a b p q r s v : Int)
-  det : (p * s - r * q) * v = 1
   hb : 0 ≤ b
   hab : b < a
   hq : 0 ≤ q
   hs : 0 < s
   hsl : s ≤ limit
-  heqa : (p * mn.den - mn.num * q) * v = a
-  heqb : (mn.num * s - r * mn.den) * v = b
+  det : (p * s - r * q) * v = 1
+  heqa : (p * n - m * q) * v = a
+  heqb : (m * s - r * n) * v = b
   initial_parity : q = 0 → p = 1
 
 namespace LoopState
 
 def initialLoopState (args : Inputs) : LoopState where
-  mn := args.mn
+  m := args.m
+  n := args.n
   limit := args.limit
+  npos := args.npos
   limit_pos := args.limit_pos
   a := args.n
   b := args.m % args.n
@@ -195,11 +201,6 @@ def initialLoopState (args : Inputs) : LoopState where
   heqb := by grind only [Int.mul_ediv_add_emod args.m args.n]
   initial_parity := by grind only
 
-theorem initialLoopState_mn_eq (args : Inputs) :
-  (initialLoopState args).mn = args.mn := rfl
-theorem initialLoopState_limit_eq (args : Inputs) :
-  (initialLoopState args).limit = args.limit := rfl
-
 variable (st : LoopState)
 
 /-- Condition guarding iteration of the while loop. -/
@@ -210,7 +211,9 @@ instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
 
 /-- The effect of one iteration of the while loop. -/
 def nextLoopState (hst : st.loopCondition) : LoopState where
-  mn := st.mn
+  m := st.m
+  n := st.n
+  npos := st.npos
   limit := st.limit
   limit_pos := st.limit_pos
   a := st.b
@@ -249,8 +252,10 @@ theorem runLoop_loopCondition_if_false (h : ¬ st.loopCondition) :
 theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
   fun_induction runLoop st <;> trivial
 
-/-- mn and limit match the initial input. -/
-theorem runLoop_mn_eq : st.runLoop.mn = st.mn := by
+/-- m, n and limit match the initial input. -/
+theorem runLoop_m_eq : st.runLoop.m = st.m := by
+  fun_induction runLoop st <;> trivial
+theorem runLoop_n_eq : st.runLoop.n = st.n := by
   fun_induction runLoop st <;> trivial
 theorem runLoop_limit_eq : st.runLoop.limit = st.limit := by
   fun_induction runLoop st <;> trivial
@@ -263,8 +268,10 @@ def fromArgs (args : Inputs) : LoopState :=
 theorem fromArgs_loopCondition_false (args : Inputs) : ¬ (fromArgs args).loopCondition :=
   runLoop_loopCondition_false (LoopState.initialLoopState args)
 
-theorem fromArgs_mn_eq (args : Inputs) : (fromArgs args).mn = args.mn :=
-  runLoop_mn_eq (LoopState.initialLoopState args)
+theorem fromArgs_n_eq (args : Inputs) : (fromArgs args).n = args.n :=
+  runLoop_n_eq (LoopState.initialLoopState args)
+theorem fromArgs_m_eq (args : Inputs) : (fromArgs args).m = args.m :=
+  runLoop_m_eq (LoopState.initialLoopState args)
 theorem fromArgs_limit_eq (args : Inputs) : (fromArgs args).limit = args.limit :=
   runLoop_limit_eq (LoopState.initialLoopState args)
 
@@ -306,18 +313,20 @@ structure PostLoopState extends Inputs where
   hrs : rs.den ≤ limit
   htu : tu.den ≤ limit
   hsu : limit < rs.den + tu.den
-  rs_lev_mn : rs.num * mn.den * v ≤ mn.num * rs.den * v
-  mn_lev_mediant : mn.num * (rs.den + tu.den) * v ≤ (rs.num + tu.num) * mn.den * v
+  rs_lev_mn : rs.num * n * v ≤ m * rs.den * v
+  mn_lev_mediant : m * (rs.den + tu.den) * v ≤ (rs.num + tu.num) * n * v
   -- tie break condition
-  htie : (mn.num * rs.den - rs.num * mn.den) * v
-      = (tu.num * mn.den - mn.num * tu.den) * v → rs.den = tu.den → v = 1
+  htie : (m * rs.den - rs.num * n) * v
+      = (tu.num * n - m * tu.den) * v → rs.den = tu.den → v = 1
 
 namespace PostLoopState
 
 
 /-- Convert the final loop state to the post-loop state. -/
 def ofLoopState (st : LoopState) (h : ¬ st.loopCondition) : PostLoopState where
-  mn := st.mn
+  m := st.m
+  n := st.n
+  npos := st.npos
   limit := st.limit
   limit_pos := st.limit_pos
   rs := ⟨st.r, st.s, st.hs⟩
@@ -373,8 +382,11 @@ def ofLoopState (st : LoopState) (h : ¬ st.loopCondition) : PostLoopState where
     · have := Int.mul_neg_of_pos_of_neg st.hs (show st.v < 0 by omega)
       omega
 
-theorem ofLoopState_mn_eq (st : LoopState) (h : ¬ st.loopCondition) :
-    (ofLoopState st h).mn = st.mn := rfl
+theorem ofLoopState_m_eq (st : LoopState) (h : ¬ st.loopCondition) :
+    (ofLoopState st h).m = st.m := rfl
+
+theorem ofLoopState_n_eq (st : LoopState) (h : ¬ st.loopCondition) :
+    (ofLoopState st h).n = st.n := rfl
 
 theorem ofLoopState_limit_eq (st : LoopState) (h : ¬ st.loopCondition) :
     (ofLoopState st h).limit = st.limit := rfl
@@ -431,12 +443,14 @@ theorem lev_trans {ef gh ij : FractionPair}
     (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
   gh.le_of_le_mul_den (by grind only [ij.le_mul_den h1, ef.le_mul_den h2])
 
-/- XXX Check whether we ever use the ≤ form ... -/
+/- XXX Check whether we ever use the ≤ form directly, or whether it would
+   be enough to prove the ltv equivalent. -/
 /-- Distance for values ≤ r/s. -/
 theorem dist_of_lev_rs {ef : FractionPair} (h : st.lev ef st.rs) :
     st.dist ef = (st.m * ef.den - ef.num * st.n) * st.v := by
   have rhs_nonneg : 0 ≤ (st.m * ef.den - ef.num * st.n) * st.v := by
-    grind only [lev, st.v_cases, st.lev_trans h st.rs_lev_mn]
+    have rs_lev_mn' : st.lev st.rs st.mn := st.rs_lev_mn
+    grind only [lev, st.v_cases, st.lev_trans h rs_lev_mn']
   grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 theorem dist_of_ltv_rs {ef : FractionPair} (h : st.ltv ef st.rs) :
@@ -455,7 +469,8 @@ theorem dist_rs : st.dist st.rs = (st.m * st.s - st.r * st.n) * st.v :=
 theorem dist_of_tu_lev {ef : FractionPair} (h : st.lev st.tu ef) :
     st.dist ef = (ef.num * st.n - st.m * ef.den) * st.v := by
   have rhs_nonneg : 0 ≤ (ef.num * st.n - st.m * ef.den) * st.v := by
-    grind only [lev, st.v_cases, st.lev_trans st.mn_lev_tu h]
+    have tu_lev_mn' : st.lev st.mn st.tu := st.mn_lev_tu
+    grind only [lev, st.v_cases, st.lev_trans tu_lev_mn' h]
   grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance of t/u. -/
@@ -782,26 +797,38 @@ def postLoopState : PostLoopState :=
 /-- Actual return value. -/
 def rv : FractionPair := args.postLoopState.rv
 
-theorem postLoopState_mn_eq : args.postLoopState.mn = args.mn := by
-  unfold postLoopState; rw [PostLoopState.ofLoopState_mn_eq, LoopState.fromArgs_mn_eq]
+theorem postLoopState_m_eq : args.postLoopState.m = args.m := by
+  unfold postLoopState; rw [PostLoopState.ofLoopState_m_eq, LoopState.fromArgs_m_eq]
+
+theorem postLoopState_n_eq : args.postLoopState.n = args.n := by
+  unfold postLoopState; rw [PostLoopState.ofLoopState_n_eq, LoopState.fromArgs_n_eq]
 
 theorem postLoopState_limit_eq : args.postLoopState.limit = args.limit := by
   unfold postLoopState; rw [PostLoopState.ofLoopState_limit_eq, LoopState.fromArgs_limit_eq]
 
+/-- The loop leaves the inputs untouched, so the post-loop state has `args` as its
+`Inputs` part. Everything below is this rewrite. -/
+theorem postLoopState_toInputs_eq : args.postLoopState.toInputs = args :=
+  Inputs.ext (postLoopState_m_eq args) (postLoopState_n_eq args)
+    (postLoopState_limit_eq args)
+
+theorem postLoopState_mn_eq : args.postLoopState.mn = args.mn := by
+  rw [postLoopState_toInputs_eq]
+
 theorem postLoopState_better_iff {ef gh : FractionPair} :
     args.postLoopState.better ef gh ↔ args.better ef gh := by
-  unfold better dist m n; rw [postLoopState_mn_eq]
+  rw [postLoopState_toInputs_eq]
 
 theorem postLoopState_best_iff {ef : FractionPair} :
     args.postLoopState.best ef ↔ args.best ef := by
-  simp only [best, postLoopState_limit_eq, postLoopState_better_iff]
+  rw [postLoopState_toInputs_eq]
 
 theorem postLoopState_ambiguous_iff : args.postLoopState.ambiguous ↔ args.ambiguous := by
-  unfold ambiguous; rw [postLoopState_limit_eq, postLoopState_mn_eq]
+  rw [postLoopState_toInputs_eq]
 
 theorem postLoopState_floor_eq :
     args.postLoopState.m / args.postLoopState.n = args.m / args.n := by
-  unfold m n; rw [postLoopState_mn_eq]
+  rw [postLoopState_toInputs_eq]
 
 /-- args.rv is a best approximation. -/
 theorem rv_best : args.best args.rv := by
