@@ -20,10 +20,6 @@ theorem Int.eq_one_or_neg_one_of_mul_eq_one {a b : Int} (hab : a * b = 1) :
   exact Int.eq_one_of_mul_eq_one_left (Int.abs_nonneg b)
     (show a.abs * b.abs = 1 by grind only [Int.abs_mul a b, Int.abs])
 
-theorem Int.pos_of_mul_pos_of_nonneg_left {a b : Int} (h1 : 0 < a * b) (h2 : 0 ≤ b) :
-    0 < a := by
-  exact Int.lt_of_mul_lt_mul_right (show 0 * b < a * b by grind only) h2
-
 /-- If `a * c + b * d` is positive with `c` and `d` positive, then `a` or `b` is. -/
 theorem Int.pos_or_pos_of_mul_add_mul_pos {a b c d : Int} (hc : 0 < c) (hd : 0 < d)
     (h : 0 < a * c + b * d) : 0 < a ∨ 0 < b := by
@@ -41,11 +37,7 @@ theorem Int.mul_pos_iff {a b : Int} : 0 < a * b ↔ (0 < a ∧ 0 < b) ∨ (a < 0
     Int.mul_neg_of_pos_of_neg, Int.mul_neg_of_neg_of_pos]
 
 theorem Int.divisor_le_mul {a b : Int} (h1 : 0 < a * b) : a ≤ a * b := by
-  grind only [
-    show 0 ≤ a * (b - 1) from
-      Int.mul_nonneg_iff.mpr
-      (by rcases Int.mul_pos_iff.mp h1 with ⟨a_pos, b_pos⟩ | ⟨a_neg, b_neg⟩ <;> omega)
-  ]
+  grind only [Int.mul_nonneg_iff (a := a) (b := b - 1), Int.mul_pos_iff.mp h1]
 
 /-! # Fraction pairs -/
 
@@ -203,8 +195,8 @@ def initialLoopState (args : Inputs) : LoopState args where
   s := 1
   v := 1
   det := by grind only
-  b_nonneg := Int.emod_nonneg args.m (Int.ne_of_gt args.mn.pos)
-  b_lt_a := Int.emod_lt_of_pos args.m args.mn.pos
+  b_nonneg := Int.emod_nonneg args.m (Int.ne_of_gt args.n_pos)
+  b_lt_a := Int.emod_lt_of_pos args.m args.n_pos
   q_nonneg := by decide
   s_pos := by decide
   s_le_limit := args.limit_pos
@@ -372,7 +364,7 @@ theorem mn_lev_mediant :
 theorem mn_lev_tu : st.lev args.mn st.tu :=
   Int.le_of_mul_le_mul_right
     (by grind only [
-      args.mn.pos, args.mn.eq_mul_den st.bracket_det, st.tu.le_mul_den st.mn_lev_mediant])
+      args.n_pos, args.mn.eq_mul_den st.bracket_det, st.tu.le_mul_den st.mn_lev_mediant])
     (Int.add_pos st.s_pos st.u_pos)
 
 /-! ## Distances -/
@@ -413,21 +405,16 @@ theorem htie (h1 : args.dist st.rs = args.dist st.tu) (h2 : st.s = st.u) : st.v 
   unfold t u at h1
   unfold u at h2
   have : st.a - st.b = st.k * st.b := by grind only [st.heqa, st.heqb]
-  -- now 0 < a - b = kb, so both b and k are positive, so in particular 0 < k
+  -- 0 < a - b = k * b with 0 ≤ b, so 0 < k
   have := st.b_nonneg
   have := st.b_lt_a
-  have : 0 < st.k :=
-    Int.pos_of_mul_pos_of_nonneg_left (show 0 < st.k * st.b by omega) (by grind only)
-
-  -- now s = q + ks
+  have : 0 < st.k := by grind only [Int.mul_pos_iff.mp (show 0 < st.k * st.b by omega)]
+  -- s = q + k * s with 0 < s, so q = (1 - k) * s ≤ 0, so q = 0
   have : st.q = (1 - st.k) * st.s := by grind only
-  -- but s is positive and k is positive, so q = 0
-  have : (1 - st.k) ≤ 0 := by omega
   have : (1 - st.k) * st.s ≤ 0 :=
     Int.mul_nonpos_of_nonpos_of_nonneg (by omega) (Int.le_of_lt st.s_pos)
   have := st.q_nonneg
-  have q_eq_zero : st.q = 0 := by omega
-  exact st.v_eq_one_of_q_eq_zero q_eq_zero
+  exact st.v_eq_one_of_q_eq_zero (by omega)
 
 /-! ## Bounded fractions lie outside the bracket -/
 
@@ -498,7 +485,7 @@ theorem rv_cases :
       · rw [st.dist_rs, st.dist_tu, st.heqb]
         exact heq
       · have cs_pos : 0 < st.c * st.s := by
-          grind only [args.mn.eq_mul_den st.bracket_det, args.mn.pos]
+          grind only [args.mn.eq_mul_den st.bracket_det, args.n_pos]
         have cs_le_cu : st.c * st.s ≤ st.c * st.u := by
           grind only [st.tu.le_mul_den st.mn_lev_mediant]
         exact Int.le_of_mul_le_mul_left cs_le_cu
@@ -621,7 +608,7 @@ theorem rs_eq_floor_of_ambiguous (hamb : args.ambiguous) :
   refine ⟨?_, s_eq_one⟩
   show st.r = args.m / args.n
   have : args.m - st.r * args.n = st.b := by grind only
-  exact ((Int.ediv_eq_iff_of_pos args.mn.pos).mpr (by grind only [args.mn.pos])).symm
+  exact ((Int.ediv_eq_iff_of_pos args.n_pos).mpr (by grind only [args.n_pos])).symm
 
 /-- In the ambiguous case t/u = (⌊m/n⌋ + 1)/1. -/
 theorem tu_eq_ceil_of_ambiguous (hamb : args.ambiguous) :
