@@ -8,11 +8,6 @@ TODO:
 
 module
 
-/-! # Support lemmas -/
-
-theorem Int.le_mul_of_one_le_left {a b : Int} (ha : 0 ≤ a) (hb : 1 ≤ b) :
-    a ≤ b * a := by grind only [Int.mul_le_mul_of_nonneg_right hb ha]
-
 /-! # Absolute value of an integer, Int.abs -/
 
 /-- Absolute value of an integer. -/
@@ -25,7 +20,6 @@ theorem Int.abs_eq (a : Int) {b : Int} : 0 ≤ b → (a.abs = b ↔ a = b ∨ a 
 theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by grind only [
   Int.abs, Int.le_total 0, Int.mul_nonneg, Int.mul_nonpos_of_nonneg_of_nonpos,
   Int.mul_nonpos_of_nonpos_of_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos]
-theorem Int.abs_cases (a : Int) : (a.abs = a ∨ a.abs = -a) := by grind only [Int.abs]
 
 /- More support lemmas. -/
 theorem Int.eq_one_or_neg_one_of_mul_eq_one {a b : Int} (hab : a * b = 1) :
@@ -235,12 +229,6 @@ def runLoop (st : LoopState args) : LoopState args :=
   if h : st.loopCondition then runLoop (st.nextLoopState h) else st
 termination_by st.a.toNat
 decreasing_by exact (Int.toNat_lt_toNat (Int.lt_of_le_of_lt st.hb st.hab)).mpr st.hab
-
-/-- If the loop condition is false, runLoop st is st. -/
-theorem runLoop_loopCondition_if_false (h : ¬ st.loopCondition) :
-    st.runLoop = st := by
-  unfold runLoop
-  exact dif_neg h
 
 /-- On exit of the loop, the loop condition is false. -/
 theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
