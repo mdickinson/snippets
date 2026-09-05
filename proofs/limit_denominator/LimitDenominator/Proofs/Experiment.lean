@@ -24,6 +24,13 @@ theorem Int.pos_of_mul_pos_of_nonneg_left {a b : Int} (h1 : 0 < a * b) (h2 : 0 �
     0 < a := by
   exact Int.lt_of_mul_lt_mul_right (show 0 * b < a * b by grind only) h2
 
+/-- If `a * c + b * d` is positive with `c` and `d` positive, then `a` or `b` is. -/
+theorem Int.pos_or_pos_of_mul_add_mul_pos {a b c d : Int} (hc : 0 < c) (hd : 0 < d)
+    (h : 0 < a * c + b * d) : 0 < a ∨ 0 < b := by
+  rcases (show 0 < a * c ∨ 0 < b * d by grind only) with h1 | h2
+  · left; exact Int.pos_of_mul_pos_left h1 hc
+  · right; exact Int.pos_of_mul_pos_left h2 hd
+
 theorem Int.mul_nonneg_iff {a b : Int} : 0 ≤ a * b ↔ (0 ≤ a ∧ 0 ≤ b) ∨ (a ≤ 0 ∧ b ≤ 0) := by
   grind only [Int.le_total 0, Int.mul_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos,
     Int.mul_nonpos_of_nonneg_of_nonpos, Int.mul_nonpos_of_nonpos_of_nonneg,
@@ -245,14 +252,6 @@ decreasing_by exact (Int.toNat_lt_toNat (Int.lt_of_le_of_lt st.b_nonneg st.b_lt_
 theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
   fun_induction runLoop st <;> trivial
 
-/-- Run the loop to completion starting from initial arguments. -/
-def fromArgs (args : Inputs) : LoopState args :=
-  runLoop (LoopState.initialLoopState args)
-
-/-- The loop condition is false for the output of run. -/
-theorem fromArgs_loopCondition_false (args : Inputs) : ¬ (fromArgs args).loopCondition :=
-  runLoop_loopCondition_false (LoopState.initialLoopState args)
-
 end LoopState
 
 /-! # Post-loop analysis -/
@@ -289,10 +288,6 @@ structure PostLoopState (args : Inputs) extends LoopState args where
   exited : ¬ toLoopState.loopCondition
 
 namespace PostLoopState
-
-/-- Convert the final loop state to the post-loop state. -/
-def ofLoopState {args : Inputs} (st : LoopState args) (h : ¬ st.loopCondition) :
-    PostLoopState args := ⟨st, h⟩
 
 /- We let `st` represent the post-loop state throughout this section. -/
 variable {args : Inputs} (st : PostLoopState args)
@@ -432,19 +427,13 @@ theorem htie (h1 : args.dist st.rs = args.dist st.tu) (h2 : st.s = st.u) : st.v 
 
 /-! ## Bounded fractions lie outside the bracket -/
 
-/-- If a linear combination of s and u is positive, one of the coefficients is. -/
-theorem lc_pos {a b : Int} : 0 < a * st.s + b * st.u → 0 < a ∨ 0 < b := by
-  intro; rcases (show 0 < a * st.s ∨ 0 < b * st.u by grind only) with h1 | h2
-  · left; exact Int.pos_of_mul_pos_left h1 st.s_pos
-  · right; exact Int.pos_of_mul_pos_left h2 st.u_pos
-
 /-- A fraction pair with denominator ≤ limit must be outside the bracket. -/
 theorem lev_rs_or_tu_lev {yz : FractionPair} (hyz : yz.den ≤ args.limit):
     st.lev yz st.rs ∨ st.lev st.tu yz := by
   have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
       + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
     grind only [yz.eq_mul_den st.bracket_det, st.limit_lt_s_add_u]
-  cases st.lc_pos lc
+  cases Int.pos_or_pos_of_mul_add_mul_pos st.s_pos st.u_pos lc
   · right; grind only [lev]
   · left; grind only [lev]
 
@@ -691,10 +680,10 @@ namespace Inputs
 
 variable (args : Inputs)
 
-/-- Post loop state from inputs. -/
+/-- The state on exit from the loop, run from the initial state. -/
 def postLoopState : PostLoopState args :=
-  PostLoopState.ofLoopState (LoopState.fromArgs args)
-    (LoopState.fromArgs_loopCondition_false args)
+  ⟨(LoopState.initialLoopState args).runLoop,
+    (LoopState.initialLoopState args).runLoop_loopCondition_false⟩
 
 /-- Actual return value. -/
 def rv : FractionPair := args.postLoopState.rv
