@@ -81,6 +81,9 @@ theorem eq_of_eq_den {ef gh : FractionPair}
   rw [FractionPair.mk.injEq]
   exact ⟨Int.eq_of_mul_eq_mul_right ef.ne_zero (h_deneq ▸ heq), h_deneq⟩
 
+/-- A fraction pair is reduced if its numerator and denominator are coprime. -/
+def isReduced := ∃ (g h : Int), g * ef.num + h * ef.den = 1
+
 /-- A fraction pair is a half integer if it has the form w + 1/2 for some integer w. -/
 def isHalfInteger := ∃ (w : Int), (2 * ef.num - ef.den) = 2 * ef.den * w
 
@@ -653,29 +656,16 @@ def postLoopState : PostLoopState args :=
   ⟨(LoopState.initialLoopState args).runLoop,
     (LoopState.initialLoopState args).runLoop_loopCondition_false⟩
 
-/-- Actual return value. -/
-def rv : FractionPair := args.postLoopState.rv
+/-! ## General facts about best approximations -/
 
-/-- args.rv is a best approximation. -/
-theorem rv_best : args.best args.rv := args.postLoopState.rv_best
-
-/-
-If e/f and g/h are both best approximations, then either they're
-equal or we're in the ambiguous case.
--/
-theorem best_unique_unless_ambiguous {ef gh : FractionPair} (hef : args.best ef)
-    (hgh : args.best gh) : ef = gh ∨ args.ambiguous := by
+/-- In the non-ambiguous case, there's a unique best approximation. -/
+theorem non_ambiguous_best (not_amb : ¬ args.ambiguous) {ef gh : FractionPair}
+    (hef : args.best ef) (hgh : args.best gh) : ef = gh := by
   let st := args.postLoopState
-  rcases st.eq_rs_or_eq_tu_of_best hef with h1 | h1
-  <;> rcases st.eq_rs_or_eq_tu_of_best hgh with h2 | h2
-  · left; grind only
-  · right; exact st.best_rs_and_best_tu_iff_ambiguous.mp ⟨h1 ▸ hef, h2 ▸ hgh⟩
-  · right; exact st.best_rs_and_best_tu_iff_ambiguous.mp ⟨h2 ▸ hgh, h1 ▸ hef⟩
-  · left; grind only
+  cases st.eq_rs_or_eq_tu_of_best hef <;> cases st.eq_rs_or_eq_tu_of_best hgh
+  <;> grind only [st.best_rs_and_best_tu_iff_ambiguous]
 
-/--
-In the ambiguous case, the only best approximations are the integers ⌊m/n⌋ and ⌊m/n⌋ + 1.
--/
+/-- In the ambiguous case, a best approximation is either ⌊m/n⌋ or ⌊m/n⌋ + 1. -/
 theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
     args.best yz ↔
       yz = ⟨args.m / args.n, 1, by decide⟩ ∨ yz = ⟨args.m / args.n + 1, 1, by decide⟩ := by
@@ -691,6 +681,21 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : FractionPair} :
   · rintro (rfl | rfl)
     · exact hrs ▸ rs_best
     · exact htu ▸ tu_best
+
+/-- Any best approximation is reduced. -/
+theorem isReduced_of_best {ef : FractionPair} (hef : args.best ef) : ef.isReduced := by
+  let st := args.postLoopState
+  rcases st.eq_rs_or_eq_tu_of_best hef with rfl | rfl
+  · exact ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
+  · exact ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
+
+/-! ## The return value -/
+
+/-- The return value. -/
+def rv : FractionPair := args.postLoopState.rv
+
+/-- The returned value is always a best approximation. -/
+theorem rv_best : args.best args.rv := args.postLoopState.rv_best
 
 /-- In the ambiguous case, ⌊m/n⌋ is returned. -/
 theorem ambiguous_rv (hamb : args.ambiguous) :
