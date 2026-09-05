@@ -350,13 +350,12 @@ theorem rs_lev_mn : st.lev st.rs args.mn := by
 theorem mn_lev_mediant :
     args.m * (st.s + st.u) * st.v ≤ (st.r + st.t) * args.n * st.v := by
   unfold t u
-  have exited := st.exited
   have : (st.k + 1) * st.b ≤ st.a := by
     unfold k
     rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
     · exact (Int.le_ediv_iff_mul_le hlt).mp
         (Int.lt_iff_add_one_le.mp ((Int.ediv_lt_iff_lt_mul st.s_pos).mpr
-          (by grind only [LoopState.loopCondition])))
+          (by grind only [LoopState.loopCondition, st.exited])))
     · grind only [st.b_lt_a, st.b_nonneg]
   rw [← st.heqa, ← st.heqb] at this; grind only
 
@@ -375,13 +374,13 @@ abbrev c := (st.t * args.n - args.m * st.u) * st.v
 
 /-- The two distances split `n` between them. -/
 theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
-  rw [← st.heqb]; grind only [args.mn.eq_mul_den st.bracket_det]
+  grind only [st.heqb, args.mn.eq_mul_den st.bracket_det]
 
 /-- Distance for values ≤ r/s. -/
 theorem dist_of_lev_rs {ef : FractionPair} (h : st.lev ef st.rs) :
     args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v := by
   have rhs_nonneg : 0 ≤ (args.m * ef.den - ef.num * args.n) * st.v := by
-    grind only [lev, st.v_cases, st.lev_trans h st.rs_lev_mn]
+    grind only [lev, st.lev_trans h st.rs_lev_mn]
   grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance of r/s. -/
@@ -392,7 +391,7 @@ theorem dist_rs : args.dist st.rs = (args.m * st.s - st.r * args.n) * st.v :=
 theorem dist_of_tu_lev {ef : FractionPair} (h : st.lev st.tu ef) :
     args.dist ef = (ef.num * args.n - args.m * ef.den) * st.v := by
   have rhs_nonneg : 0 ≤ (ef.num * args.n - args.m * ef.den) * st.v := by
-    grind only [lev, st.v_cases, st.lev_trans st.mn_lev_tu h]
+    grind only [lev, st.lev_trans st.mn_lev_tu h]
   grind only [Inputs.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance of t/u. -/
@@ -474,22 +473,16 @@ theorem rv_cases :
   have hn := args.mn.eq_mul_den st.bracket_det
   have bu_cs := st.bu_add_cs_eq_n
   rcases Int.lt_or_le (st.c * st.s) (st.b * st.u) with h1 | hrs
-  · right; refine ⟨if_neg (by grind only), .inl ?_⟩
-    rw [st.dist_rs, st.dist_tu, st.heqb]
-    exact h1
+  · right; exact ⟨if_neg (by grind only), .inl (by grind only [st.dist_rs, st.dist_tu, st.heqb])⟩
   · rcases Int.lt_or_eq_of_le hrs with hlt | heq
-    · left; refine ⟨if_pos (by grind only), .inl ?_⟩
-      rw [st.dist_rs, st.dist_tu, st.heqb]
-      exact hlt
-    · left; refine ⟨if_pos (by grind only), .inr ⟨?_, ?_⟩⟩
-      · rw [st.dist_rs, st.dist_tu, st.heqb]
-        exact heq
-      · have cs_pos : 0 < st.c * st.s := by
-          grind only [args.mn.eq_mul_den st.bracket_det, args.n_pos]
-        have cs_le_cu : st.c * st.s ≤ st.c * st.u := by
-          grind only [st.tu.le_mul_den st.mn_lev_mediant]
-        exact Int.le_of_mul_le_mul_left cs_le_cu
-          (Int.pos_of_mul_pos_left cs_pos st.s_pos)
+    · left; exact ⟨if_pos (by grind only), .inl (by grind only [st.dist_rs, st.dist_tu, st.heqb])⟩
+    · left
+      refine ⟨if_pos (by grind only), .inr ⟨?_, ?_⟩⟩
+      · grind only [st.dist_rs, st.dist_tu, st.heqb]
+      have cs_pos : 0 < st.c * st.s := by grind only [args.n_pos]
+      have cs_le_cu : st.c * st.s ≤ st.c * st.u := by
+        grind only [st.tu.le_mul_den st.mn_lev_mediant]
+      exact Int.le_of_mul_le_mul_left cs_le_cu (Int.pos_of_mul_pos_left cs_pos st.s_pos)
 
 /-- The returned fraction pair has denominator bounded by limit. -/
 theorem rv_bounded : st.rv.den ≤ args.limit := by grind only [rv, st.s_le_limit, st.u_le_limit]
