@@ -297,6 +297,8 @@ def ofLoopState {args : Inputs} (st : LoopState args) (h : ¬ st.loopCondition) 
 /- We let `st` represent the post-loop state throughout this section. -/
 variable {args : Inputs} (st : PostLoopState args)
 
+/-! ## The bracket -/
+
 /-- The far endpoint of the bracket: `t/u` is `p/q` advanced by as many copies of `r/s`
 as the denominator limit allows. -/
 def t : Int := st.p + (args.limit - st.q) / st.s * st.r
@@ -309,6 +311,8 @@ theorem u_pos : 0 < st.u := by
 /- The two bracket endpoints, packaged as fraction pairs. -/
 abbrev rs : FractionPair := ⟨st.r, st.s, st.s_pos⟩
 abbrev tu : FractionPair := ⟨st.t, st.u, st.u_pos⟩
+
+/-! ## Orientation-aware order -/
 
 /- Generic fraction pairs. -/
 variable (ef gh ij : FractionPair)
@@ -330,6 +334,8 @@ theorem lev_refl : st.lev ef ef := Int.le_refl _
 theorem lev_trans {ef gh ij : FractionPair}
     (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
   gh.le_of_le_mul_den (by grind only [ij.le_mul_den h1, ef.le_mul_den h2])
+
+/-! ## Bracket facts -/
 
 /-
 The facts the after-loop analysis rests on. `bracket_det` is the loop's own `det`
@@ -370,12 +376,11 @@ theorem mn_lev_tu : st.lev args.mn st.tu :=
       args.mn.pos, args.mn.eq_mul_den st.bracket_det, st.tu.le_mul_den st.mn_lev_mediant])
     (Int.add_pos st.s_pos st.u_pos)
 
+/-! ## Distances -/
+
 /- `st.b` is already the scaled distance from m/n to r/s -- that is what the loop
 invariant `heqb` says -- so only the far endpoint needs an abbrev of its own. -/
 abbrev c := (st.t * args.n - args.m * st.u) * st.v
-
-/-- `st.rv` is the return value from limit_denominator. -/
-def rv : FractionPair := if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
 
 /-- The two distances split `n` between them. -/
 theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
@@ -424,6 +429,8 @@ theorem htie (h1 : args.dist st.rs = args.dist st.tu) (h2 : st.s = st.u) : st.v 
   have := st.q_nonneg
   have q_eq_zero : st.q = 0 := by omega
   exact st.v_eq_one_of_q_eq_zero q_eq_zero
+
+/-! ## Bounded fractions lie outside the bracket -/
 
 /-- If a linear combination of s and u is positive, one of the coefficients is. -/
 theorem lc_pos {a b : Int} : 0 < a * st.s + b * st.u → 0 < a ∨ 0 < b := by
@@ -476,6 +483,11 @@ theorem yz_cases {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
     args.better st.rs yz ∨ args.better st.tu yz :=
   (st.lev_rs_or_tu_lev hyz).imp st.better_rs_of_lev st.better_tu_of_lev
 
+/-! ## The return value -/
+
+/-- `st.rv` is the return value from limit_denominator. -/
+def rv : FractionPair := if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
+
 /-- The returned pair is at least as good as the other. -/
 theorem rv_cases :
     st.rv = st.rs ∧ args.better st.rs st.tu ∨ st.rv = st.tu ∧ args.better st.tu st.rs := by
@@ -514,6 +526,8 @@ theorem rv_better {yz : FractionPair} (hyz : yz.den ≤ args.limit) :
 
 /-- The returned fraction is a best approximation. -/
 theorem rv_best : args.best st.rv := ⟨st.rv_bounded, st.rv_better⟩
+
+/-! ## Best approximations -/
 
 /-- A best approximation beyond r/s is r/s itself. -/
 theorem eq_rs_of_lev_of_best {yz : FractionPair} (h : st.lev yz st.rs) (yz_best : args.best yz) :
@@ -558,6 +572,8 @@ theorem eq_rs_or_eq_tu_of_best {yz : FractionPair} (yz_best : args.best yz) :
     yz = st.rs ∨ yz = st.tu :=
   (st.lev_rs_or_tu_lev yz_best.1).imp
     (st.eq_rs_of_lev_of_best · yz_best) (st.eq_tu_of_lev_of_best · yz_best)
+
+/-! ## The ambiguous case -/
 
 /- In the ambiguous case the limit is 1, so both endpoints of the bracket have
 denominator 1. -/
