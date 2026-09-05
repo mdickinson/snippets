@@ -102,7 +102,7 @@ denominator.
 /-- The inputs to the algorithm: a target fraction m/n and a denominator limit. -/
 structure Inputs where
   (m n limit : Int)
-  npos : 0 < n
+  n_pos : 0 < n
   limit_pos : 0 < limit
 
 /-- Inputs agreeing on m, n and limit are equal: the remaining fields are proofs. -/
@@ -114,7 +114,7 @@ namespace Inputs
 
 variable (args : Inputs)
 
-abbrev mn : FractionPair := ⟨args.m, args.n, args.npos⟩
+abbrev mn : FractionPair := ⟨args.m, args.n, args.n_pos⟩
 
 /-- Scaled distance from e/f to m/n. -/
 def dist (ef : FractionPair) := (ef.num * args.n - args.m * ef.den).abs
@@ -182,7 +182,7 @@ def initialLoopState (args : Inputs) : LoopState where
   m := args.m
   n := args.n
   limit := args.limit
-  npos := args.npos
+  n_pos := args.n_pos
   limit_pos := args.limit_pos
   a := args.n
   b := args.m % args.n
@@ -213,7 +213,7 @@ instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
 def nextLoopState (hst : st.loopCondition) : LoopState where
   m := st.m
   n := st.n
-  npos := st.npos
+  n_pos := st.n_pos
   limit := st.limit
   limit_pos := st.limit_pos
   a := st.b
@@ -326,7 +326,7 @@ namespace PostLoopState
 def ofLoopState (st : LoopState) (h : ¬ st.loopCondition) : PostLoopState where
   m := st.m
   n := st.n
-  npos := st.npos
+  n_pos := st.n_pos
   limit := st.limit
   limit_pos := st.limit_pos
   r := st.r
