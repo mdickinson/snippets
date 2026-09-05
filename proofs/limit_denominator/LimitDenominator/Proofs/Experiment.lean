@@ -4,12 +4,6 @@ TODO:
 
 - remove the dvd-using lemma
 - look for overlaps/simplifications with the two results using yz_cases_raw
-- define "ambiguous"
-- prove that if e/f and g/h are both best approximations, then either they're
-  equal or we're in the ambiguous case
-- analysis of the ambiguous case
-- PostLoopState should inherit from LoopState (but we need to find a better)
-  way than inheritance ...
 
 -/
 
