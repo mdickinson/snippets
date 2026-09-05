@@ -154,6 +154,23 @@ end Inputs
 
 /-! # In the loop -/
 
+/-
+The loop is the Euclidean algorithm on `m` and `n`, tracking the continued-fraction
+convergents of m/n as it goes. `a > b ≥ 0` are the two most recent remainders. `r/s` is
+the most recent convergent and `p/q` the one before it, starting from `⌊m/n⌋/1` and `1/0`,
+so `q = 0` only in the initial state. Consecutive convergents lie on opposite sides of
+m/n; `v ∈ {1, -1}` records which way round, with `r/s ≤ m/n < p/q` when `v = 1`, and it
+flips on every iteration.
+
+The invariants tie the remainders to the convergents. `det` is the consecutive-convergent
+identity `p * s - r * q = ±1`, with `v` as the sign. `heqa` and `heqb` say that `a` and `b`
+are the cross-multiplied distances `|p * n - m * q|` and `|m * s - r * n|` from m/n to the
+two convergents, again with `v` supplying the sign. `s_le_limit` is what the loop condition
+checked before stepping to this state.
+-/
+
+/-- The loop state: the two latest Euclidean remainders, the two latest convergents, and
+the orientation `v`. -/
 structure LoopState (args : Inputs) where
   (a b p q r s v : Int)
   b_nonneg : 0 ≤ b
@@ -168,6 +185,8 @@ structure LoopState (args : Inputs) where
 
 namespace LoopState
 
+/-- The state before the first iteration: remainders `n` and `m % n`, convergents `1/0`
+and `⌊m/n⌋/1`. -/
 def initialLoopState (args : Inputs) : LoopState args where
   a := args.n
   b := args.m % args.n
