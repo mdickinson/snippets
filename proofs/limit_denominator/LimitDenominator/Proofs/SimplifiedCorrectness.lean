@@ -38,11 +38,8 @@ def loopBody (l : Int) (_u : Unit) (state : LoopState) : PyExcept (ForInStep Loo
 def afterLoop (n l : Int) (state : LoopState) : PyExcept (Int × Int) :=
   let ⟨_a, b, p, q, r, s⟩ := state
   do
-    -- Two bindings for one quotient, because the Python writes `(l - q) // s` twice:
-    -- collapsing them breaks the `rfl` in `limitDenominatorSimplified_fold`.
-    let k1 ← pyFloordiv (l - q) s
-    let k2 ← pyFloordiv (l - q) s
-    pure (if 2 * b * (q + k2 * s) ≤ n then (r, s) else (p + k1 * r, q + k2 * s))
+    let k ← pyFloordiv (l - q) s
+    pure (if 2 * b * (q + k * s) ≤ n then (r, s) else (p + k * r, q + k * s))
 
 /-- `limitDenominatorSimplified` on a valid target, as a loop followed by its tail. -/
 theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
@@ -128,7 +125,7 @@ public theorem isCorrectLimitDenominator_simplified :
     obtain ⟨a, b, p, q, r, s⟩ := y
     obtain ⟨hinv, hexit⟩ :
         LoopInvariant m n l a b p q r s ∧ (b = 0 ∨ (0 < b ∧ l < q + a / b * s)) := hy_post
-    rw [afterLoop, pyFloordiv_ok_bind hinv.s_pos, pyFloordiv_ok_bind hinv.s_pos]
+    rw [afterLoop, pyFloordiv_ok_bind hinv.s_pos]
     have hbracket := hinv.bracketing hexit rfl rfl rfl rfl
     split <;> rename_i hchoice
     · exact ⟨r, s, rfl, hbracket.isBestApproximation_loop_of_test hchoice⟩

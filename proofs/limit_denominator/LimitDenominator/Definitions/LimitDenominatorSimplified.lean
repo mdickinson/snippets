@@ -30,7 +30,8 @@ that every input either gets an answer or an exception, and none gets a wrong an
         a, b, p, q, r, s = n, m % n, 1, 0, m // n, 1
         while 0 < b and q + a // b * s <= l:
             a, b, p, q, r, s = b, a % b, r, s, p + a // b * r, q + a // b * s
-        t, u = p + (l - q) // s * r, q + (l - q) // s * s
+        k = (l - q) // s
+        t, u = p + k * r, q + k * s
         return (r, s) if 2 * b * u <= n else (t, u)
 -/
 
@@ -51,7 +52,8 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   -- Keep the right operand a `do` block, or the division is hoisted past the `0 < b` test.
   while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
     (a, b, p, q, r, s) := (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s)
-  let (t, u) := (p + (← (l - q) // s) * r, q + (← (l - q) // s) * s)
+  let k ← (l - q) // s
+  let (t, u) := (p + k * r, q + k * s)
   return if 2 * b * u ≤ n then (r, s) else (t, u)
 
 end
