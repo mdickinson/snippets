@@ -45,8 +45,8 @@ def afterLoop (n l : Int) (state : LoopState) : PyExcept (Int × Int) :=
 theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     limitDenominatorSimplified m n l =
       forIn Lean.Loop.mk (n, m % n, 1, 0, m / n, 1) (loopBody l) >>= afterLoop n l := by
-  rw [limitDenominatorSimplified, if_neg (by omega), if_neg (by omega), pyMod_ok_bind hn,
-    pyFloordiv_ok_bind hn]
+  rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_right (by omega),
+    pyMod_ok_bind hn, pyFloordiv_ok_bind hn]
   rfl
 
 /-! ## Reducing the loop body -/
@@ -58,7 +58,7 @@ never evaluated, and the loop exits.
 theorem loopBody_of_zero (l a p q r s : Int) :
     loopBody l () (a, 0, p, q, r, s) = pure (ForInStep.done (a, 0, p, q, r, s)) := by
   rw [loopBody, show decide ((0 : Int) < 0) = false from by decide, andM_pure_false, pure_bind,
-    if_neg (by decide)]
+    ite_eq_right (by decide)]
 
 /-- With `b` positive, the body divides safely and the exit test is the Python condition. -/
 theorem loopBody_of_pos {l a b p q r s : Int} (hb : 0 < b) :
@@ -113,7 +113,7 @@ public theorem isCorrectLimitDenominator_simplified :
   refine ⟨?_, ?_⟩
   · -- A nonpositive limit: the first guard raises, short-circuiting the `do` block.
     intro m n l hl
-    rw [limitDenominatorSimplified, if_pos (show l < 1 by omega)]
+    rw [limitDenominatorSimplified, ite_eq_left (show l < 1 by omega)]
     rfl
   · -- Otherwise the loop runs, never raises, and returns one of the two candidates.
     intro m n l hn hl
@@ -138,7 +138,7 @@ checked first, so this needs the limit to have passed its own check.
 public theorem limitDenominatorSimplified_raises_of_denominator_nonpos {m n l : Int}
     (hn : n ≤ 0) (hl : 0 < l) :
     raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive") := by
-  rw [limitDenominatorSimplified, if_neg (by omega), if_pos hn]
+  rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_left hn]
   rfl
 
 /--

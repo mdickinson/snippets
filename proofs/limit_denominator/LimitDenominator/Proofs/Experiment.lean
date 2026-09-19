@@ -618,12 +618,12 @@ theorem rv_cases :
     st.rv = st.tu ∧ args.better st.tu st.rs := by
   have bu_cs := st.bu_add_cs_eq_n
   rcases Int.lt_or_le (st.c * st.s) (st.b * st.u) with htu | hrs
-  · right; refine ⟨if_neg (by grind only), .inl ?_⟩
+  · right; refine ⟨ite_eq_right (by grind only), .inl ?_⟩
     grind only [st.dist_rs, st.dist_tu, st.b_eq_rs_cross, st.c_eq_tu_cross]
   · rcases Int.lt_or_eq_of_le hrs with hlt | heq
-    · left; refine ⟨if_pos (by grind only), .inl ?_⟩
+    · left; refine ⟨ite_eq_left (by grind only), .inl ?_⟩
       grind only [st.dist_rs, st.dist_tu, st.b_eq_rs_cross, st.c_eq_tu_cross]
-    · left; refine ⟨if_pos (by grind only), .inr ⟨?_, ?_⟩⟩
+    · left; refine ⟨ite_eq_left (by grind only), .inr ⟨?_, ?_⟩⟩
       · grind only [st.dist_rs, st.dist_tu, st.c_eq_tu_cross,
           args.mn.eq_mul_den st.bracket_det]
       · exact Int.le_of_mul_le_mul_left (heq ▸ st.tu.le_mul_den st.b_le_c) st.c_pos
@@ -753,7 +753,7 @@ theorem tu_eq_floor_add_one : st.tu = args.floorAddOne := by
 
 /-- In the ambiguous case r/s is returned. -/
 theorem rv_eq_rs : st.rv = st.rs :=
-  if_pos (by grind only [st.bu_eq_cs hamb, st.bu_add_cs_eq_n])
+  ite_eq_left (by grind only [st.bu_eq_cs hamb, st.bu_add_cs_eq_n])
 
 /-- In the ambiguous case ⌊m/n⌋ is returned. -/
 theorem rv_eq_floor : st.rv = args.floor := by

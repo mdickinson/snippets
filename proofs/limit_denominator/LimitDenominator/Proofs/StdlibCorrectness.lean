@@ -63,7 +63,7 @@ def stdlibAfterLoop (n l : Int) (state : StdlibLoopState) : PyExcept (Int × Int
 theorem limitDenominatorStdlib_fold {m n l : Int} (hl : 0 < l) (hn : l < n) :
     limitDenominatorStdlib m n l =
       forIn Lean.Loop.mk (0, 1, 1, 0, m, n) (stdlibLoopBody l) >>= stdlibAfterLoop n l := by
-  rw [limitDenominatorStdlib, if_neg (by omega), if_neg (by omega)]
+  rw [limitDenominatorStdlib, ite_eq_right (by omega), ite_eq_right (by omega)]
   rfl
 
 /-! ## Peeling the first iteration -/
@@ -77,7 +77,7 @@ theorem stdlibLoopBody_initial {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     stdlibLoopBody l () (0, 1, 1, 0, m, n)
       = pure (ForInStep.yield (1, 0, m / n, 1, n, m % n)) := by
   have h : m - m / n * n = m % n := by have := Int.mul_ediv_add_emod m n; grind
-  rw [stdlibLoopBody, pyFloordiv_ok_bind hn, if_neg (by omega), h]
+  rw [stdlibLoopBody, pyFloordiv_ok_bind hn, ite_eq_right (by omega), h]
   simp
 
 /-! ## Driving the loop -/
@@ -130,13 +130,13 @@ public theorem isCorrectLimitDenominator_stdlib :
   refine ⟨?_, ?_⟩
   · -- A nonpositive limit: the first guard raises, short-circuiting the `do` block.
     intro m n l hl
-    rw [limitDenominatorStdlib, if_pos (show l < 1 by omega)]
+    rw [limitDenominatorStdlib, ite_eq_left (show l < 1 by omega)]
     rfl
   · intro m n l ⟨hn, hgcd⟩ hl
     rcases (by omega : n ≤ l ∨ l < n) with hfast | hslow
     · -- The fast path returns the target itself.
       refine ⟨m, n, ?_, isBestApproximation_self hn hfast hgcd⟩
-      rw [limitDenominatorStdlib, if_neg (by omega), if_pos hfast]
+      rw [limitDenominatorStdlib, ite_eq_right (by omega), ite_eq_left hfast]
       rfl
     -- Otherwise the loop runs, never raises, and returns one of the two candidates.
     rw [limitDenominatorStdlib_fold hl hslow, forIn_loop_peel _ (stdlibLoopBody_initial hn hl)]
