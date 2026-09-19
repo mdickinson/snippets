@@ -398,7 +398,7 @@ theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
 /-! ## Orientation-aware order -/
 
 /- Generic fraction pairs. -/
-variable (ef gh ij : FractionPair)
+variable (ef gh : FractionPair)
 
 /--
 We define `st.lev` as an orientation-aware less-than-or-equal-to relation:
@@ -458,7 +458,7 @@ theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
 theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
 
 /-- `c` is the scaled distance from t/u to m/n. -/
-theorem heqc : st.c = (st.t * args.n - args.m * st.u) * st.v := by
+theorem heqc : (st.t * args.n - args.m * st.u) * st.v = st.c := by
   grind only [c, t, u, st.heqa, st.heqb]
 
 /-- The two distances split `n` between them. -/
@@ -507,10 +507,10 @@ theorem den_le_of_eqv_rs {yz : args.Candidate} (yz_eqv_rs : st.eqv yz st.rs) :
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- if y/z = t/u then u ≤ z (because t/u is in lowest terms). -/
-theorem den_le_of_eqv_tu {yz : args.Candidate} (yz_eqv_tu : st.eqv yz st.tu) :
+theorem den_le_of_tu_eqv {yz : args.Candidate} (tu_eqv_yz : st.eqv st.tu yz) :
     st.u ≤ yz.den := by
   have : yz.den = st.u * ((yz.num * st.s - st.r * yz.den) * st.v) := by
-    grind only [st.rs.eq_mul_den yz_eqv_tu, yz.eq_mul_den st.bracket_det]
+    grind only [st.rs.eq_mul_den tu_eqv_yz, yz.eq_mul_den st.bracket_det]
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- r/s is at least as good as anything beyond it. -/
@@ -529,7 +529,7 @@ theorem better_tu_of_lev {yz : args.Candidate} (h : st.lev st.tu yz) :
   rw [st.dist_tu, st.dist_of_tu_lev h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · left; grind only [args.mn.lt_mul_den hlt]
-  · right; exact ⟨by grind only [args.mn.eq_mul_den heq], st.den_le_of_eqv_tu heq.symm⟩
+  · right; exact ⟨by grind only [args.mn.eq_mul_den heq], st.den_le_of_tu_eqv heq⟩
 
 /-- One of the two candidates is at least as good as any candidate fraction pair. -/
 theorem yz_cases (yz : args.Candidate) :
@@ -567,25 +567,20 @@ theorem eq_tu_of_lev_of_best (h : st.lev st.tu yz) (yz_best : args.best yz) :
   · -- y/z = t/u as fractions, so u ≤ z; yz_tu gives z ≤ u
     have ⟨_, z_le_u⟩ := Or.resolve_left yz_tu (by grind only [args.mn.eq_mul_den heq])
     exact Arguments.Candidate.eq_of_eq_den
-      (Int.le_antisymm z_le_u (st.den_le_of_eqv_tu heq.symm))
+      (Int.le_antisymm z_le_u (st.den_le_of_tu_eqv heq))
       (Int.eq_of_mul_eq_mul_right st.v_nonzero heq.symm)
 
 /-- Any best approximation is equal to either r/s or t/u. -/
 theorem eq_rs_or_eq_tu_of_best (yz_best : args.best yz) :
-    yz = st.rs ∨ yz = st.tu := by
-  rcases st.lev_rs_or_tu_lev yz with hrs | htu
-  · left; exact st.eq_rs_of_lev_of_best hrs yz_best
-  · right; exact st.eq_tu_of_lev_of_best htu yz_best
+    yz = st.rs ∨ yz = st.tu :=
+  (st.lev_rs_or_tu_lev yz).imp (st.eq_rs_of_lev_of_best · yz_best)
+    (st.eq_tu_of_lev_of_best · yz_best)
 
 /-- At least one of r/s and t/u _is_ a best approximation. -/
-theorem rs_best_or_tu_best : args.best st.rs ∨ args.best st.tu := by
-  rcases args.better_total st.rs st.tu with (rs_better_tu | tu_better_rs)
-  · left; intro gh; rcases st.yz_cases gh with rs_better_gh | tu_better_gh
-    · exact rs_better_gh
-    · exact args.better_trans rs_better_tu tu_better_gh
-  · right; intro gh; rcases st.yz_cases gh with rs_better_gh | tu_better_gh
-    · exact args.better_trans tu_better_rs rs_better_gh
-    · exact tu_better_gh
+theorem rs_best_or_tu_best : args.best st.rs ∨ args.best st.tu :=
+  (args.better_total st.rs st.tu).imp
+    (fun rs_tu gh => (st.yz_cases gh).elim id (args.better_trans rs_tu))
+    (fun tu_rs gh => (st.yz_cases gh).elim (args.better_trans tu_rs) id)
 
 /-- If both `r/s` and `t/u` are best approximations then we're in the ambiguous case. -/
 theorem ambiguous_of_rs_and_tu_best
@@ -629,12 +624,9 @@ theorem rv_cases :
 /-- The returned fraction pair is a best approximation. -/
 theorem rv_best : args.best st.rv := by
   intro yz
-  rcases st.rv_cases with ⟨rveq, hrv⟩ | ⟨rveq, hrv⟩
-    <;> rw [rveq] <;> rcases st.yz_cases yz with h | h
-  · exact h
-  · exact args.better_trans hrv h
-  · exact args.better_trans hrv h
-  · exact h
+  rcases st.rv_cases with ⟨rveq, hrv⟩ | ⟨rveq, hrv⟩ <;> rw [rveq] <;>
+    rcases st.yz_cases yz with h | h <;>
+      first | exact h | exact args.better_trans hrv h
 
 /-! ## The ambiguous case -/
 
