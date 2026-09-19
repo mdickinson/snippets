@@ -26,8 +26,8 @@ theorem Int.eq_one_or_neg_one_of_mul_eq_one {a b : Int} (hab : a * b = 1) :
 If a linear combination of two positive integers is positive, then at least one of the
 coefficients is positive.
 -/
-theorem Int.pos_or_pos_of_mul_add_mul_pos {a b c d : Int} (c_pos : 0 < c) (d_pos : 0 < d)
-    (lc_pos : 0 < a * c + b * d) : 0 < a ∨ 0 < b := by
+theorem Int.pos_or_pos_of_mul_add_mul_pos {a b c d : Int}
+    (c_pos : 0 < c) (d_pos : 0 < d) (lc_pos : 0 < a * c + b * d) : 0 < a ∨ 0 < b := by
   rcases (show 0 < a * c ∨ 0 < b * d by omega) with h1 | h2
   · left; exact Int.pos_of_mul_pos_left h1 c_pos
   · right; exact Int.pos_of_mul_pos_left h2 d_pos
@@ -35,14 +35,17 @@ theorem Int.pos_or_pos_of_mul_add_mul_pos {a b c d : Int} (c_pos : 0 < c) (d_pos
 /--
 A product of two integers is positive iff both are positive or both are negative.
 -/
-theorem Int.mul_pos_iff {a b : Int} : 0 < a * b ↔ (0 < a ∧ 0 < b) ∨ (a < 0 ∧ b < 0) := by
+theorem Int.mul_pos_iff {a b : Int} :
+    0 < a * b ↔ (0 < a ∧ 0 < b) ∨ (a < 0 ∧ b < 0) := by
   grind only [Int.lt_trichotomy 0, Int.mul_pos, Int.mul_pos_of_neg_of_neg,
     Int.mul_neg_of_pos_of_neg, Int.mul_neg_of_neg_of_pos]
 
 /--
-A product of two integers is nonnegative iff both are nonnegative or both are nonpositive.
+A product of two integers is nonnegative iff both are nonnegative or both are
+nonpositive.
 -/
-theorem Int.mul_nonneg_iff {a b : Int} : 0 ≤ a * b ↔ (0 ≤ a ∧ 0 ≤ b) ∨ (a ≤ 0 ∧ b ≤ 0) := by
+theorem Int.mul_nonneg_iff {a b : Int} :
+    0 ≤ a * b ↔ (0 ≤ a ∧ 0 ≤ b) ∨ (a ≤ 0 ∧ b ≤ 0) := by
   grind only [Int.le_total 0, Int.mul_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos,
     Int.mul_nonpos_of_nonneg_of_nonpos, Int.mul_nonpos_of_nonpos_of_nonneg,
     Int.mul_eq_zero]
@@ -66,7 +69,9 @@ variable (ef : FractionPair)
 /-- A fraction pair is *reduced* if its numerator and denominator are coprime. -/
 def isReduced := ∃ (g h : Int), g * ef.num + h * ef.den = 1
 
-/-- A fraction pair is a *half integer* if it has the form w + 1/2 for some integer w. -/
+/--
+A fraction pair is a *half integer* if it has the form w + 1/2 for some integer w.
+-/
 def isHalfInteger := ∃ (w : Int), 2 * ef.num = (2 * w + 1) * ef.den
 
 /- We often just need to know that the denominator of `ef` is nonnegative or nonzero. -/
@@ -90,9 +95,12 @@ theorem lt_of_lt_mul_den {a b : Int} (hlt : a * ef.den < b * ef.den) : a < b :=
 theorem le_of_le_mul_den {a b : Int} (hle : a * ef.den ≤ b * ef.den) : a ≤ b :=
   Int.le_of_mul_le_mul_right hle ef.pos
 
-/-- Two fraction pairs that are numerically equal and have equal denominator are equal. -/
+/--
+Two fraction pairs that are numerically equal and have equal denominator are equal.
+-/
 theorem eq_of_eq_den {ef gh : FractionPair}
-    (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) : ef = gh := by
+    (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
+    ef = gh := by
   rw [FractionPair.mk.injEq]; exact ⟨ eq_of_eq_mul_den gh (h_deneq ▸ heq), h_deneq ⟩
 
 end FractionPair
@@ -128,9 +136,12 @@ structure Candidate extends FractionPair where
 /-- Allow a `Candidate` to be used where a `FractionPair` is expected. -/
 instance : CoeOut args.Candidate FractionPair where coe ef := ef.toFractionPair
 
-/-- Two candidates that are numerically equal and have equal denominator are equal. -/
+/--
+Two candidates that are numerically equal and have equal denominator are equal.
+-/
 theorem Candidate.eq_of_eq_den {args : Arguments} {ef gh : args.Candidate}
-    (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) : ef = gh := by
+    (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
+    ef = gh := by
   rw [Candidate.mk.injEq]; exact FractionPair.eq_of_eq_den h_deneq heq
 
 /-
@@ -173,8 +184,10 @@ theorem better_trans {ef gh ij : args.Candidate} (h1 : args.better ef gh)
       Int.le_trans d1 d2⟩
 
 /-- The `better` relation is total. -/
-theorem better_total (ef gh : args.Candidate) : args.better ef gh ∨ args.better gh ef := by
-  rcases Int.lt_trichotomy (args.dist ef * gh.den) (args.dist gh * ef.den) with (hdist | hdist | hdist)
+theorem better_total (ef gh : args.Candidate) :
+    args.better ef gh ∨ args.better gh ef := by
+  rcases Int.lt_trichotomy (args.dist ef * gh.den) (args.dist gh * ef.den)
+    with (hdist | hdist | hdist)
   · left; left; exact hdist
   · rcases Int.le_total ef.den gh.den with (hden | hden)
     · left; right; exact ⟨ hdist, hden ⟩
@@ -194,8 +207,10 @@ def ambiguous := args.limit = 1 ∧ args.mn.isHalfInteger
 We define the floor and floor plus one of m/n as candidates. These will turn out
 to be exactly the best approximations in the ambiguous case.
 -/
-def floor : args.Candidate := ⟨⟨args.m / args.n, 1, by decide⟩, args.one_le_limit⟩
-def floorAddOne : args.Candidate := ⟨⟨args.m / args.n + 1, 1, by decide⟩, args.one_le_limit⟩
+def floor : args.Candidate :=
+  ⟨⟨args.m / args.n, 1, by decide⟩, args.one_le_limit⟩
+def floorAddOne : args.Candidate :=
+  ⟨⟨args.m / args.n + 1, 1, by decide⟩, args.one_le_limit⟩
 
 end Arguments
 
@@ -203,17 +218,17 @@ end Arguments
 
 /-
 The loop is the Euclidean algorithm on `m` and `n`, tracking the continued-fraction
-convergents of `m/n` as it goes. `a > b ≥ 0` are the two most recent remainders. `r/s` is
-the most recent convergent and `p/q` the one before it, starting from `⌊m/n⌋/1` and `1/0`,
-so `q = 0` only in the initial state. Consecutive convergents lie on opposite sides of
-m/n; `v ∈ {1, -1}` records which way round, with `r/s ≤ m/n < p/q` when `v = 1` and
-`p/q < m/n ≤ r/s` when `v = -1`. The orientation reverses on every iteration.
+convergents of `m/n` as it goes. `a > b ≥ 0` are the two most recent remainders. `r/s`
+is the most recent convergent and `p/q` the one before it, starting from `⌊m/n⌋/1` and
+`1/0`, so `q = 0` only in the initial state. Consecutive convergents lie on opposite
+sides of m/n; `v ∈ {1, -1}` records which way round, with `r/s ≤ m/n < p/q` when `v = 1`
+and `p/q < m/n ≤ r/s` when `v = -1`. The orientation reverses on every iteration.
 
-The invariants tie the remainders to the convergents. `det` is the consecutive-convergent
-identity `p * s - r * q = ±1`, with `v` as the sign. `heqa` and `heqb` say that `a` and `b`
-are the cross-multiplied distances `|p * n - m * q|` and `|m * s - r * n|` from m/n to the
-two convergents, again with `v` supplying the sign. `s_le_limit` is what the loop condition
-checked before stepping to this state.
+The invariants tie the remainders to the convergents. `det` is the
+consecutive-convergent identity `p * s - r * q = ±1`, with `v` as the sign. `heqa` and
+`heqb` say that `a` and `b` are the cross-multiplied distances `|p * n - m * q|` and
+`|m * s - r * n|` from m/n to the two convergents, again with `v` supplying the sign.
+`s_le_limit` is what the loop condition checked before stepping to this state.
 -/
 
 /-- The loop state: the two latest Euclidean remainders, the two latest convergents, and
@@ -279,7 +294,9 @@ def nextLoopState (hst : st.loopCondition) : LoopState args where
   heqb := by grind only [st.heqa, st.heqb, Int.mul_ediv_add_emod st.a st.b]
   v_eq_one_of_q_eq_zero := by grind only [st.s_pos]
 
-/-- The value max(a, 0) (as a Nat) strictly decreases with each iteration of the loop. -/
+/--
+The value max(a, 0) (as a Nat) strictly decreases with each iteration of the loop.
+-/
 theorem loop_decreases (hst : st.loopCondition) :
     (st.nextLoopState hst).a.toNat < st.a.toNat :=
   (Int.toNat_lt_toNat (Int.lt_of_le_of_lt st.b_nonneg st.b_lt_a)).mpr st.b_lt_a
@@ -406,10 +423,12 @@ The facts the after-loop analysis rests on. `bracket_det` is the loop's own `det
 carried into the bracket basis; both are in scope for a post-loop state, so it cannot be
 called `det` itself.
 -/
-theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by grind only [t, u, st.det]
+theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
+  grind only [t, u, st.det]
 
 /-- v must be either 1 or -1. -/
-theorem v_cases : st.v = 1 ∨ st.v = -1 := Int.eq_one_or_neg_one_of_mul_eq_one st.bracket_det
+theorem v_cases : st.v = 1 ∨ st.v = -1 :=
+  Int.eq_one_or_neg_one_of_mul_eq_one st.bracket_det
 
 /-- In particular, v is nonzero. -/
 theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
@@ -425,7 +444,8 @@ theorem mediant_lev_tu : st.lev st.mediant st.tu := by
   unfold mediant; grind only [lev, st.bracket_det]
 
 /-- m/n ≤ t/u if v = 1, and t/u ≤ m/n if v = -1. -/
-theorem mn_lev_tu : st.lev args.mn st.tu := st.lev_trans st.mn_lev_mediant st.mediant_lev_tu
+theorem mn_lev_tu : st.lev args.mn st.tu :=
+  st.lev_trans st.mn_lev_mediant st.mediant_lev_tu
 
 /-! ## Distances -/
 
@@ -494,7 +514,8 @@ theorem den_le_of_eqv_tu {yz : args.Candidate} (yz_eqv_tu : st.eqv yz st.tu) :
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- r/s is at least as good as anything beyond it. -/
-theorem better_rs_of_lev {yz : args.Candidate} (h : st.lev yz st.rs) : args.better st.rs yz := by
+theorem better_rs_of_lev {yz : args.Candidate} (h : st.lev yz st.rs) :
+    args.better st.rs yz := by
   unfold Arguments.better
   rw [st.dist_rs, st.dist_of_lev_rs h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
@@ -502,7 +523,8 @@ theorem better_rs_of_lev {yz : args.Candidate} (h : st.lev yz st.rs) : args.bett
   · right; exact ⟨by grind only [args.mn.eq_mul_den heq], st.den_le_of_eqv_rs heq⟩
 
 /-- t/u is at least as good as anything beyond it. -/
-theorem better_tu_of_lev {yz : args.Candidate} (h : st.lev st.tu yz) : args.better st.tu yz := by
+theorem better_tu_of_lev {yz : args.Candidate} (h : st.lev st.tu yz) :
+    args.better st.tu yz := by
   unfold Arguments.better
   rw [st.dist_tu, st.dist_of_tu_lev h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
@@ -529,7 +551,8 @@ theorem eq_rs_of_lev_of_best (h : st.lev yz st.rs) (yz_best : args.best yz) :
     grind only [args.mn.lt_mul_den hlt]
   · -- y/z = r/s as fractions, so s ≤ z; yz_rs gives z ≤ s
     have ⟨_, z_le_s⟩ := Or.resolve_left yz_rs (by grind only [args.mn.eq_mul_den heq])
-    exact Arguments.Candidate.eq_of_eq_den (Int.le_antisymm z_le_s (st.den_le_of_eqv_rs heq))
+    exact Arguments.Candidate.eq_of_eq_den
+      (Int.le_antisymm z_le_s (st.den_le_of_eqv_rs heq))
       (Int.eq_of_mul_eq_mul_right st.v_nonzero heq)
 
 /-- A best approximation beyond t/u is t/u itself. -/
@@ -543,7 +566,8 @@ theorem eq_tu_of_lev_of_best (h : st.lev st.tu yz) (yz_best : args.best yz) :
     grind only [args.mn.lt_mul_den hlt]
   · -- y/z = t/u as fractions, so u ≤ z; yz_tu gives z ≤ u
     have ⟨_, z_le_u⟩ := Or.resolve_left yz_tu (by grind only [args.mn.eq_mul_den heq])
-    exact Arguments.Candidate.eq_of_eq_den (Int.le_antisymm z_le_u (st.den_le_of_eqv_tu heq.symm))
+    exact Arguments.Candidate.eq_of_eq_den
+      (Int.le_antisymm z_le_u (st.den_le_of_eqv_tu heq.symm))
       (Int.eq_of_mul_eq_mul_right st.v_nonzero heq.symm)
 
 /-- Any best approximation is equal to either r/s or t/u. -/
@@ -564,8 +588,8 @@ theorem rs_best_or_tu_best : args.best st.rs ∨ args.best st.tu := by
     · exact tu_better_gh
 
 /-- If both `r/s` and `t/u` are best approximations then we're in the ambiguous case. -/
-theorem ambiguous_of_rs_and_tu_best (rs_best : args.best st.rs) (tu_best : args.best st.tu) :
-    args.ambiguous := by
+theorem ambiguous_of_rs_and_tu_best
+    (rs_best : args.best st.rs) (tu_best : args.best st.tu) : args.ambiguous := by
   -- The only possible case is that r/s and t/u are equidistant from m/n and s = u.
   cases (show args.better st.rs st.tu from rs_best st.tu)
   <;> cases (show args.better st.tu st.rs from tu_best st.rs) <;> try omega
@@ -625,26 +649,34 @@ variable (hamb : args.ambiguous)
 include hamb
 
 /-- It's convenient to have an oriented version of the definition of half-integer. -/
-theorem exists_oriented : ∃ w : Int, 2 * args.m * st.v = (2 * w * st.v + 1) * args.n := by
+theorem exists_oriented :
+    ∃ w : Int, 2 * args.m * st.v = (2 * w * st.v + 1) * args.n := by
   obtain ⟨w, _⟩ := hamb.2; cases st.v_cases
   · exact ⟨w, by grind only⟩
   · exact ⟨w + 1, by grind only⟩
 
 /- In the ambiguous case both endpoints of the bracket have denominator 1. -/
-theorem s_eq_one_of_ambiguous : st.s = 1 := by grind only [hamb.1, st.s_le_limit, st.s_pos]
-theorem u_eq_one_of_ambiguous : st.u = 1 := by grind only [hamb.1, st.u_le_limit, st.u_pos]
+theorem s_eq_one_of_ambiguous : st.s = 1 := by
+  grind only [hamb.1, st.s_le_limit, st.s_pos]
+theorem u_eq_one_of_ambiguous : st.u = 1 := by
+  grind only [hamb.1, st.u_le_limit, st.u_pos]
 
 /-- In the ambiguous case, m/n v = r/s v + 1/2. -/
-theorem mnv_sub_half : 2 * args.m * st.s * st.v = (2 * st.r * st.v + st.s) * args.n := by
+theorem mnv_sub_half :
+    2 * args.m * st.s * st.v = (2 * st.r * st.v + st.s) * args.n := by
   -- s = u = 1
   have s_eq_one := st.s_eq_one_of_ambiguous hamb
   have u_eq_one := st.u_eq_one_of_ambiguous hamb
 
   -- rv ≤ m/n v ≤ tv, from the general case
   have : st.r * st.v * args.n ≤ args.m * st.v := by
-    grind only [s_eq_one ▸ show st.r * args.n * st.v ≤ args.m * st.s * st.v from st.rs_lev_mn]
+    grind only [
+      s_eq_one ▸ show st.r * args.n * st.v ≤ args.m * st.s * st.v from st.rs_lev_mn
+    ]
   have : args.m * st.v ≤ st.t * st.v * args.n := by
-    grind only [u_eq_one ▸ show args.m * st.u * st.v ≤ st.t * args.n * st.v from st.mn_lev_tu]
+    grind only [
+      u_eq_one ▸ show args.m * st.u * st.v ≤ st.t * args.n * st.v from st.mn_lev_tu
+    ]
 
   -- there's a w such that m/n v = wv + 1/2, so wv < m/n v < wv + 1
   obtain ⟨w, hw⟩ := st.exists_oriented hamb
@@ -706,10 +738,12 @@ theorem v_eq_one_of_ambiguous : st.v = 1 := by
   -- Since s = u = q + ks, (1 - k)s = q, so k ≤ 1.
   have h1 : (1 - st.k) * st.s = st.q := by grind only [u]
   -- Since 0 < a - b and a - kb = c = b, and bu = cs (so b = c), we have 0 < k * b
-  have h2 : 0 < st.k * st.b := by grind only [c, st.b_lt_a, st.bu_eq_cs_of_ambiguous hamb]
+  have h2 : 0 < st.k * st.b := by
+    grind only [c, st.b_lt_a, st.bu_eq_cs_of_ambiguous hamb]
   -- It follows from positivity of s and nonnegativity of b that k = 1.
   have : st.k = 1 := by grind only [
-    st.s_pos, st.b_nonneg, Int.mul_nonneg_iff.mp (h1 ▸ st.q_nonneg), Int.mul_pos_iff.mp h2]
+    st.s_pos, st.b_nonneg,
+    Int.mul_nonneg_iff.mp (h1 ▸ st.q_nonneg), Int.mul_pos_iff.mp h2]
   exact st.v_eq_one_of_q_eq_zero (show st.q = 0 by grind only)
 
 /-- In the ambiguous case r/s = ⌊m/n⌋/1. -/
@@ -785,7 +819,8 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : args.Candidate} :
 
 /-- A best approximation is one of the two bracket endpoints, and both are in lowest
 terms, with Bézout coefficients read off `bracket_det`. -/
-theorem isReduced_of_best {ef : args.Candidate} (hef : args.best ef) : ef.isReduced := by
+theorem isReduced_of_best {ef : args.Candidate} (hef : args.best ef) :
+    ef.isReduced := by
   let st := args.postLoopState
   rcases st.eq_rs_or_eq_tu_of_best hef with rfl | rfl
   · exact ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
@@ -794,7 +829,8 @@ theorem isReduced_of_best {ef : args.Candidate} (hef : args.best ef) : ef.isRedu
 /-! ## The return value -/
 
 /-- The limitDenominator return value is always a best approximation. -/
-theorem limitDenominator_best : args.best args.limitDenominator := args.postLoopState.rv_best
+theorem limitDenominator_best : args.best args.limitDenominator :=
+  args.postLoopState.rv_best
 
 /-- In the ambiguous case, ⌊m/n⌋ is returned. -/
 theorem limitDenominator_ambiguous_case (hamb : args.ambiguous) :
