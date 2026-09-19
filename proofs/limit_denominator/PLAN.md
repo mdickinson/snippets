@@ -11,7 +11,7 @@ stay. Started from `a3983376`.
    correctness is that equality composed with the spec bridge.
 2. **`v` stays in `LoopState`**, and goes back into the simplified listing, seventh in
    both simultaneous assignments. We control that listing — it appears publicly only
-   in the issue, which can be updated to agree.
+   in the issue, which carries `v` itself.
 3. **`isBestApproximation` becomes two-clause.** The tie towards the floor is not a
    sense in which the floor is better; it is an implementation accident, and it moves
    out of the specification into separate statements.
@@ -24,6 +24,16 @@ stay. Started from `a3983376`.
    reproved through Bézout coefficients read off `bracket_det`; the spec-level proof
    is retired.
 8. **Seven modules** for the core.
+9. **The four new statements and `gcd_eq_one` carry `0 < n`.** Under two clauses
+   `n = 0` stops being vacuous — every `(r, 1)` is then best, so uniqueness fails
+   outside the ambiguous case — and for `n < 0` Lean's `m / n` is not the floor, so the
+   ambiguous characterisation names the wrong pair. The project has no interest in a
+   non-positive target denominator; the hypothesis says so. `gcd_eq_one` gives up a
+   statement it can make today about a negative `n`, deliberately.
+10. **`checkBestApproximation` gains an ambiguous-case conjunct**, replacing the clause
+    it loses. Like the `Int.gcd r s == 1` conjunct beside it, it goes beyond the
+    specification deliberately: it is the executable counterpart of the two
+    `*_ambiguous` theorems.
 
 ## What the decisions do to the shape
 
@@ -82,11 +92,25 @@ def isBestApproximation (m n l r s : Int) : Prop :=
     atLeastAsClose m n r s y z
     ∧ (atLeastAsClose m n y z r s → s ≤ z)
 
-/-- The one case in which `isBestApproximation` does not determine the answer. -/
+/--
+The one case in which `isBestApproximation` does not determine the answer, for a
+positive target denominator. (For `n = 0` every `(r, 1)` is best, whatever the limit.)
+-/
 def isAmbiguous (m n l : Int) : Prop := l = 1 ∧ ∃ w : Int, 2 * m = (2 * w + 1) * n
 ```
 
 `isCorrectLimitDenominator` is unchanged.
+
+`Tests/SpecCheck.lean`'s Bool form of the new definition, decision 10:
+
+```lean
+def checkAmbiguous (m n l : Int) : Bool :=
+  l == 1 && 2 * m % n == 0 && (2 * m / n) % 2 == 1
+```
+
+with `checkBestApproximation` gaining `!checkAmbiguous m n l || (r == m / n && s == 1)`.
+Both readings of `%` want the grid's `0 < n`, which the existing `y := m * z / n` wants
+too; the odd-quotient test is sign-safe either way, `%` on `Int` being `emod`.
 
 ## The four new public statements
 
@@ -94,21 +118,26 @@ All four exist already inside `Experiment.lean`; this is repackaging in the
 specification's vocabulary.
 
 ```lean
-theorem isBestApproximation_unique_of_not_ambiguous (hamb : ¬ isAmbiguous m n l)
+theorem isBestApproximation_unique_of_not_ambiguous (hn : 0 < n)
+    (hamb : ¬ isAmbiguous m n l)
     (h₁ : isBestApproximation m n l r₁ s₁) (h₂ : isBestApproximation m n l r₂ s₂) :
     r₁ = r₂ ∧ s₁ = s₂                                      -- non_ambiguous_best
 
-theorem isBestApproximation_of_ambiguous (hamb : isAmbiguous m n l) :
+theorem isBestApproximation_of_ambiguous (hn : 0 < n) (hamb : isAmbiguous m n l) :
     isBestApproximation m n l r s ↔
       (r, s) = (m / n, 1) ∨ (r, s) = (m / n + 1, 1)         -- ambiguous_best
 
-theorem limitDenominatorSimplified_ambiguous (hamb : isAmbiguous m n l) :
+theorem limitDenominatorSimplified_ambiguous (hn : 0 < n) (hamb : isAmbiguous m n l) :
     returns (limitDenominatorSimplified m n l) (m / n, 1)   -- rv_eq_floor
-theorem limitDenominatorStdlib_ambiguous ...                -- likewise
+theorem limitDenominatorStdlib_ambiguous ...                -- likewise, under `valid`
 ```
 
-Under the stdlib listing's `valid` the target is in lowest terms, so its ambiguous
-case is `n = 2` with `m` odd and `l = 1`.
+Every one of them needs `0 < n`, per decision 9; the two listing statements take it
+from `valid` anyway.
+
+Under the stdlib listing's `valid` the target is in lowest terms, so its ambiguous case
+is `n = 2` with `m` odd and `l = 1` — which fails `n ≤ l`, so the fast path is never the
+ambiguous one, and that theorem lives wholly on the loop path.
 
 ## The bridge
 
@@ -137,14 +166,15 @@ only constructive one.
 `eq_rs_or_eq_tu_of_best` → coefficients off `bracket_det` → `Int.gcd_eq_one_of_bezout`.
 
 **This needs `0 < n`, to build the `Arguments`, which the current statement does not
-assume.** Keeping it hypothesis-free costs two small additions:
+assume.** Per decision 9 it gains that hypothesis rather than a tail covering the other
+signs: no negation lemma carrying a negative `n` to a positive one, and no separate
+`n = 0` case where every candidate is equidistant and clause 2 forces `s = 1`. The
+theorem stops saying anything outside `0 < n`, which is where the project's interest
+stops too.
 
-- `atLeastAsClose m n r s y z ↔ atLeastAsClose (-m) (-n) r s y z` by `Int.abs_neg`, so
-  a negative `n` flips to a positive one and the machinery applies;
-- `n = 0` separately: every candidate is then equidistant, so clause 2 forces `s = 1`
-  and `Int.gcd_one_right` finishes it.
-
-Fallback if that tail turns ugly: add `0 < n` to the statement and say so in README.
+The hypothesis lands at step 3, with the proof that uses it. Added at step 1, on top of
+the existing proof, it would be an unused binder — `unusedVariables` warns, and
+`--wfail` turns that into a failure.
 
 ## `v` in the simplified listing
 
@@ -157,11 +187,18 @@ t, u = p + k * r, q + k * s
 return (r, s) if 2 * b * u <= n else (t, u)
 ```
 
-Both lines fit in 88 columns. **Checked:** no `unusedVariables` warning — `do`-block
-mutables all become part of the desugared loop state, so `--wfail` is not at risk and
-no `set_option` is needed. The listing's docstring goes from "two changes" to one, the
-enforced preconditions, which tightens the claim that this is the issue's listing;
-same edit in README beside its copy. The issue is updated to match.
+Both Python lines fit in 88 columns, at 58 and 84 characters. The Lean does not: the
+loop body's simultaneous assignment goes from 84 characters to 91, so that one line
+wraps.
+
+**Checked:** no `unusedVariables` warning — `do`-block mutables all become part of the
+desugared loop state, so `--wfail` is not at risk and no `set_option` is needed. The
+listing's docstring goes from "two changes" to one, the enforced preconditions, which
+tightens the claim that this is the issue's listing; same edit in README beside its
+copy.
+
+The issue already carries `v` in its invariants, so this closes a divergence rather
+than opening one, and no edit there is needed for the two listings to agree.
 
 ## Target layout
 
@@ -202,39 +239,66 @@ two listings agreeing as a theorem rather than as a test.
 
 ## Order of work
 
-One commit each, `lake build --wfail` and `lake lint` green at each. Steps 1 and 4 are
-the only ones touching the trusted surface, and both are small enough to review alone.
+One commit each, `lake build --wfail` and `lake lint` green at each. Steps 1, 3 and 4
+touch the trusted surface — step 1 the specification, step 3 the first two new
+statements and `gcd_eq_one`'s hypothesis, step 4 the listing — and each is small enough
+to review alone.
 
 1. **The specification.** `isBestApproximation` drops clause 3; `atLeastAsClose` flips;
    `isAmbiguous` is added. Adjust `gcd_eq_one` and `isBestApproximation_self` for both
-   changes, drop a bullet from each of the two `Bracketing.isBestApproximation_*`, and
-   flip and trim `Tests/SpecCheck.lean`'s `checkAtLeastAsClose` and `checkCandidate`.
-   Delete `isBestApproximation_unique`. **This opens a window** in which the tree
-   claims neither uniqueness nor the tie-break; step 3 closes most of it, step 5 the
-   rest.
+   changes, keeping both statements as they stand, drop a bullet from each of the two
+   `Bracketing.isBestApproximation_*`, and flip and trim `Tests/SpecCheck.lean`'s
+   `checkAtLeastAsClose` and `checkCandidate`,
+   which gains `checkAmbiguous` and decision 10's conjunct. Delete
+   `isBestApproximation_unique`.
+
+   The flip is not free in the layer that is about to die. `Bracket.lean` hands out its
+   bounds in the old orientation, on `(m * s - r * n).abs`, and `omega` and `grind`
+   treat `.abs` as an atom, so the two `Bracketing.isBestApproximation_*` proofs need
+   rewriting through `Int.abs_neg` to take them; `gcd_eq_one` needs its residual
+   equation negated. Throwaway work on code step 7 deletes, and the price of a
+   trusted-surface diff that can be read on its own.
+
+   **This opens a window** in which the tree proves neither uniqueness nor the
+   tie-break; step 3 closes most of it, step 5 the rest. Behaviour stays covered
+   throughout: `Tests/Vectors.lean` pins all four ambiguous cases, and decision 10's
+   conjunct keeps `SpecCheck` testing the tie direction across the window.
 2. **Unify `Int.abs`.** New `Definitions/IntAbs.lean`; `Experiment.lean` drops its own
    copy and its duplicate lemmas. Clears the handoff's recorded blocker: with a
    public, exposed `Int.abs` in scope, `dist` can go public whenever wanted.
 3. **The bridge**, and on it: uniqueness, the ambiguous characterisation, and
    `gcd_eq_one`'s new proof. Written into `Experiment.lean` where it stands; no
-   listing touched.
+   listing touched. `gcd_eq_one` gains its `0 < n` here, with the proof that uses it.
+   The first two of decision 5's four pins land here.
 4. **`v` back in the simplified listing.** The listing, its docstring, and a mechanical
    thread-through of the extra tuple component in the existing `SimplifiedCorrectness`
    — about twenty lines of churn in a file step 5 replaces, bought so that the
    trusted-surface diff can be read on its own.
-5. **The simplified listing onto the new core**, plus its ambiguous-case theorem.
+5. **The simplified listing onto the new core**, plus its ambiguous-case theorem and
+   its pin.
 6. **The stdlib listing**, plus its ambiguous-case theorem. Needs `LoopState.b_pos` (the
    numerator/denominator recovery is derivable from `a_eq_pq_cross`, `b_eq_rs_cross`
    and `det`, so the existing proof transfers), the peeled first iteration, the
    permuted state, and `v` supplied from `p * s - r * q`. `isBestApproximation_self`
-   still carries the fast path.
+   still carries the fast path, which the ambiguous-case theorem — the last pin — never
+   reaches.
 7. **Delete the dead chain.**
-8. **Split and rename `Experiment.lean`** into the seven modules — a pure move,
-   token-identical once whitespace is removed, as `e75e3973` was. After (7), because it
-   wants the names `Bracket.lean` and `BestApproximation.lean` back.
-9. **Docs.** README §§ the listing, "What is proved", "Project structure", and the
-   `isBestApproximation_unique` citation in "What do I need to trust?"; PROOF.md; the
-   issue's listing; PR #19's description. The largest single chunk, and prose rather
+8. **Split and rename `Experiment.lean`** into the seven modules. Not a pure move:
+   `Experiment.lean` carries no `public` or `@[expose]` marker anywhere today, which is
+   what lets its own `Int.abs` coexist with the specification's. The split makes most
+   of its declarations public, and `@[expose]` every definition another module unfolds
+   — `Arguments.dist`, `better`, `ambiguous`, `floor`, `floorAddOne`, `isHalfInteger`
+   and `LoopState.loopCondition` at least. The lint gate then applies to them, and
+   `ambiguous`, `floor`, `floorAddOne`, `u`, `rs`, `tu` and `lev` have block comments
+   where they will need docstrings. After (7), because it wants the names
+   `Bracket.lean` and `BestApproximation.lean` back.
+9. **Docs.** README §§ the listing, "What is proved", "Project structure" — which has
+   no `Experiment.lean` row even now — "`while` loops and simultaneous assignment",
+   whose six-tuple and `forIn_loop_invariant` citation both go, and the
+   `isBestApproximation_unique` citation in "What do I need to trust?", where the
+   replacement is a two-part claim of equal strength and should be spelled out as one,
+   and where `gcd_eq_one`'s new hypothesis wants a line of its own. Then PROOF.md and
+   PR #19's description. The largest single chunk, and prose rather
    than proof.
 10. **Optional.** The two listings agree, as a theorem. Needs
     `args.limitDenominator = args.mn` when `n ≤ limit` and the target is in lowest
@@ -248,10 +312,13 @@ the only ones touching the trusted surface, and both are small enough to review 
   per-listing: the invariant-threading route still exists for whichever listing fights.
 - **R2.** The stdlib listing under Option A: `v` reconstructed, the first iteration
   peeled, the state permuted, and the loop condition coinciding only under `b_pos`.
-- **R3.** `gcd_eq_one`'s negative-`n` and zero-`n` tail, per decision 7.
-- **R4.** PROOF.md. §§ "Removing the orientation from the state" (reversed outright),
-  "Vocabulary", "Loop invariants", "After the loop", "The bracket", "Choosing between
-  the two candidates" and "Discharging the three clauses" all describe machinery or
-  decisions being replaced. §§ "The specification", "Why the seventh invariant", "What
-  the stdlib listing adds" and "What the informal proof needs that this one does not"
-  survive with edits.
+  Smaller than it looks: `b_pos` is state-local, `a * r + b * p = m` and
+  `a * s + b * q = n` coming back from `a_eq_pq_cross`, `b_eq_rs_cross` and `det`, and
+  its two hypotheses — lowest terms, and `limit < n` — are about `args`, so the
+  induction threads nothing that varies.
+- **R3.** PROOF.md. §§ "Removing the orientation from the state" (reversed outright),
+  "Vocabulary", "Loop invariants", "After the loop" with "The degenerate tie", "The
+  bracket", "Choosing between the two candidates" and "Discharging the three clauses"
+  all describe machinery or decisions being replaced. §§ "The specification", "Why the
+  seventh invariant", "What the stdlib listing adds" and "What the informal proof needs
+  that this one does not" survive with edits.
