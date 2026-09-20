@@ -207,13 +207,9 @@ names follow that split:
 | File | Role |
 | --- | --- |
 | [`SupportLemmas.lean`](LimitDenominator/Proofs/SupportLemmas.lean) | general `Int` facts the core library lacks |
-| [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | driving a `while` loop with a measure and an invariant, or peeling one iteration, monad-agnostically |
+| [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | peeling one iteration off a `while` loop, or stopping it, monad-agnostically |
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
-| [`LoopInvariant.lean`](LimitDenominator/Proofs/LoopInvariant.lean) | the loop invariant, its preservation, and the facts derived from it |
-| [`AfterLoop.lean`](LimitDenominator/Proofs/AfterLoop.lean) | the extended candidate, and the `Bracketing` facts everything downstream uses |
-| [`Bracket.lean`](LimitDenominator/Proofs/Bracket.lean) | the bracket lemma, the two-way case split it yields, and the distance bound and equality case on each side |
-| [`TieBreak.lean`](LimitDenominator/Proofs/TieBreak.lean) | comparing the two candidates |
-| [`BestApproximation.lean`](LimitDenominator/Proofs/BestApproximation.lean) | the three specification clauses, for whichever candidate is returned and for the fast path |
+| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the mathematics: the loop and its state, the bracket, the algorithm, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
 

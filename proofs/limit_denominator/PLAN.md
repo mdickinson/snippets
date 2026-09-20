@@ -7,10 +7,9 @@ stay.
 
 ## Progress
 
-Steps 1 to 6 have landed; their commits carry the reasoning, and the tree is the
+Steps 1 to 7 have landed; their commits carry the reasoning, and the tree is the
 record of what they produced, so the sections that described them have been cut. What
-they changed about the steps still to come is folded in below. Step 7 is next, and is
-now a pure deletion: nothing outside the old chain refers to any of it.
+they changed about the steps still to come is folded in below. Step 8 is next.
 
 ## Decisions taken
 
@@ -127,13 +126,7 @@ statements at Lean's three axioms, with no `sorryAx`.
 | `Proofs/SimplifiedCorrectness.lean` | rewritten: fold, induct, read off |
 | `Proofs/StdlibCorrectness.lean` | the same, peeled and permuted |
 
-## What dies
-
-Step 7 takes the five files and `forIn_loop_invariant`; `Bracket.lean`'s name is reused
-at step 8. What it leaves to check by hand once they are gone: from `SupportLemmas.lean`,
-`Int.le_mul_of_one_le_left`, `Int.abs_cancel` and `Int.abs_lt_abs_of_mul_lt_mul`, which
-served the bracket manoeuvres that `lev`/`eqv` and `dist_of_lev_rs` replace, and
-`Int.abs_mul_of_pos` if `gcd_eq_one` was its only caller.
+## What the rework buys
 
 Not a line-count win: the two developments are comparable in size. The win is one
 vocabulary instead of two, a specification that says only what it means, and results
@@ -168,12 +161,11 @@ to review alone.
    permuted state. Landed. `LoopState.b_pos` and `isBestApproximation_self` moved into
    the core, the latter into the closing specification section; `Tests/Axioms.lean`
    ends with its nine pins, as decision 5 said it would.
-7. **Delete the dead chain**: `LoopInvariant.lean`, `AfterLoop.lean`, `TieBreak.lean`,
-   `Bracket.lean` and `BestApproximation.lean`, their rows in `Proofs.lean`, and
-   `WhileLoop.lean`'s `forIn_loop_invariant`. All five files are reachable only from
-   each other and the aggregator, and `forIn_loop_invariant` has no callers at all.
-   `BestApproximation.lean` still holds the second copy of `isBestApproximation_self`,
-   which goes with it.
+7. **Delete the dead chain.** Landed, and it took `SupportLemmas.lean` with it:
+   `Int.le_mul_of_one_le_left`, `Int.abs_neg`, `Int.abs_of_nonneg`, `Int.abs_mul_of_pos`,
+   `Int.abs_cancel` and `Int.abs_lt_abs_of_mul_lt_mul` had no reachable callers left,
+   and `Int.dvd_of_mul_eq_mul_of_gcd_eq_one` is down to one in-file caller and so is
+   private now. What survives is checked used, one grep per name.
 8. **Split and rename `Experiment.lean`** into the modules the target layout lists.
    Not a pure move: the markers move with the declarations, and the split turns what
    is one module boundary into eight, so each one is decided again — some of what is
@@ -188,14 +180,19 @@ to review alone.
    drops the `Definitions.Specification` import step 3 added, which is what makes
    decision 11 true of the split layout, and takes `Tests/Axioms.lean`'s import of
    `Experiment` away again.
-9. **Docs.** README §§ the listing, "What is proved", "Project structure" — which has
-   no `Experiment.lean` row even now — "`while` loops and simultaneous assignment",
-   whose six-tuple and `forIn_loop_invariant` citation both go, and the
+9. **Docs.** The listing and the structure table went with steps 5 and 7, so what is
+   left is prose, plus fourteen links left dangling by the deletion — four in README
+   (lines 105, 310, 314 and 442) and ten in PROOF.md (91, 147, 168, 206, 295, 364, 388,
+   396, 452 and 460). Step 8 revives the names `BestApproximation.lean` and
+   `Bracket.lean`, so those links resolve again on their own, to different contents;
+   the ones naming `LoopInvariant.lean`, `AfterLoop.lean`, `TieBreak.lean` or
+   `forIn_loop_invariant` do not, and neither does README's
    `isBestApproximation_unique` citation in "What do I need to trust?", where the
    replacement is a two-part claim of equal strength and should be spelled out as one,
-   and where `gcd_eq_one`'s new hypothesis wants a line of its own. Then PROOF.md and
-   PR #19's description. The largest single chunk, and prose rather
-   than proof.
+   and where `gcd_eq_one`'s new hypothesis wants a line of its own. README's
+   "`while` loops and simultaneous assignment" still describes the loop as driven by
+   `forIn_loop_invariant`. Then PROOF.md — R3 has the section list — and PR #19's
+   description. The largest single chunk, and prose rather than proof.
 10. **Optional.** The two listings agree, as a theorem. No new lemma about the
     algorithm is needed. On the slow path both listings equal `args.limitDenominator`
     by Option A. On the fast path the stdlib pair `(m, n)` is best by
