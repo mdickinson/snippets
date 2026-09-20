@@ -83,16 +83,6 @@ A *fraction pair* is a (possibly non-reduced) fraction `num / den`, with `den` p
 -/
 structure FractionPair where (num : Int) (den : Int) (pos : 0 < den)
 
-namespace FractionPair
-
-/- In this section, write `ef` for a generic fraction pair. -/
-variable (ef : FractionPair)
-
-/-- A fraction pair is *reduced* if its numerator and denominator are coprime. -/
-def isReduced := ∃ (g h : Int), g * ef.num + h * ef.den = 1
-
-end FractionPair
-
 /-! # Arguments -/
 
 /--
@@ -116,6 +106,10 @@ approximation to `m/n`, in a sense to be made precise below.
 -/
 structure Candidate extends FractionPair where
   den_limited : den ≤ args.limit
+
+/-- A candidate is *reduced* if its numerator and denominator are coprime. -/
+def Candidate.isReduced {args : Arguments} (ef : args.Candidate) :=
+  ∃ (g h : Int), g * ef.num + h * ef.den = 1
 
 /--
 Two candidates that are numerically equal and have equal denominator are equal.
