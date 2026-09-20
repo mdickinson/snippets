@@ -401,6 +401,15 @@ theorem v_cases : st.v = 1 ∨ st.v = -1 :=
 /-- In particular, v is nonzero. -/
 theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
 
+/-- The near endpoint `r/s` is in lowest terms, with Bézout coefficients read off
+`bracket_det`. -/
+theorem isReduced_rs : st.rs.isReduced :=
+  ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
+
+/-- The far endpoint `t/u` likewise, from the same determinant. -/
+theorem isReduced_tu : st.tu.isReduced :=
+  ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
+
 /-! ## Distances -/
 
 /--
@@ -773,14 +782,14 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : args.Candidate} :
 
 /-! ## Any best approximation is reduced -/
 
-/-- A best approximation is one of the two bracket endpoints, and both are in lowest
-terms, with Bézout coefficients read off `bracket_det`. -/
+/-- A best approximation is one of the two bracket endpoints, and both of those are in
+lowest terms. -/
 theorem isReduced_of_best {ef : args.Candidate} (hef : args.best ef) :
     ef.isReduced := by
   let st := args.postLoopState
   rcases st.eq_rs_or_eq_tu_of_best hef with rfl | rfl
-  · exact ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
-  · exact ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
+  · exact st.isReduced_rs
+  · exact st.isReduced_tu
 
 /-! ## The return value -/
 
