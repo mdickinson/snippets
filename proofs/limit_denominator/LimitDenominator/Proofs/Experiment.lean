@@ -76,18 +76,11 @@ theorem Int.lt_of_lt_mul_pos {a b c : Int} (hc : 0 < c) (hlt : a * c < b * c) : 
 theorem Int.le_of_le_mul_pos {a b c : Int} (hc : 0 < c) (hle : a * c ≤ b * c) : a ≤ b :=
   Int.le_of_mul_le_mul_right hle hc
 
-/-! # Fraction pairs -/
-
-/--
-A *fraction pair* is a (possibly non-reduced) fraction `num / den`, with `den` positive.
--/
-structure FractionPair where (num : Int) (den : Int) (pos : 0 < den)
-
 /-! # Arguments -/
 
 /--
-The arguments to the limitDenominator algorithm consist of a fraction pair m/n and a
-positive limit on the denominator.
+The arguments to the limitDenominator algorithm consist of a fraction `m/n` with `n`
+positive, and a positive limit on the denominator.
 -/
 structure Arguments where
   (m n limit : Int)
@@ -100,11 +93,14 @@ namespace Arguments
 variable (args : Arguments)
 
 /--
-A *candidate* solution to the problem is a fraction pair whose denominator is bounded by
-the given limit. We're interested in finding the candidate that offers the best
-approximation to `m/n`, in a sense to be made precise below.
+A *candidate* solution to the problem is a (possibly non-reduced) fraction `num / den`
+whose denominator is positive and bounded by the given limit. We're interested in
+finding the candidate that offers the best approximation to `m/n`, in a sense to be
+made precise below.
 -/
-structure Candidate extends FractionPair where
+structure Candidate where
+  (num den : Int)
+  pos : 0 < den
   den_limited : den ≤ args.limit
 
 /-- A candidate is *reduced* if its numerator and denominator are coprime. -/
@@ -117,7 +113,7 @@ Two candidates that are numerically equal and have equal denominator are equal.
 theorem Candidate.eq_of_eq_den {args : Arguments} {ef gh : args.Candidate}
     (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
     ef = gh := by
-  rw [Candidate.mk.injEq, FractionPair.mk.injEq]
+  rw [Candidate.mk.injEq]
   exact ⟨ Int.eq_of_eq_mul_pos gh.pos (h_deneq ▸ heq), h_deneq ⟩
 
 /-
@@ -189,9 +185,9 @@ We define the floor and floor plus one of m/n as candidates. These will turn out
 to be exactly the best approximations in the ambiguous case.
 -/
 def floor : args.Candidate :=
-  ⟨⟨args.m / args.n, 1, by decide⟩, args.one_le_limit⟩
+  ⟨args.m / args.n, 1, by decide, args.one_le_limit⟩
 def floorAddOne : args.Candidate :=
-  ⟨⟨args.m / args.n + 1, 1, by decide⟩, args.one_le_limit⟩
+  ⟨args.m / args.n + 1, 1, by decide, args.one_le_limit⟩
 
 end Arguments
 
@@ -306,13 +302,12 @@ end LoopState
 /-
 A `PostLoopState` is a `LoopState` whose loop condition has gone false. The state of
 knowledge that gives us is the block of theorems below the structure: the loop's own r/s
-and a second endpoint t/u form a Farey pair bracketing the target fraction pair m/n;
+and a second endpoint t/u form a Farey pair bracketing the target fraction m/n;
 both r/s and t/u have "small" denominator (s ≤ limit and u ≤ limit), but
 that s + u exceeds our denominator limit (s + u > limit), and it follows that everything
 strictly between `r/s` and `t/u` has denominator exceeding `limit`. (We prove the
-contrapositive of this below, as `lev_rs_or_tu_lev`: any fraction pair with denominator
-no larger than `limit` must be outside the bracket, or equal to one or other of the
-endpoints.)
+contrapositive of this below, as `lev_rs_or_tu_lev`: every candidate must be outside
+the bracket, or equal to one or other of the endpoints.)
 
 The field `v` represents the orientation of the bracket, and from `bracket_det` it must
 be either `1` or `-1`. If `v = 1` then we have
@@ -358,8 +353,8 @@ theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
 theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_add_u]
 
 /- The two bracket endpoints, packaged as candidates. -/
-abbrev rs : args.Candidate := ⟨⟨st.r, st.s, st.s_pos⟩, st.s_le_limit⟩
-abbrev tu : args.Candidate := ⟨⟨st.t, st.u, st.u_pos⟩, st.u_le_limit⟩
+abbrev rs : args.Candidate := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
+abbrev tu : args.Candidate := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 
 /-
 If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
@@ -601,7 +596,7 @@ theorem rv_cases :
       · exact Int.le_of_mul_le_mul_left
           (heq ▸ Int.le_mul_pos st.u_pos st.b_le_c) st.c_pos
 
-/-- The returned fraction pair is a best approximation. -/
+/-- The returned candidate is a best approximation. -/
 theorem rv_best : args.best st.rv := by
   intro yz
   rcases st.rv_cases with ⟨rveq, hrv⟩ | ⟨rveq, hrv⟩ <;> rw [rveq] <;>
