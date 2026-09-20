@@ -55,3 +55,14 @@ public theorem forIn_loop_invariant
       exact ind (measure r') (by omega) r' hinv rfl
     · rw [hbody, pure_bind]
       exact ⟨r', rfl, hpost⟩
+
+/--
+Stopping a `while` loop, given a state at which the body neither raises nor iterates.
+-/
+public theorem forIn_loop_done
+    {m : Type → Type} {α : Type} [Monad m] [LawfulMonad m] [Lean.Order.MonadTail m]
+    (body : Unit → α → m (ForInStep α)) {r r' : α}
+    (hbody : body () r = pure (ForInStep.done r')) :
+    forIn Lean.Loop.mk r body = pure r' := by
+  show Lean.Loop.forIn Lean.Loop.mk r body = _
+  rw [Lean.Loop.forIn_eq_of_monadTail, hbody, pure_bind]

@@ -1,30 +1,31 @@
 module
 
 public import LimitDenominator.Definitions.LimitDenominatorSimplified
-public import LimitDenominator.Definitions.Specification
-public import LimitDenominator.Proofs.BestApproximation
+public import LimitDenominator.Proofs.Experiment
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
 Correctness of `limitDenominatorSimplified`.
 
-This file is the mechanics: it names the two halves of the `do` block — `loopBody` and
-`afterLoop` — folds the translation onto them, drives the loop with `forIn_loop_invariant`, and
-reads the result off. All of the mathematics has already happened, in `BestApproximation`.
+This file is the mechanics: it names the two halves of the `do` block — `loopBody`
+and `afterLoop` — folds the translation onto them, identifies the loop with
+`runLoop`, and reads the result off. All of the mathematics has already happened,
+in `Experiment`.
 
-The six-tuple state appears only here. `LoopInvariant` and `Bracketing` take plain `Int`
-arguments and never project out of a tuple.
+The six-tuple state appears only here. `LoopState` carries the same six numbers with
+their invariants and the orientation attached, and `loopTuple` is the projection
+onto the tuple.
 -/
 
 /-- The mutable state of the loop: `(a, b, p, q, r, s)`. -/
-abbrev LoopState := Int × Int × Int × Int × Int × Int
+abbrev LoopTuple := Int × Int × Int × Int × Int × Int
 
 /--
 The loop body, named. This is definitionally what `limitDenominatorSimplified`'s `do` block
 desugars to, so `limitDenominatorSimplified_fold` folds the loop onto it by `rfl`.
 -/
-def loopBody (l : Int) (_u : Unit) (state : LoopState) : PyExcept (ForInStep LoopState) :=
+def loopBody (l : Int) (_u : Unit) (state : LoopTuple) : PyExcept (ForInStep LoopTuple) :=
   let ⟨a, b, p, q, r, s⟩ := state
   do
     let cond ← pure (0 < b : Bool) <&&> (do return q + (← pyFloordiv a b) * s ≤ l)
@@ -35,7 +36,7 @@ def loopBody (l : Int) (_u : Unit) (state : LoopState) : PyExcept (ForInStep Loo
       pure (ForInStep.done (a, b, p, q, r, s))
 
 /-- The tail of the `do` block, named likewise: the extended candidate and the final choice. -/
-def afterLoop (n l : Int) (state : LoopState) : PyExcept (Int × Int) :=
+def afterLoop (n l : Int) (state : LoopTuple) : PyExcept (Int × Int) :=
   let ⟨_a, b, p, q, r, s⟩ := state
   do
     let k ← pyFloordiv (l - q) s
@@ -75,33 +76,55 @@ theorem loopBody_of_pos {l a b p q r s : Int} (hb : 0 < b) :
 
 /-! ## Driving the loop -/
 
-/-- The loop invariant, as a predicate on the loop's state. -/
-def loopInvariant (m n l : Int) (state : LoopState) : Prop :=
-  let ⟨a, b, p, q, r, s⟩ := state
-  LoopInvariant m n l a b p q r s
+/-- The six numbers a loop state carries, as the tuple the `do` block threads. -/
+def loopTuple {args : Arguments} (st : LoopState args) : LoopTuple :=
+  (st.a, st.b, st.p, st.q, st.r, st.s)
 
-/-- The loop invariant together with the negation of the loop condition. -/
-def loopPost (m n l : Int) (state : LoopState) : Prop :=
-  let ⟨a, b, p, q, r, s⟩ := state
-  LoopInvariant m n l a b p q r s ∧ (b = 0 ∨ (0 < b ∧ l < q + a / b * s))
+/-- Where the loop condition holds, one iteration of the body is one `nextLoopState`. -/
+theorem loopBody_of_loopCondition {args : Arguments} {st : LoopState args}
+    (hst : st.loopCondition) :
+    loopBody args.limit () (loopTuple st) =
+      pure (ForInStep.yield (loopTuple (st.nextLoopState hst))) := by
+  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s) = _
+  rw [loopBody_of_pos hst.1, ite_eq_left hst.2]
+  rfl
 
-/--
-Under the invariant the body never raises: it either yields a state that still satisfies the
-invariant with a strictly smaller `b`, or finishes with the loop condition false.
--/
-theorem loopBody_step (m n l : Int) (state : LoopState) (hinv : loopInvariant m n l state) :
-    (∃ state', loopBody l () state = pure (ForInStep.yield state')
-        ∧ loopInvariant m n l state' ∧ state'.2.1.toNat < state.2.1.toNat)
-    ∨ (∃ state', loopBody l () state = pure (ForInStep.done state') ∧ loopPost m n l state') := by
-  obtain ⟨a, b, p, q, r, s⟩ := state
-  have h : LoopInvariant m n l a b p q r s := hinv
-  rcases (by have := h.b_nonneg; omega : b = 0 ∨ 0 < b) with rfl | hb
-  · exact .inr ⟨_, loopBody_of_zero l a p q r s, h, .inl rfl⟩
-  rw [loopBody_of_pos hb]
-  split
-  · exact .inl ⟨_, rfl, h.step hb (by assumption),
-      (Int.toNat_lt_toNat hb).mpr (Int.emod_lt_of_pos a hb)⟩
-  · exact .inr ⟨_, rfl, h, .inr ⟨hb, by omega⟩⟩
+/-- Where it fails, the body is done and leaves the state as it stands. -/
+theorem loopBody_of_not_loopCondition {args : Arguments} {st : LoopState args}
+    (hst : ¬ st.loopCondition) :
+    loopBody args.limit () (loopTuple st) = pure (ForInStep.done (loopTuple st)) := by
+  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s) =
+    pure (ForInStep.done (st.a, st.b, st.p, st.q, st.r, st.s))
+  rcases (by have := st.b_nonneg; omega : st.b = 0 ∨ 0 < st.b) with hb | hb
+  · rw [hb]; exact loopBody_of_zero args.limit st.a st.p st.q st.r st.s
+  · rw [loopBody_of_pos hb, ite_eq_right (fun hle => hst ⟨hb, hle⟩)]
+
+/-- The `do` block's loop, run to exhaustion, is `runLoop`. -/
+theorem forIn_eq_runLoop {args : Arguments} (st : LoopState args) :
+    forIn Lean.Loop.mk (loopTuple st) (loopBody args.limit) =
+      pure (loopTuple st.runLoop) := by
+  fun_induction LoopState.runLoop st with
+  | case1 st hst ih => rw [forIn_loop_peel _ (loopBody_of_loopCondition hst), ih]
+  | case2 st hst => exact forIn_loop_done _ (loopBody_of_not_loopCondition hst)
+
+/-- The tail of the `do` block is the post-loop state's return value. -/
+theorem afterLoop_eq {args : Arguments} (st : PostLoopState args) :
+    afterLoop args.n args.limit (loopTuple st.toLoopState) =
+      pure (st.rv.num, st.rv.den) := by
+  show afterLoop args.n args.limit (st.a, st.b, st.p, st.q, st.r, st.s) = _
+  rw [afterLoop, pyFloordiv_ok_bind st.s_pos]
+  show pure (if 2 * st.b * st.u ≤ args.n then (st.r, st.s) else (st.t, st.u)) = _
+  rw [PostLoopState.rv]
+  split <;> rfl
+
+/-- The listing computes the algorithm, end to end. -/
+theorem limitDenominatorSimplified_eq (args : Arguments) :
+    limitDenominatorSimplified args.m args.n args.limit =
+      pure (args.limitDenominator.num, args.limitDenominator.den) := by
+  rw [limitDenominatorSimplified_fold args.n_pos (by have := args.one_le_limit; omega)]
+  show forIn Lean.Loop.mk (loopTuple (LoopState.initialLoopState args)) _ >>= _ = _
+  rw [forIn_eq_runLoop, pure_bind]
+  exact afterLoop_eq args.postLoopState
 
 /--
 Correctness of `limitDenominatorSimplified`: for a denominator limit that is not positive it
@@ -115,21 +138,12 @@ public theorem isCorrectLimitDenominator_simplified :
     intro m n l hl
     rw [limitDenominatorSimplified, ite_eq_left (show l < 1 by omega)]
     rfl
-  · -- Otherwise the loop runs, never raises, and returns one of the two candidates.
+  · -- Otherwise the listing computes the algorithm, whose answer is best.
     intro m n l hn hl
-    rw [limitDenominatorSimplified_fold hn hl]
-    obtain ⟨y, hy_eq, hy_post⟩ := forIn_loop_invariant
-      (fun state => state.2.1.toNat) (loopBody l) (loopInvariant m n l) (loopPost m n l)
-      (loopBody_step m n l) (n, m % n, 1, 0, m / n, 1) (LoopInvariant.initial hn hl)
-    rw [hy_eq]
-    obtain ⟨a, b, p, q, r, s⟩ := y
-    obtain ⟨hinv, hexit⟩ :
-        LoopInvariant m n l a b p q r s ∧ (b = 0 ∨ (0 < b ∧ l < q + a / b * s)) := hy_post
-    rw [afterLoop, pyFloordiv_ok_bind hinv.s_pos]
-    have hbracket := hinv.bracketing hexit rfl rfl rfl rfl
-    split <;> rename_i hchoice
-    · exact ⟨r, s, rfl, hbracket.isBestApproximation_loop_of_test hchoice⟩
-    · exact ⟨_, _, rfl, hbracket.isBestApproximation_extended_of_test hchoice⟩
+    let args : Arguments := ⟨m, n, l, hn, by omega⟩
+    exact ⟨args.limitDenominator.num, args.limitDenominator.den,
+      limitDenominatorSimplified_eq args,
+      (best_iff_isBestApproximation _).mp args.limitDenominator_best⟩
 
 /--
 A target denominator that is not positive raises a `ValueError`. The denominator limit is
@@ -140,6 +154,20 @@ public theorem limitDenominatorSimplified_raises_of_denominator_nonpos {m n l : 
     raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive") := by
   rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_left hn]
   rfl
+
+/--
+In the ambiguous case the two best approximations are `⌊m/n⌋` and `⌊m/n⌋ + 1`, and
+the listing returns the lower of them. This is the tie-break CPython makes, and the
+one the specification deliberately leaves open.
+-/
+public theorem limitDenominatorSimplified_returns_floor_of_ambiguous {m n l : Int}
+    (hn : 0 < n) (hamb : isAmbiguous m n l) :
+    returns (limitDenominatorSimplified m n l) (m / n, 1) := by
+  let args : Arguments := ⟨m, n, l, hn, by have := hamb.1; omega⟩
+  have heq := limitDenominatorSimplified_eq args
+  have hamb' := (ambiguous_iff_isAmbiguous args).mpr hamb
+  rw [args.limitDenominator_ambiguous_case hamb'] at heq
+  exact heq
 
 /--
 Every input is accounted for: the function raises one of its two `ValueError`s or returns the

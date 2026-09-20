@@ -72,8 +72,13 @@ theorem Int.le_of_le_mul_pos {a b c : Int} (hc : 0 < c) (hle : a * c ≤ b * c) 
 The arguments to the limitDenominator algorithm consist of a fraction `m/n` with `n`
 positive, and a positive limit on the denominator.
 -/
-structure Arguments where
-  (m n limit : Int)
+public structure Arguments where
+  /-- Numerator of the fraction to be approximated. -/
+  m : Int
+  /-- Denominator of the fraction to be approximated. -/
+  n : Int
+  /-- Upper bound on the denominator of the approximation. -/
+  limit : Int
   n_pos : 0 < n
   one_le_limit : 1 ≤ limit
 
@@ -88,8 +93,11 @@ whose denominator is positive and bounded by the given limit. We're interested i
 finding the candidate that offers the best approximation to `m/n`, in a sense to be
 made precise below.
 -/
-structure Candidate where
-  (num den : Int)
+public structure Candidate where
+  /-- Numerator of the candidate fraction. -/
+  num : Int
+  /-- Denominator of the candidate fraction. -/
+  den : Int
   pos : 0 < den
   den_limited : den ≤ args.limit
 
@@ -161,20 +169,18 @@ theorem better_total (ef gh : args.Candidate) :
   · right; left; exact hdist
 
 /-- Definition of *best*. -/
-def best (ef : args.Candidate) := ∀ (gh : args.Candidate), args.better ef gh
+public def best (ef : args.Candidate) := ∀ (gh : args.Candidate), args.better ef gh
 
 /--
 We say a set of arguments is *ambiguous* if the limit is `1` and `m/n` is a
 half-integer, that is, `m/n = w + 1/2` for some integer `w`. This is the only case
 where we do not have a unique best approximation.
 -/
-def ambiguous := args.limit = 1 ∧ ∃ (w : Int), 2 * args.m = (2 * w + 1) * args.n
+public def ambiguous := args.limit = 1 ∧ ∃ (w : Int), 2 * args.m = (2 * w + 1) * args.n
 
-/-
-We define the floor and floor plus one of m/n as candidates. These will turn out
-to be exactly the best approximations in the ambiguous case.
--/
-def floor : args.Candidate :=
+/-- `⌊m/n⌋`, as a candidate. It and `floorAddOne` turn out to be exactly the best
+approximations in the ambiguous case. -/
+@[expose] public def floor : args.Candidate :=
   ⟨args.m / args.n, 1, by decide, args.one_le_limit⟩
 def floorAddOne : args.Candidate :=
   ⟨args.m / args.n + 1, 1, by decide, args.one_le_limit⟩
@@ -201,8 +207,21 @@ stepping to this state.
 
 /-- The loop state: the two latest Euclidean remainders, the two latest convergents, and
 the orientation `v`. -/
-structure LoopState (args : Arguments) where
-  (a b p q r s v : Int)
+public structure LoopState (args : Arguments) where
+  /-- The larger of the two most recent Euclidean remainders. -/
+  a : Int
+  /-- The smaller of the two most recent Euclidean remainders. -/
+  b : Int
+  /-- Numerator of the previous convergent `p/q`. -/
+  p : Int
+  /-- Denominator of the previous convergent `p/q`. -/
+  q : Int
+  /-- Numerator of the most recent convergent `r/s`. -/
+  r : Int
+  /-- Denominator of the most recent convergent `r/s`. -/
+  s : Int
+  /-- The orientation: `1` where `r/s ≤ m/n`, `-1` where `m/n ≤ r/s`. -/
+  v : Int
   b_nonneg : 0 ≤ b
   b_lt_a : b < a
   q_nonneg : 0 ≤ q
@@ -219,7 +238,7 @@ variable {args : Arguments} (st : LoopState args)
 
 /-- The state before the first iteration: remainders `n` and `m % n`, convergents `1/0`
 and `⌊m/n⌋/1`. -/
-def initialLoopState (args : Arguments) : LoopState args where
+@[expose] public def initialLoopState (args : Arguments) : LoopState args where
   a := args.n
   b := args.m % args.n
   p := 1
@@ -238,10 +257,10 @@ def initialLoopState (args : Arguments) : LoopState args where
   v_eq_one_of_q_eq_zero := by decide
 
 /-- Condition guarding iteration of the while loop. -/
-def loopCondition := 0 < st.b ∧ st.q + st.a / st.b * st.s ≤ args.limit
+@[expose] public def loopCondition := 0 < st.b ∧ st.q + st.a / st.b * st.s ≤ args.limit
 
 /-- The state transition resulting from execution of the loop body. -/
-def nextLoopState (hst : st.loopCondition) : LoopState args where
+@[expose] public def nextLoopState (hst : st.loopCondition) : LoopState args where
   a := st.b
   b := st.a % st.b
   p := st.r
@@ -273,16 +292,16 @@ theorem loop_decreases (hst : st.loopCondition) :
 /-! ## Execution of the loop -/
 
 /-- The loop condition is decidable. -/
-instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
+public instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
 
 /-- Starting from a given state, run the loop to completion. -/
-def runLoop (st : LoopState args) : LoopState args :=
+@[expose] public def runLoop (st : LoopState args) : LoopState args :=
   if h : st.loopCondition then runLoop (st.nextLoopState h) else st
 termination_by st.a.toNat
 decreasing_by exact st.loop_decreases h
 
 /-- On exit of the loop, the loop condition is false. -/
-theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
+public theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
   fun_induction runLoop st <;> trivial
 
 end LoopState
@@ -312,7 +331,7 @@ and if `v = -1` then we have
 -/
 
 /-- State on exiting the loop: a loop state whose loop condition has gone false. -/
-structure PostLoopState (args : Arguments) extends LoopState args where
+public structure PostLoopState (args : Arguments) extends LoopState args where
   exited : ¬ toLoopState.loopCondition
 
 namespace PostLoopState
@@ -326,25 +345,28 @@ variable {args : Arguments} (st : PostLoopState args)
 The number of copies of `r/s` that can be "added" to `p/q` without the denominator
 exceeding the limit.
 -/
-def k : Int := (args.limit - st.q) / st.s
+@[expose] public def k : Int := (args.limit - st.q) / st.s
 
-/-- The far endpoint of the bracket: `t/u` is `p/q` advanced by `k` copies of `r/s`. -/
-def t : Int := st.p + st.k * st.r
-def u : Int := st.q + st.k * st.s
+/-- Numerator of the far endpoint of the bracket: `t/u` is `p/q` advanced by `k`
+copies of `r/s`. -/
+@[expose] public def t : Int := st.p + st.k * st.r
+/-- Denominator of that same far endpoint. -/
+@[expose] public def u : Int := st.q + st.k * st.s
 
 /-
 From the definition of `k` we have `ks ≤ limit - q < (k + 1)s`,
 giving `u ≤ limit < s + u`. Since also `s ≤ limit`, it follows that `0 < u`.
  -/
-theorem u_le_limit : st.u ≤ args.limit := by
+public theorem u_le_limit : st.u ≤ args.limit := by
   grind only [k, u, Int.ediv_mul_le (args.limit - st.q) (Int.ne_of_gt st.s_pos)]
 theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
   grind only [k, u, Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
-theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_add_u]
+public theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_add_u]
 
-/- The two bracket endpoints, packaged as candidates. -/
-abbrev rs : args.Candidate := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
-abbrev tu : args.Candidate := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
+/-- The near bracket endpoint `r/s`, packaged as a candidate. -/
+public abbrev rs : args.Candidate := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
+/-- The far bracket endpoint `t/u`, packaged as a candidate. -/
+public abbrev tu : args.Candidate := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 
 /-
 If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
@@ -576,7 +598,7 @@ theorem ambiguous_of_rs_and_tu_best
 /-! ## The return value -/
 
 /-- `st.rv` is the return value from limitDenominator - either `r/s` or `t/u`. -/
-def rv : args.Candidate := if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
+@[expose] public def rv : args.Candidate := if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
 
 /-- Whichever bound is returned is at least as good as the other one. -/
 theorem rv_cases :
@@ -771,12 +793,12 @@ variable (args : Arguments)
 /-! # The algorithm -/
 
 /-- The state on exit from the loop, run from the initial state. -/
-def postLoopState : PostLoopState args :=
+@[expose] public def postLoopState : PostLoopState args :=
   let loopState := LoopState.initialLoopState args
   ⟨loopState.runLoop, loopState.runLoop_loopCondition_false⟩
 
 /-- The full algorithm, end to end. -/
-def limitDenominator : args.Candidate := args.postLoopState.rv
+@[expose] public def limitDenominator : args.Candidate := args.postLoopState.rv
 
 /-! # Results -/
 
@@ -819,11 +841,11 @@ theorem isReduced_of_best {ef : args.Candidate} (hef : args.best ef) :
 /-! ## The return value -/
 
 /-- The limitDenominator return value is always a best approximation. -/
-theorem limitDenominator_best : args.best args.limitDenominator :=
+public theorem limitDenominator_best : args.best args.limitDenominator :=
   args.postLoopState.rv_best
 
 /-- In the ambiguous case, ⌊m/n⌋ is returned. -/
-theorem limitDenominator_ambiguous_case (hamb : args.ambiguous) :
+public theorem limitDenominator_ambiguous_case (hamb : args.ambiguous) :
     args.limitDenominator = args.floor :=
   args.postLoopState.rv_eq_floor hamb
 
@@ -844,7 +866,7 @@ closeness clause, and the strict arm is impossible once the rival is at least as
 the tie arm supplies the denominator comparison. Backwards, a strict inequality is the
 first arm and an equality feeds the second clause, which gives the second arm.
 -/
-theorem best_iff_isBestApproximation {args : Arguments} (ef : args.Candidate) :
+public theorem best_iff_isBestApproximation {args : Arguments} (ef : args.Candidate) :
     args.best ef ↔ isBestApproximation args.m args.n args.limit ef.num ef.den := by
   constructor
   · intro hbest
@@ -860,7 +882,7 @@ theorem best_iff_isBestApproximation {args : Arguments} (ef : args.Candidate) :
     omega
 
 /-- `Arguments.ambiguous` is the specification's `isAmbiguous`, formula for formula. -/
-theorem ambiguous_iff_isAmbiguous (args : Arguments) :
+public theorem ambiguous_iff_isAmbiguous (args : Arguments) :
     args.ambiguous ↔ isAmbiguous args.m args.n args.limit := Iff.rfl
 
 /--

@@ -7,10 +7,14 @@ stay.
 
 ## Progress
 
-Steps 1, 2 and 3 have landed; their commits carry the reasoning, and the tree is the
+Steps 1 to 4 have landed; their commits carry the reasoning, and the tree is the
 record of what they produced, so the sections that described them have been cut. What
-they changed about the steps still to come is folded in below. Step 4 is next, and
-carries R1.
+they changed about the steps still to come is folded in below. Step 5 is next.
+
+R1 is settled. `fun_induction LoopState.runLoop` drives a goal about `forIn` without
+complaint, and `SimplifiedCorrectness.forIn_eq_runLoop` is the two-case proof it
+gives; step 6 inherits the route, so the invariant-threading fallback is not needed
+for either listing.
 
 ## Decisions taken
 
@@ -45,6 +49,10 @@ carries R1.
     `isAmbiguous` are the same formula, stated twice rather than one delegating to the
     other, so that the core meets the trusted surface at `BestApproximation.lean`
     alone. `ambiguous_iff_isAmbiguous` records the coincidence there.
+12. **Private by default.** A declaration is `public` only where a consumer names it,
+    and `@[expose]` only where a consumer unfolds it. No blanket `public section` — it
+    would make the whole core API, and nothing could then be changed without checking
+    every module. The rule outlives the split; step 8 applies it per module.
 
 ## What the decisions do to the shape
 
@@ -160,7 +168,7 @@ than opening one, and no edit there is needed for the two listings to agree.
 | `Proofs/Bracket.lean` | `PostLoopState`, `k`/`t`/`u`, `lev`/`eqv`, the bracket, distances |
 | `Proofs/Algorithm.lean` | `rv`, the ambiguous case, `postLoopState`, `limitDenominator` |
 | `Proofs/BestApproximation.lean` | the specification's vocabulary: the bridge, the four statements, `gcd_eq_one`, `isBestApproximation_self` |
-| `Proofs/WhileLoop.lean` | gains a "the loop stops here" lemma; loses `forIn_loop_invariant` if nothing needs it |
+| `Proofs/WhileLoop.lean` | `forIn_loop_done`, landed; loses `forIn_loop_invariant` after step 6 |
 | `Proofs/PythonTranslation.lean` | unchanged |
 | `Proofs/SimplifiedCorrectness.lean` | rewritten: fold, induct, read off |
 | `Proofs/StdlibCorrectness.lean` | the same, peeled and permuted |
@@ -197,35 +205,31 @@ to review alone.
    `gcd_eq_one`'s new proof. Landed, at the end of `Experiment.lean`, which imports
    `Definitions.Specification` for that section alone.
 4. **The simplified listing onto the new core**, plus its ambiguous-case theorem and
-   its pin.
+   its pin. Landed. It opened the core's API: thirty of `Experiment.lean`'s
+   declarations are `public` and eleven of those `@[expose]`, each one because
+   `SimplifiedCorrectness.lean` names it or unfolds it, and the rest of the file stays
+   private. The sixteen docstrings the lint gate then wanted are written.
 5. **`v` back in the simplified listing.** The listing, its docstring, and the extra
-   component threaded through `SimplifiedCorrectness`: the state abbrev, the body's
-   destructuring and its yield tuple, the tail's destructuring, the fold's initial
-   tuple, and the statements of the two body-reduction lemmas. The projection gains a
-   component rather than becoming the identity, `LoopState` carrying proof fields as
-   well. About ten lines, all definitions and statements; the induction does not move,
-   the seventh component matching `nextLoopState`'s `v := -st.v` by the same `rfl` as
-   the other six.
-
-   After step 4 rather than before it, that being the smaller total diff: ahead of it
-   the same thread-through costs about twenty lines in the old file's invariant
-   predicates, post predicate and step lemma, all discarded at step 4. The price is
-   that step 4's file is touched twice. Either order, the listing change cannot land
-   without touching a correctness file, and the trusted-surface diff reads on its own.
+   component threaded through `SimplifiedCorrectness`: `LoopTuple`, the body's
+   destructuring and both of its tuples, the tail's destructuring, the fold's initial
+   tuple, the statements of the two body-reduction lemmas, `loopTuple` itself, and the
+   three `show` lines that spell a state out. The projection gains a component rather
+   than becoming the identity, `LoopState` carrying proof fields as well. All
+   definitions and statements; the induction does not move, the seventh component
+   matching `nextLoopState`'s `v := -st.v` by the same `rfl` as the other six.
 6. **The stdlib listing**, plus its ambiguous-case theorem. Needs `LoopState.b_pos` (the
    numerator/denominator recovery is derivable from `a_eq_pq_cross`, `b_eq_rs_cross`
    and `det`, so the existing proof transfers), the peeled first iteration and the
    permuted state. `isBestApproximation_self` still carries the fast path, which the
    ambiguous-case theorem — the last pin — never reaches.
 7. **Delete the dead chain.**
-8. **Split and rename `Experiment.lean`** into the modules the target layout lists. Not
-   a pure move: today only the three statements step 3 exposed are `public`, and
-   nothing is `@[expose]`. The split makes most of its declarations public, and `@[expose]` every definition
-   another module unfolds — `Arguments.dist`, `better`, `ambiguous`, `floor`,
-   `floorAddOne`, `Candidate.isReduced` and `LoopState.loopCondition` at least. The
-   lint gate then applies to them, and `floor`, `floorAddOne`, `u`, `rs`, `tu` and
-   `lev` carry a block comment or nothing where they will need docstrings. After (7),
-   because it wants the names `Bracket.lean` and `BestApproximation.lean` back.
+8. **Split and rename `Experiment.lean`** into the modules the target layout lists.
+   Not a pure move: the markers move with the declarations, and the split turns what
+   is one module boundary into eight, so each one is decided again — some of what is
+   public today is public only for `SimplifiedCorrectness`, and some of what is
+   private today is named across a boundary the split creates. Both directions, and
+   each new `public` costs a docstring. After (7), because it wants the names
+   `Bracket.lean` and `BestApproximation.lean` back.
 
    It also moves the closing specification section to `BestApproximation.lean` and
    drops the `Definitions.Specification` import step 3 added, which is what makes
@@ -251,10 +255,6 @@ to review alone.
 
 ## Risks
 
-- **R1.** `fun_induction runLoop` inside a goal about `forIn`. The only significant
-  unknown left; decision 3 took the other one away. `runLoop_loopCondition_false`
-  already does `fun_induction runLoop`, so the induction principle works. Fallback is
-  per-listing: the invariant-threading route still exists for whichever listing fights.
 - **R2.** The stdlib listing under Option A: the first iteration peeled, the state
   permuted, and the loop condition coinciding only under `b_pos`.
   Smaller than it looks: `b_pos` is state-local, `a * r + b * p = m` and
