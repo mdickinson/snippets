@@ -91,15 +91,6 @@ variable (ef : FractionPair)
 /-- A fraction pair is *reduced* if its numerator and denominator are coprime. -/
 def isReduced := ∃ (g h : Int), g * ef.num + h * ef.den = 1
 
-/--
-Two fraction pairs that are numerically equal and have equal denominator are equal.
--/
-theorem eq_of_eq_den {ef gh : FractionPair}
-    (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
-    ef = gh := by
-  rw [FractionPair.mk.injEq]
-  exact ⟨ Int.eq_of_eq_mul_pos gh.pos (h_deneq ▸ heq), h_deneq ⟩
-
 end FractionPair
 
 /-! # Arguments -/
@@ -126,16 +117,14 @@ approximation to `m/n`, in a sense to be made precise below.
 structure Candidate extends FractionPair where
   den_limited : den ≤ args.limit
 
-/-- Allow a `Candidate` to be used where a `FractionPair` is expected. -/
-instance : CoeOut args.Candidate FractionPair where coe ef := ef.toFractionPair
-
 /--
 Two candidates that are numerically equal and have equal denominator are equal.
 -/
 theorem Candidate.eq_of_eq_den {args : Arguments} {ef gh : args.Candidate}
     (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
     ef = gh := by
-  rw [Candidate.mk.injEq]; exact FractionPair.eq_of_eq_den h_deneq heq
+  rw [Candidate.mk.injEq, FractionPair.mk.injEq]
+  exact ⟨ Int.eq_of_eq_mul_pos gh.pos (h_deneq ▸ heq), h_deneq ⟩
 
 /-
 Now to define what *best* means for a candidate.
@@ -393,8 +382,8 @@ theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
 
 /-! ## Orientation-aware order -/
 
-/- Generic fraction pairs. -/
-variable (ef gh : FractionPair)
+/- Generic candidates. -/
+variable (ef gh : args.Candidate)
 
 /--
 We define `st.lev` as an orientation-aware less-than-or-equal-to relation:
