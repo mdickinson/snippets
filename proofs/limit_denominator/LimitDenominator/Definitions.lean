@@ -1,6 +1,7 @@
 module
 
 import LimitDenominator.Definitions.Exceptions
+import LimitDenominator.Definitions.IntAbs
 import LimitDenominator.Definitions.LimitDenominatorSimplified
 import LimitDenominator.Definitions.LimitDenominatorStdlib
 import LimitDenominator.Definitions.PythonPrimitives

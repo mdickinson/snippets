@@ -1,13 +1,13 @@
 module
 
-public import LimitDenominator.Definitions.Specification
+public import LimitDenominator.Definitions.IntAbs
 
 /-!
-General `Int` facts missing from the core library: monotonicity of multiplication in the
-shape the bracket argument needs, basic properties of the specification's `Int.abs`, the
-cancellation that removes the orientation from an inequality, and the two divisibility facts
-the fast path needs, lowest terms being what makes its rival's denominator a multiple of the
-target's.
+General `Int` facts missing from the core library: monotonicity of multiplication in
+the shape the bracket argument needs, basic properties of `Int.abs`, the cancellation
+that removes the orientation from an inequality, and the two divisibility facts the
+fast path needs, lowest terms being what makes its rival's denominator a multiple of
+the target's.
 -/
 
 /-! ## Multiplication and order -/
@@ -21,6 +21,10 @@ public theorem Int.le_mul_of_one_le_left {a b : Int} (hb : 0 ≤ b) (ha : 1 ≤ 
 
 /-- The absolute value is nonnegative. -/
 public theorem Int.abs_nonneg (a : Int) : 0 ≤ a.abs := by unfold Int.abs; split <;> omega
+
+/-- What it takes for an absolute value to equal a given nonnegative integer. -/
+public theorem Int.abs_eq (a : Int) {b : Int} : 0 ≤ b → (a.abs = b ↔ a = b ∨ a = -b) := by
+  unfold Int.abs; split <;> omega
 
 /-- Only zero has zero absolute value. -/
 public theorem Int.abs_eq_zero {a : Int} : a.abs = 0 ↔ a = 0 := by
@@ -36,7 +40,7 @@ private theorem Int.abs_of_nonneg {a : Int} (ha : 0 ≤ a) : a.abs = a := by unf
 private theorem Int.abs_eq_natAbs (a : Int) : a.abs = a.natAbs := by unfold Int.abs; split <;> omega
 
 /-- The absolute value is multiplicative. -/
-private theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by
+public theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by
   rw [Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.abs_eq_natAbs, Int.natAbs_mul]; rfl
 
 /-- A positive factor comes out of the absolute value. -/

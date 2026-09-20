@@ -1,6 +1,7 @@
 module
 
 public import LimitDenominator.Definitions.Exceptions
+public import LimitDenominator.Definitions.IntAbs
 
 /-!
 Definition of correctness for a function claiming to compute, among the fractions
@@ -14,9 +15,6 @@ def returns {α : Type} (x : PyExcept α) (a : α) := x = .ok a
 
 /-- Statement that a possibly-exception-raising computation raises an exception. -/
 def raises {α : Type} (x : PyExcept α) (e : PyException) := x = .error e
-
-/-- Absolute value of an integer. -/
-def Int.abs (a : Int) : Int := if 0 ≤ a then a else -a
 
 /--
 `r / s` is at least as close to `m / n` as `y / z` is, for a positive denominator `n`

@@ -1,5 +1,6 @@
 module
 
+public import LimitDenominator.Definitions.Specification
 public import LimitDenominator.Proofs.TieBreak
 
 /-!

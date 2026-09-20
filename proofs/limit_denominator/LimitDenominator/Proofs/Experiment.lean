@@ -1,17 +1,6 @@
 module
 
-/-! # Absolute value of an integer -/
-
-/-- Absolute value of an integer. -/
-def Int.abs (a : Int) : Int := if 0 ≤ a then a else -a
-
-/- Basic facts about Int.abs. -/
-theorem Int.abs_nonneg (a : Int) : 0 ≤ a.abs := by grind only [Int.abs]
-theorem Int.abs_eq (a : Int) {b : Int} : 0 ≤ b → (a.abs = b ↔ a = b ∨ a = -b) := by
-  grind only [Int.abs]
-theorem Int.abs_mul (a b : Int) : (a * b).abs = a.abs * b.abs := by grind only [
-  Int.abs, Int.le_total 0, Int.mul_nonneg, Int.mul_nonpos_of_nonneg_of_nonpos,
-  Int.mul_nonpos_of_nonpos_of_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos]
+public import LimitDenominator.Proofs.SupportLemmas
 
 /-! # Support lemmas for Int -/
 
