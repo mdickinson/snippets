@@ -347,11 +347,7 @@ and if `v = -1` then we have
 
     t/u < m/n ≤ r/s
 
-From the loop exit condition and the way that `t/u` was constructed, we further know
-that in fact `m/n ≤ (r + t)/(s + u)` in case `v = 1` and `(r + t)/(s + u) ≤ m/n` in case
-`v = -1`, so `m/n` is in fact bracketed by the Farey pair `r/s` and `(r + t)/(s + u)`.
-`rs_lev_mn` and `mn_lev_mediant` are the two relevant statements. We derive the fact
-that `m/n < t/u` (`v = 1`) or `t/u < m/n` (`v = -1`) as a consequence: `mn_lev_tu`.
+`rs_lev_mn` and `mn_lev_tu` state this, in the non-strict form the later proofs use.
 -/
 
 /-- State on exiting the loop: a loop state whose loop condition has gone false. -/
@@ -441,21 +437,6 @@ theorem v_cases : st.v = 1 ∨ st.v = -1 :=
 /-- In particular, v is nonzero. -/
 theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
 
-/- `m/n` lies between `r/s` and `(r + t)/(s + u)`, hence between `r/s` and `t/u`. -/
-/-- The mediant of the two bracket endpoints. -/
-def mediant : FractionPair := ⟨st.r + st.t, st.s + st.u, Int.add_pos st.s_pos st.u_pos⟩
-
-theorem rs_lev_mn : st.lev st.rs args.mn := by
-  grind only [lev, st.b_eq_rs_cross, st.b_nonneg]
-theorem mn_lev_mediant : st.lev args.mn st.mediant := by
-  unfold lev mediant t u; grind only [st.b_eq_rs_cross ▸ st.a_eq_pq_cross ▸ st.k_upper]
-theorem mediant_lev_tu : st.lev st.mediant st.tu := by
-  unfold mediant; grind only [lev, st.bracket_det]
-
-/-- m/n ≤ t/u if v = 1, and t/u ≤ m/n if v = -1. -/
-theorem mn_lev_tu : st.lev args.mn st.tu :=
-  st.lev_trans st.mn_lev_mediant st.mediant_lev_tu
-
 /-! ## Distances -/
 
 /--
@@ -474,6 +455,13 @@ theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
 theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
   grind only [c, t, u, st.a_eq_pq_cross, st.b_eq_rs_cross]
 
+/- These two place `m/n` between the endpoints: `r/s ≤ m/n ≤ t/u` when `v = 1`, and
+`t/u ≤ m/n ≤ r/s` when `v = -1`. -/
+theorem rs_lev_mn : st.r * args.n * st.v ≤ args.m * st.s * st.v := by
+  grind only [st.b_eq_rs_cross, st.b_nonneg]
+theorem mn_lev_tu : args.m * st.u * st.v ≤ st.t * args.n * st.v := by
+  grind only [st.c_eq_tu_cross, st.c_pos]
+
 /-- The two distances split `n` between them. -/
 theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross,
@@ -482,8 +470,9 @@ theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
 /-- Distance for values ≤ r/s. -/
 theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
     args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v := by
-  have rhs_nonneg : 0 ≤ (args.m * ef.den - ef.num * args.n) * st.v := by
-    grind only [lev, st.lev_trans h st.rs_lev_mn]
+  have rhs_nonneg : 0 ≤ (args.m * ef.den - ef.num * args.n) * st.v :=
+    Int.le_of_le_mul_pos st.s_pos (by grind only [
+      Int.le_mul_pos args.n_pos h, Int.le_mul_pos ef.pos st.rs_lev_mn])
   grind only [Arguments.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance of r/s. -/
@@ -493,8 +482,9 @@ theorem dist_rs : args.dist st.rs = (args.m * st.s - st.r * args.n) * st.v :=
 /-- Distance for values ≥ t/u. -/
 theorem dist_of_tu_lev {ef : args.Candidate} (h : st.lev st.tu ef) :
     args.dist ef = (ef.num * args.n - args.m * ef.den) * st.v := by
-  have rhs_nonneg : 0 ≤ (ef.num * args.n - args.m * ef.den) * st.v := by
-    grind only [lev, st.lev_trans st.mn_lev_tu h]
+  have rhs_nonneg : 0 ≤ (ef.num * args.n - args.m * ef.den) * st.v :=
+    Int.le_of_le_mul_pos st.u_pos (by grind only [
+      Int.le_mul_pos ef.pos st.mn_lev_tu, Int.le_mul_pos args.n_pos h])
   grind only [Arguments.dist, Int.abs_eq _ rhs_nonneg, st.v_cases]
 
 /-- Distance of t/u. -/
@@ -681,13 +671,9 @@ theorem mnv_sub_half :
 
   -- rv ≤ m/n v ≤ tv, from the general case
   have : st.r * st.v * args.n ≤ args.m * st.v := by
-    grind only [
-      s_eq_one ▸ show st.r * args.n * st.v ≤ args.m * st.s * st.v from st.rs_lev_mn
-    ]
+    grind only [s_eq_one ▸ st.rs_lev_mn]
   have : args.m * st.v ≤ st.t * st.v * args.n := by
-    grind only [
-      u_eq_one ▸ show args.m * st.u * st.v ≤ st.t * args.n * st.v from st.mn_lev_tu
-    ]
+    grind only [u_eq_one ▸ st.mn_lev_tu]
 
   -- there's a w such that m/n v = wv + 1/2, so wv < m/n v < wv + 1
   obtain ⟨w, hw⟩ := st.exists_oriented hamb
