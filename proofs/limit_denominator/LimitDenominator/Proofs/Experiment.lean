@@ -680,6 +680,50 @@ theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
   · exact ⟨ rs_best, fun gh => args.better_trans (st.tu_better_rs hamb) (rs_best gh) ⟩
   · exact ⟨ fun gh => args.better_trans (st.rs_better_tu hamb) (tu_best gh) , tu_best⟩
 
+/--
+With the bracket pointing up, `r/s` is `⌊m/n⌋/1` and `t/u` is `(⌊m/n⌋ + 1)/1`.
+
+`s = u = 1` makes both endpoints integers, `bracket_det` makes them adjacent, and
+`mnv_sub_half` puts `m/n` midway between them.
+-/
+theorem endpoints_of_v_eq_one (hv : st.v = 1) :
+    st.rs = args.floor ∧ st.tu = args.floorAddOne := by
+  have hn := args.n_pos
+  have hs := st.s_eq_one hamb
+  have hu := st.u_eq_one hamb
+  have hdet := st.bracket_det
+  have hkey : 2 * args.m = 2 * (st.r * args.n) + args.n := by
+    have := st.mnv_sub_half hamb; grind only
+  have r_eq : args.m / args.n = st.r := by
+    rw [Int.ediv_eq_iff_of_pos hn]; omega
+  exact ⟨by grind only [Arguments.floor], by grind only [Arguments.floorAddOne]⟩
+
+/-- And with it pointing down, the two endpoints swap roles. -/
+theorem endpoints_of_v_eq_neg_one (hv : st.v = -1) :
+    st.rs = args.floorAddOne ∧ st.tu = args.floor := by
+  have hn := args.n_pos
+  have hs := st.s_eq_one hamb
+  have hu := st.u_eq_one hamb
+  have hdet := st.bracket_det
+  have hkey : 2 * args.m = 2 * (st.r * args.n) - args.n := by
+    have := st.mnv_sub_half hamb; grind only
+  -- The floor is `r - 1`, so the bounds are stated about `(r - 1) * n`, which `omega`
+  -- keeps apart from the `r * n` of `hkey` unless the product is expanded for it.
+  have hexp : (st.r - 1) * args.n = st.r * args.n - args.n := by grind only
+  have r_eq : args.m / args.n = st.r - 1 := by
+    rw [Int.ediv_eq_iff_of_pos hn, hexp]; omega
+  exact ⟨by grind only [Arguments.floorAddOne], by grind only [Arguments.floor]⟩
+
+/--
+Either way, the two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`. Which of them is which
+takes the orientation, and so `v_eq_one`; that the pair is those two does not, which is
+what keeps the specification's vocabulary clear of the loop's history.
+-/
+theorem endpoints_eq_floor_pair :
+    (st.rs = args.floor ∧ st.tu = args.floorAddOne)
+    ∨ (st.rs = args.floorAddOne ∧ st.tu = args.floor) :=
+  st.v_cases.imp (st.endpoints_of_v_eq_one hamb) (st.endpoints_of_v_eq_neg_one hamb)
+
 /-- In the ambiguous case, bu = cs. -/
 theorem bu_eq_cs : st.b * st.u = st.c * st.s := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross,
@@ -701,21 +745,12 @@ theorem v_eq_one : st.v = 1 := by
   exact st.v_eq_one_of_q_eq_zero (show st.q = 0 by grind only)
 
 /-- In the ambiguous case r/s = ⌊m/n⌋/1. -/
-theorem rs_eq_floor : st.rs = args.floor := by
-  have := st.v_eq_one hamb
-  have := st.s_eq_one hamb
-  have := st.mnv_sub_half hamb
-  have r_eq : args.m / args.n = st.r :=
-    (Int.ediv_eq_iff_of_pos args.n_pos).mpr (by grind only [args.n_pos])
-  grind only [Arguments.floor]
+theorem rs_eq_floor : st.rs = args.floor :=
+  (st.endpoints_of_v_eq_one hamb (st.v_eq_one hamb)).1
 
 /-- In the ambiguous case t/u = (⌊m/n⌋ + 1)/1. -/
-theorem tu_eq_floor_add_one : st.tu = args.floorAddOne := by
-  have r_eq_floor : st.r = args.m / args.n := congrArg (·.num) (st.rs_eq_floor hamb)
-  have v_eq_one := st.v_eq_one hamb
-  have s_eq_one := st.s_eq_one hamb
-  have u_eq_one := st.u_eq_one hamb
-  grind only [st.bracket_det, Arguments.floorAddOne]
+theorem tu_eq_floor_add_one : st.tu = args.floorAddOne :=
+  (st.endpoints_of_v_eq_one hamb (st.v_eq_one hamb)).2
 
 /-- In the ambiguous case r/s is returned. -/
 theorem rv_eq_rs : st.rv = st.rs :=
@@ -758,17 +793,17 @@ theorem non_ambiguous_best (not_amb : ¬ args.ambiguous) {ef gh : args.Candidate
 theorem ambiguous_best (hamb : args.ambiguous) {yz : args.Candidate} :
     args.best yz ↔ yz = args.floor ∨ yz = args.floorAddOne := by
   let st := args.postLoopState
-  have hrs := st.rs_eq_floor hamb
-  have htu := st.tu_eq_floor_add_one hamb
   obtain ⟨rs_best, tu_best⟩ := st.rs_best_and_tu_best hamb
+  have hpair : (yz = st.rs ∨ yz = st.tu) ↔ (yz = args.floor ∨ yz = args.floorAddOne) := by
+    rcases st.endpoints_eq_floor_pair hamb with ⟨hrs, htu⟩ | ⟨hrs, htu⟩
+    · rw [hrs, htu]
+    · rw [hrs, htu]; exact Or.comm
+  rw [← hpair]
   constructor
-  · intro hyz
-    rcases st.eq_rs_or_eq_tu_of_best hyz with h | h
-    · left; rw [h, hrs]
-    · right; rw [h, htu]
+  · exact st.eq_rs_or_eq_tu_of_best
   · rintro (rfl | rfl)
-    · exact hrs ▸ rs_best
-    · exact htu ▸ tu_best
+    · exact rs_best
+    · exact tu_best
 
 /-! ## Any best approximation is reduced -/
 
