@@ -19,8 +19,8 @@ transitively, so that a change to one proof cannot quietly narrow what is checke
 stipulate lowest terms: that promise is carried by this theorem alone. The two statements about
 what the specification does and does not determine — one solution outside the ambiguous case,
 exactly two inside it — are pinned for the same reason, being claims no correctness theorem
-makes. So is the tie-break: where the specification admits both answers, which one comes back
-is a claim about the listing alone.
+makes. So is the tie-break, once per listing: where the specification admits both
+answers, which one comes back is a claim about that listing alone.
 -/
 
 /--
@@ -57,6 +57,13 @@ info: 'isCorrectLimitDenominator_stdlib' depends on axioms:
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms isCorrectLimitDenominator_stdlib
+
+/--
+info: 'limitDenominatorStdlib_returns_floor_of_ambiguous' depends on axioms:
+  [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms limitDenominatorStdlib_returns_floor_of_ambiguous
 
 /--
 info: 'isBestApproximation.gcd_eq_one' depends on axioms:

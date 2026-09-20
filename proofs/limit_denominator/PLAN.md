@@ -7,14 +7,10 @@ stay.
 
 ## Progress
 
-Steps 1 to 5 have landed; their commits carry the reasoning, and the tree is the
+Steps 1 to 6 have landed; their commits carry the reasoning, and the tree is the
 record of what they produced, so the sections that described them have been cut. What
-they changed about the steps still to come is folded in below. Step 6 is next.
-
-R1 is settled. `fun_induction LoopState.runLoop` drives a goal about `forIn` without
-complaint, and `SimplifiedCorrectness.forIn_eq_runLoop` is the two-case proof it
-gives; step 6 inherits the route, so the invariant-threading fallback is not needed
-for either listing.
+they changed about the steps still to come is folded in below. Step 7 is next, and is
+now a pure deletion: nothing outside the old chain refers to any of it.
 
 ## Decisions taken
 
@@ -114,24 +110,6 @@ arbitrary choice, and the specification does not depend on it. Checked rather th
 argued: stubbing `v_eq_one` with `sorry` leaves all three public specification
 statements at Lean's three axioms, with no `sorryAx`.
 
-## The four new public statements
-
-The first two landed at step 3. The two that remain repackage `rv_eq_floor`, one per
-listing:
-
-```lean
-theorem limitDenominatorSimplified_returns_floor_of_ambiguous
-    (hn : 0 < n) (hamb : isAmbiguous m n l) :
-    returns (limitDenominatorSimplified m n l) (m / n, 1)   -- rv_eq_floor
-theorem limitDenominatorStdlib_returns_floor_of_ambiguous ... -- likewise, under `valid`
-```
-
-Both need `0 < n`, per decision 9, and take it from `valid` anyway.
-
-Under the stdlib listing's `valid` the target is in lowest terms, so its ambiguous case
-is `n = 2` with `m` odd and `l = 1` — which fails `n ≤ l`, so the fast path is never the
-ambiguous one, and that theorem lives wholly on the loop path.
-
 ## Target layout
 
 | Module | Contents |
@@ -151,17 +129,11 @@ ambiguous one, and that theorem lives wholly on the loop path.
 
 ## What dies
 
-- `LoopInvariant.lean`, `AfterLoop.lean`, `TieBreak.lean`, and `Bracket.lean`'s current
-  contents (the name is reused).
-- `BestApproximation.lean`'s `Bracketing` half: `isBestApproximation_loop`, `_extended`
-  and the two `_of_test` wrappers; and `gcd_eq_one`'s spec-level proof.
-- `isBestApproximation_unique` as it stands — false under two clauses, and back in
-  two parts.
-- From `SupportLemmas.lean`: `Int.le_mul_of_one_le_left`, `Int.abs_cancel`,
-  `Int.abs_lt_abs_of_mul_lt_mul`, which serve the bracket manoeuvres that `lev`/`eqv`
-  and `dist_of_lev_rs` replace; and `Int.abs_mul_of_pos` if `gcd_eq_one` was its only
-  caller.
-- `forIn_loop_invariant`, if Option A holds for both listings.
+Step 7 takes the five files and `forIn_loop_invariant`; `Bracket.lean`'s name is reused
+at step 8. What it leaves to check by hand once they are gone: from `SupportLemmas.lean`,
+`Int.le_mul_of_one_le_left`, `Int.abs_cancel` and `Int.abs_lt_abs_of_mul_lt_mul`, which
+served the bracket manoeuvres that `lev`/`eqv` and `dist_of_lev_rs` replace, and
+`Int.abs_mul_of_pos` if `gcd_eq_one` was its only caller.
 
 Not a line-count win: the two developments are comparable in size. The win is one
 vocabulary instead of two, a specification that says only what it means, and results
@@ -193,16 +165,24 @@ to review alone.
 6. **The stdlib listing**, plus its ambiguous-case theorem. Needs `LoopState.b_pos` (the
    numerator/denominator recovery is derivable from `a_eq_pq_cross`, `b_eq_rs_cross`
    and `det`, so the existing proof transfers), the peeled first iteration and the
-   permuted state. `isBestApproximation_self` still carries the fast path, which the
-   ambiguous-case theorem — the last pin — never reaches.
-7. **Delete the dead chain.**
+   permuted state. Landed. `LoopState.b_pos` and `isBestApproximation_self` moved into
+   the core, the latter into the closing specification section; `Tests/Axioms.lean`
+   ends with its nine pins, as decision 5 said it would.
+7. **Delete the dead chain**: `LoopInvariant.lean`, `AfterLoop.lean`, `TieBreak.lean`,
+   `Bracket.lean` and `BestApproximation.lean`, their rows in `Proofs.lean`, and
+   `WhileLoop.lean`'s `forIn_loop_invariant`. All five files are reachable only from
+   each other and the aggregator, and `forIn_loop_invariant` has no callers at all.
+   `BestApproximation.lean` still holds the second copy of `isBestApproximation_self`,
+   which goes with it.
 8. **Split and rename `Experiment.lean`** into the modules the target layout lists.
    Not a pure move: the markers move with the declarations, and the split turns what
    is one module boundary into eight, so each one is decided again — some of what is
    public today is public only for `SimplifiedCorrectness`, and some of what is
    private today is named across a boundary the split creates. Both directions, and
-   each new `public` costs a docstring. After (7), because it wants the names
-   `Bracket.lean` and `BestApproximation.lean` back.
+   each new `public` costs a docstring. The imports are decided again too: the core's
+   `public import` of `SupportLemmas` can already be a plain one, nothing downstream
+   needing those names through it. After (7), because it wants the names `Bracket.lean`
+   and `BestApproximation.lean` back.
 
    It also moves the closing specification section to `BestApproximation.lean` and
    drops the `Definitions.Specification` import step 3 added, which is what makes
@@ -228,12 +208,6 @@ to review alone.
 
 ## Risks
 
-- **R2.** The stdlib listing under Option A: the first iteration peeled, the state
-  permuted, and the loop condition coinciding only under `b_pos`.
-  Smaller than it looks: `b_pos` is state-local, `a * r + b * p = m` and
-  `a * s + b * q = n` coming back from `a_eq_pq_cross`, `b_eq_rs_cross` and `det`, and
-  its two hypotheses — lowest terms, and `limit < n` — are about `args`, so the
-  induction threads nothing that varies.
 - **R3.** PROOF.md. §§ "The orientation in the state" (its second half still on
   `Bracketing`), "Vocabulary", "Loop invariants", "After the loop" with "The degenerate tie", "The
   bracket", "Choosing between the two candidates" and "Discharging the three clauses"

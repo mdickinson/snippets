@@ -304,6 +304,28 @@ decreasing_by exact st.loop_decreases h
 public theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
   fun_induction runLoop st <;> trivial
 
+/-! ## The residual stays positive -/
+
+/--
+For a target in lowest terms whose denominator exceeds the limit, the residual `b` stays
+positive — the issue's § "Optimization".
+
+Were `b` zero, `b_eq_rs_cross` would read `msv = rnv`. Multiplying `a_eq_pq_cross`
+through by `r` and substituting then gives
+`ar = (pn - mq)vr = pnvr - mqvr = pmsv - mqvr = (ps - qr)vm = m`, the last step by
+`det`, and `as = n` goes the same way. So `a` divides both `m` and `n`; a target in
+lowest terms forces `a = 1`, and so `n = s`, within the limit after all. This is what
+lets a listing whose loop condition omits the `0 < b` test divide by `b` safely.
+-/
+public theorem b_pos (hgcd : Int.gcd args.m args.n = 1) (hlim : args.limit < args.n) :
+    0 < st.b := by
+  cases Int.lt_or_eq_of_le st.b_nonneg
+  · assumption
+  · have : st.a * st.r = args.m ∧ st.a * st.s = args.n :=
+      by grind only [st.det, st.a_eq_pq_cross, st.b_eq_rs_cross]
+    grind only [st.s_le_limit, Int.eq_one_of_dvd_one,
+      Int.dvd_mul_right, Int.gcd_eq_one_iff, show 0 ≤ st.a by grind only [st.b_lt_a]]
+
 end LoopState
 
 /-! # Post-loop analysis -/
@@ -941,3 +963,31 @@ public theorem isBestApproximation.gcd_eq_one {m n l r s : Int} (hn : 0 < n)
   let ef : args.Candidate := ⟨r, s, h.1, h.2.1⟩
   obtain ⟨g, k, hb⟩ := args.isReduced_of_best ((best_iff_isBestApproximation ef).mpr h)
   exact Int.gcd_eq_one_of_bezout hb
+
+/--
+A target in lowest terms whose denominator is already within the limit is its own best
+approximation — the fast path, which the shipped listing takes and the algorithm above
+never sees.
+
+Its distance to itself is zero, so the first clause is immediate, and a rival at
+distance zero too is the same fraction, whose denominator is therefore a multiple of
+this one.
+-/
+public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)
+    (hgcd : Int.gcd m n = 1) : isBestApproximation m n l m n := by
+  have h0 : (m * n - m * n).abs = 0 := Int.abs_eq_zero.mpr (by omega)
+  refine ⟨hn, hl, fun y z hz _ => ?_⟩
+  have h1 : 0 ≤ (y * n - m * z).abs * n := Int.mul_nonneg (Int.abs_nonneg _) (by omega)
+  have key : atLeastAsClose m n y z m n → y * n = m * z := by
+    intro hrev
+    unfold atLeastAsClose at hrev
+    rw [h0] at hrev
+    have h2 : (y * n - m * z).abs = 0 := by
+      rcases Int.mul_eq_zero.mp (show (y * n - m * z).abs * n = 0 by omega) with h | h
+      · exact h
+      · omega
+    have := Int.abs_eq_zero.mp h2
+    omega
+  refine ⟨?_, fun hrev => ?_⟩
+  · unfold atLeastAsClose; rw [h0]; omega
+  · exact Int.le_of_mul_eq_mul_of_gcd_eq_one hgcd hz (key hrev)
