@@ -413,13 +413,6 @@ whichever way the bracket points.
 def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
 def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
 
-/- The `st.lev` relation is reflexive and transitive. -/
-theorem lev_refl : st.lev ef ef := Int.le_refl _
-theorem lev_trans {ef gh ij : FractionPair}
-    (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
-  Int.le_of_le_mul_pos gh.pos
-    (by grind only [Int.le_mul_pos ij.pos h1, Int.le_mul_pos ef.pos h2])
-
 /-! ## Bracket facts -/
 
 /-
@@ -477,7 +470,7 @@ theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
 
 /-- Distance of r/s. -/
 theorem dist_rs : args.dist st.rs = (args.m * st.s - st.r * args.n) * st.v :=
-  st.dist_of_lev_rs (st.lev_refl st.rs)
+  st.dist_of_lev_rs Int.le_rfl
 
 /-- Distance for values ≥ t/u. -/
 theorem dist_of_tu_lev {ef : args.Candidate} (h : st.lev st.tu ef) :
@@ -489,7 +482,7 @@ theorem dist_of_tu_lev {ef : args.Candidate} (h : st.lev st.tu ef) :
 
 /-- Distance of t/u. -/
 theorem dist_tu : args.dist st.tu = (st.t * args.n - args.m * st.u) * st.v :=
-  st.dist_of_tu_lev (st.lev_refl st.tu)
+  st.dist_of_tu_lev Int.le_rfl
 
 /-! ## Bounded fractions lie outside the bracket -/
 
