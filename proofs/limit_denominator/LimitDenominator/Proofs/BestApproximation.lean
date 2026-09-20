@@ -26,47 +26,6 @@ math.
 -/
 
 /--
-The result is in lowest terms, and that is a consequence of the specification rather than a
-part of it.
-
-Were `r` and `s` to share a factor `g > 1`, the reduced pair `(r / g, s / g)` would be a
-candidate in its own right: its denominator is positive and strictly smaller, so still within
-the limit. It is also *exactly* as close to the target, because scaling a pair down by `g`
-scales its residual `r * n - m * s` down by `g` too, which cancels against the `s` on the
-other side of `atLeastAsClose`. The second clause applied to that candidate would then give
-`s ≤ s / g`, which is false. So minimality of the denominator already forces lowest terms.
--/
-public theorem isBestApproximation.gcd_eq_one {m n l r s : Int}
-    (h : isBestApproximation m n l r s) : Int.gcd r s = 1 := by
-  obtain ⟨hs, hsl, hall⟩ := h
-  obtain ⟨g, hgdef⟩ : ∃ g : Int, ((Int.gcd r s : Nat) : Int) = g := ⟨_, rfl⟩
-  have hgr : g ∣ r := hgdef ▸ Int.gcd_dvd_left r s
-  have hgs : g ∣ s := hgdef ▸ Int.gcd_dvd_right r s
-  have hne : Int.gcd r s ≠ 0 := by
-    intro h0; have := Int.gcd_eq_zero_iff.mp h0; omega
-  rcases (by omega : Int.gcd r s = 1 ∨ 2 ≤ Int.gcd r s) with hone | hg2n
-  · exact hone
-  exfalso
-  have hg2 : 2 ≤ g := by omega
-  obtain ⟨s', hs'⟩ := hgs
-  obtain ⟨r', hr'⟩ := hgr
-  have hs'pos : 0 < s' := by
-    rcases (by omega : s' ≤ 0 ∨ 0 < s') with hle | hlt
-    · have : g * s' ≤ 0 := Int.mul_nonpos_of_nonneg_of_nonpos (by omega) hle
-      omega
-    · exact hlt
-  have hs'lt : s' < s := by
-    have : 2 * s' ≤ g * s' := Int.mul_le_mul_of_nonneg_right hg2 (by omega)
-    omega
-  have hres : r * n - m * s = g * (r' * n - m * s') := by rw [hs', hr']; grind
-  have hclose : atLeastAsClose m n r' s' r s := by
-    unfold atLeastAsClose
-    rw [hres, Int.abs_mul_of_pos (by omega : (0 : Int) < g), hs']
-    grind
-  have := (hall r' s' hs'pos (by omega)).2 hclose
-  omega
-
-/--
 A target in lowest terms whose denominator is already within the limit is its own best
 approximation — the fast path.
 

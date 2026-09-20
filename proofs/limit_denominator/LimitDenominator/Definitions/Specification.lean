@@ -30,9 +30,8 @@ most `l`: closest, with ties broken towards the smaller denominator.
 
 Being in lowest terms is deliberately *not* stipulated here. It follows from the two
 clauses alone, because an unreduced pair is beaten on the second one by its own
-reduction — see `isBestApproximation.gcd_eq_one` in
-`LimitDenominator.Proofs.BestApproximation`. So once the value is fixed, so is the
-representation.
+reduction — see `isBestApproximation.gcd_eq_one`. So once the value is fixed, so is
+the representation.
 -/
 def isBestApproximation (m n l r s : Int) : Prop :=
   0 < s ∧ s ≤ l ∧

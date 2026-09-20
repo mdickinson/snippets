@@ -87,6 +87,15 @@ public theorem Int.abs_lt_abs_of_mul_lt_mul {x y v z w : Int} (hv : v ≠ 0) (hz
 /-! ## Lowest terms and divisibility -/
 
 /--
+A Bézout identity certifies lowest terms: any common divisor of `r` and `s` divides the
+combination, hence divides `1`.
+-/
+public theorem Int.gcd_eq_one_of_bezout {g h r s : Int} (hb : g * r + h * s = 1) :
+    Int.gcd r s = 1 :=
+  Int.gcd_eq_one_iff.mpr fun _ cr cs =>
+    hb ▸ Int.dvd_add (Int.dvd_mul_of_dvd_right cr) (Int.dvd_mul_of_dvd_right cs)
+
+/--
 If `y / z` equals `r / s` as a value and `r / s` is in lowest terms, then `s` divides `z`.
 -/
 public theorem Int.dvd_of_mul_eq_mul_of_gcd_eq_one {r s y z : Int}

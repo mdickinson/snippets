@@ -1,5 +1,6 @@
 module
 
+public import LimitDenominator.Definitions.Specification
 public import LimitDenominator.Proofs.SupportLemmas
 
 /-! # Support lemmas for Int -/
@@ -792,3 +793,94 @@ theorem limitDenominator_ambiguous_case (hamb : args.ambiguous) :
   args.postLoopState.rv_eq_floor hamb
 
 end Arguments
+
+/-! # The specification -/
+
+/-
+Everything above is in the proofs' own vocabulary. This section is where it meets the
+specification's, and the only part of the file that mentions `isBestApproximation`.
+-/
+
+/--
+`best` and `isBestApproximation` say the same thing of the same pair.
+
+`better`'s two arms are the specification's two clauses. Forwards, either arm gives the
+closeness clause, and the strict arm is impossible once the rival is at least as close, so
+the tie arm supplies the denominator comparison. Backwards, a strict inequality is the
+first arm and an equality feeds the second clause, which gives the second arm.
+-/
+theorem best_iff_isBestApproximation {args : Arguments} (ef : args.Candidate) :
+    args.best ef ↔ isBestApproximation args.m args.n args.limit ef.num ef.den := by
+  constructor
+  · intro hbest
+    refine ⟨ef.pos, ef.den_limited, fun y z hz hzl => ?_⟩
+    have hb := hbest ⟨y, z, hz, hzl⟩
+    simp only [Arguments.better, Arguments.dist] at hb
+    unfold atLeastAsClose
+    omega
+  · rintro ⟨-, -, hall⟩ gh
+    have hc := hall gh.num gh.den gh.pos gh.den_limited
+    unfold atLeastAsClose at hc
+    simp only [Arguments.better, Arguments.dist]
+    omega
+
+/-- `Arguments.ambiguous` is the specification's `isAmbiguous`, formula for formula. -/
+theorem ambiguous_iff_isAmbiguous (args : Arguments) :
+    args.ambiguous ↔ isAmbiguous args.m args.n args.limit := Iff.rfl
+
+/--
+Outside the ambiguous case the specification determines the answer: no two distinct pairs
+satisfy it.
+-/
+public theorem isBestApproximation_unique_of_not_ambiguous {m n l r₁ s₁ r₂ s₂ : Int}
+    (hn : 0 < n) (hamb : ¬ isAmbiguous m n l)
+    (h₁ : isBestApproximation m n l r₁ s₁) (h₂ : isBestApproximation m n l r₂ s₂) :
+    r₁ = r₂ ∧ s₁ = s₂ := by
+  have hl : 1 ≤ l := by have := h₁.1; have := h₁.2.1; omega
+  let args : Arguments := ⟨m, n, l, hn, hl⟩
+  let ef : args.Candidate := ⟨r₁, s₁, h₁.1, h₁.2.1⟩
+  let gh : args.Candidate := ⟨r₂, s₂, h₂.1, h₂.2.1⟩
+  have heq : ef = gh :=
+    args.non_ambiguous_best (fun ha => hamb ((ambiguous_iff_isAmbiguous args).mp ha))
+      ((best_iff_isBestApproximation ef).mpr h₁) ((best_iff_isBestApproximation gh).mpr h₂)
+  exact ⟨congrArg Arguments.Candidate.num heq, congrArg Arguments.Candidate.den heq⟩
+
+/--
+In the ambiguous case the specification is satisfied by exactly two pairs, the floor and
+the floor plus one, each over denominator one.
+-/
+public theorem isBestApproximation_iff_of_ambiguous {m n l r s : Int}
+    (hn : 0 < n) (hamb : isAmbiguous m n l) :
+    isBestApproximation m n l r s ↔ (r, s) = (m / n, 1) ∨ (r, s) = (m / n + 1, 1) := by
+  have hl : 1 ≤ l := by have := hamb.1; omega
+  let args : Arguments := ⟨m, n, l, hn, hl⟩
+  constructor
+  · intro h
+    let ef : args.Candidate := ⟨r, s, h.1, h.2.1⟩
+    rcases (args.ambiguous_best hamb (yz := ef)).mp ((best_iff_isBestApproximation ef).mpr h)
+      with he | he
+    · exact Or.inl (congrArg (fun c : args.Candidate => (c.num, c.den)) he)
+    · exact Or.inr (congrArg (fun c : args.Candidate => (c.num, c.den)) he)
+  · intro h
+    have hfloor := (best_iff_isBestApproximation args.floor).mp
+      ((args.ambiguous_best hamb).mpr (Or.inl rfl))
+    have hadd := (best_iff_isBestApproximation args.floorAddOne).mp
+      ((args.ambiguous_best hamb).mpr (Or.inr rfl))
+    rcases h with he | he <;> rw [Prod.mk.injEq] at he <;> rw [he.1, he.2]
+    · exact hfloor
+    · exact hadd
+
+/--
+The result is in lowest terms, and that is a consequence of the specification rather than
+a part of it.
+
+A pair satisfying the specification is one of the two bracket endpoints, and the bracket's
+determinant is a Bézout identity for each of them.
+-/
+public theorem isBestApproximation.gcd_eq_one {m n l r s : Int} (hn : 0 < n)
+    (h : isBestApproximation m n l r s) : Int.gcd r s = 1 := by
+  have hl : 1 ≤ l := by have := h.1; have := h.2.1; omega
+  let args : Arguments := ⟨m, n, l, hn, hl⟩
+  let ef : args.Candidate := ⟨r, s, h.1, h.2.1⟩
+  obtain ⟨g, k, hb⟩ := args.isReduced_of_best ((best_iff_isBestApproximation ef).mpr h)
+  exact Int.gcd_eq_one_of_bezout hb

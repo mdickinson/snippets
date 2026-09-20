@@ -1,5 +1,6 @@
 module
 
+meta import LimitDenominator.Proofs.Experiment
 meta import LimitDenominator.Proofs.SimplifiedCorrectness
 meta import LimitDenominator.Proofs.StdlibCorrectness
 
@@ -15,7 +16,10 @@ Each theorem is checked separately rather than relying on the trichotomy to cove
 transitively, so that a change to one proof cannot quietly narrow what is checked.
 
 `isBestApproximation.gcd_eq_one` is pinned alongside them because the specification does not
-stipulate lowest terms: that promise is carried by this theorem alone.
+stipulate lowest terms: that promise is carried by this theorem alone. The two statements about
+what the specification does and does not determine — one solution outside the ambiguous case,
+exactly two inside it — are pinned for the same reason, being claims no correctness theorem
+makes.
 -/
 
 /--
@@ -52,3 +56,17 @@ info: 'isBestApproximation.gcd_eq_one' depends on axioms:
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms isBestApproximation.gcd_eq_one
+
+/--
+info: 'isBestApproximation_unique_of_not_ambiguous' depends on axioms:
+  [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms isBestApproximation_unique_of_not_ambiguous
+
+/--
+info: 'isBestApproximation_iff_of_ambiguous' depends on axioms:
+  [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms isBestApproximation_iff_of_ambiguous
