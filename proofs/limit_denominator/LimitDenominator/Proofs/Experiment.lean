@@ -92,11 +92,6 @@ variable (ef : FractionPair)
 def isReduced := ∃ (g h : Int), g * ef.num + h * ef.den = 1
 
 /--
-A fraction pair is a *half integer* if it has the form w + 1/2 for some integer w.
--/
-def isHalfInteger := ∃ (w : Int), 2 * ef.num = (2 * w + 1) * ef.den
-
-/--
 Two fraction pairs that are numerically equal and have equal denominator are equal.
 -/
 theorem eq_of_eq_den {ef gh : FractionPair}
@@ -122,9 +117,6 @@ namespace Arguments
 
 /- In this section, fix arguments `args`. -/
 variable (args : Arguments)
-
-/-- Shortcut for the fraction pair m/n. -/
-abbrev mn : FractionPair := ⟨args.m, args.n, args.n_pos⟩
 
 /--
 A *candidate* solution to the problem is a fraction pair whose denominator is bounded by
@@ -204,9 +196,10 @@ def best (ef : args.Candidate) := ∀ (gh : args.Candidate), args.better ef gh
 
 /--
 We say a set of arguments is *ambiguous* if the limit is `1` and `m/n` is a
-half-integer. This is the only case where we do not have a unique best approximation.
+half-integer, that is, `m/n = w + 1/2` for some integer `w`. This is the only case
+where we do not have a unique best approximation.
 -/
-def ambiguous := args.limit = 1 ∧ args.mn.isHalfInteger
+def ambiguous := args.limit = 1 ∧ ∃ (w : Int), 2 * args.m = (2 * w + 1) * args.n
 
 /-
 We define the floor and floor plus one of m/n as candidates. These will turn out
