@@ -131,7 +131,7 @@ our "better" relation is reflexive: e/f is better than itself.
 A *best* candidate is then a candidate that's better than any other candidate.
 -/
 
-/-- Absolute distance from e/f to m/n, scaled by both denominators. -/
+/-- Absolute distance from m/n to e/f, scaled by both denominators. -/
 def dist (ef : args.Candidate) := (ef.num * args.n - args.m * ef.den).abs
 
 /-- Definition of the *better* relation. -/

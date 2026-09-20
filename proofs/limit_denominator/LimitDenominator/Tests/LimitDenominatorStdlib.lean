@@ -44,11 +44,10 @@ divisions safe. -/
 /-! ## The specification, evaluated -/
 
 /- Being gated on `Int.gcd m n = 1`, both grid checks below could have passed vacuously. Neither
-does: a clear majority of the grid's targets are in lowest terms, and among those both tie-break
-clauses have live antecedents for either sign of `m` — clause 3's only at a limit of one, which
-§ "Discharging the three clauses" of PROOF.md shows is the only place they can be. To
-re-derive, filter `specCheckGrid` to targets in lowest terms and count those with a rival that
-ties on distance at a different denominator (clause 2) or at the same one (clause 3). -/
+does: a clear majority of the grid's targets are in lowest terms, and among those the tie-break
+clause has live antecedents for either sign of `m`. To re-derive, filter `specCheckGrid` to
+targets in lowest terms and count those with a rival that ties on distance at a different
+denominator. -/
 
 #guard specCheckGrid.all fun (m, n, l) =>
   Int.gcd m n != 1 ||

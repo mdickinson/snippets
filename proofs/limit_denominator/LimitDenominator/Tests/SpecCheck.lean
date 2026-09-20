@@ -15,13 +15,22 @@ file checks the specification itself, by evaluating it.
 
 /-- `Bool`-valued form of `atLeastAsClose`. -/
 def checkAtLeastAsClose (m n r s y z : Int) : Bool :=
-  (m * s - r * n).abs * z ≤ (m * z - y * n).abs * s
+  (r * n - m * s).abs * z ≤ (y * n - m * z).abs * s
 
-/-- `Bool`-valued form of the three clauses `isBestApproximation` asserts of one candidate. -/
+/-- `Bool`-valued form of the two clauses `isBestApproximation` asserts of one candidate. -/
 def checkCandidate (m n r s y z : Int) : Bool :=
   checkAtLeastAsClose m n r s y z
   && (!checkAtLeastAsClose m n y z r s || s ≤ z)
-  && (!checkAtLeastAsClose m n y z r s || s ≠ z || r ≤ y)
+
+/--
+`Bool`-valued form of `isAmbiguous`: the limit is one and `2 * m / n` is an odd integer.
+
+Both readings of `%` want `0 < n`, which the grid below supplies. Given that, `%` on `Int`
+being `emod`, the divisibility test and the odd-quotient test are both right for either sign
+of `m`.
+-/
+def checkAmbiguous (m n l : Int) : Bool :=
+  l == 1 && 2 * m % n == 0 && (2 * m / n) % 2 == 1
 
 /--
 `Bool`-valued bounded form of `isBestApproximation`.
@@ -34,19 +43,22 @@ Both of those steps need `0 < n`, which the grid supplies: it is what makes `m *
 floor, Lean's `Int` division agreeing with the floor only for a positive divisor, and it is
 what confines `m * z % n` to `[0, n)` below. Given that, the two `y` suffice:
 
-* `|m*z - y*n|` is smallest at those two `y`, taking the values `t` and `n - t` where
+* `|y*n - m*z|` is smallest at those two `y`, taking the values `t` and `n - t` where
   `t = m*z % n`, and every other `y` gives at least `n + min(t, n - t)`.
 * So if the closeness clause holds at whichever of the two is nearer, then for every other `y`
   it holds *strictly*.
-* The two tie-break clauses are conditioned on the closeness inequality holding in reverse, so
-  wherever the closeness clause holds strictly they are vacuous.
+* The tie-break clause is conditioned on the closeness inequality holding in reverse, so
+  wherever the closeness clause holds strictly it is vacuous.
 
-The `Int.gcd r s == 1` conjunct below goes beyond `isBestApproximation`, which does not stipulate
-lowest terms. It is kept as an independent empirical check of
-`isBestApproximation.gcd_eq_one`, which derives it from the three clauses instead.
+Two conjuncts below go beyond `isBestApproximation`, deliberately, and both are checks on
+statements the proof layer makes about the specification rather than within it. `Int.gcd r s
+== 1` is an independent empirical check of `isBestApproximation.gcd_eq_one`, which derives
+lowest terms from the two clauses instead. The ambiguous-case conjunct pins the choice the
+specification leaves open: where two pairs satisfy it, the one returned is the floor.
 -/
 def checkBestApproximation (m n l r s : Int) : Bool :=
   0 < s && s ≤ l && Int.gcd r s == 1
+  && (!checkAmbiguous m n l || (r == m / n && s == 1))
   && (List.range l.toNat).all fun i =>
     let z : Int := i + 1
     let y : Int := m * z / n
