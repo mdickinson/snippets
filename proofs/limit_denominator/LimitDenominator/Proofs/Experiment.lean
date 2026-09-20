@@ -54,6 +54,28 @@ theorem Int.mul_nonneg_iff {a b : Int} :
 theorem Int.divisor_le_mul {a b : Int} (h : 0 < a * b) : a ≤ a * b := by
   grind only [Int.mul_nonneg_iff (a := a) (b := b - 1), Int.mul_pos_iff.mp h]
 
+/-! # Multiplying and cancelling a positive factor -/
+
+/-
+The proofs below often multiply both sides of an equality or inequality by a positive
+integer, or cancel that factor again. All six lemmas take the factor's positivity
+first, so that call sites read alike.
+
+`eq_mul_pos` has no use for `_hc`; it takes it only for that uniformity.
+-/
+theorem Int.eq_mul_pos {a b c : Int} (_hc : 0 < c) (heq : a = b) : a * c = b * c := by
+  rw [heq]
+theorem Int.lt_mul_pos {a b c : Int} (hc : 0 < c) (hlt : a < b) : a * c < b * c :=
+  Int.mul_lt_mul_of_pos_right hlt hc
+theorem Int.le_mul_pos {a b c : Int} (hc : 0 < c) (hle : a ≤ b) : a * c ≤ b * c :=
+  Int.mul_le_mul_of_nonneg_right hle (Int.le_of_lt hc)
+theorem Int.eq_of_eq_mul_pos {a b c : Int} (hc : 0 < c) (heq : a * c = b * c) : a = b :=
+  Int.eq_of_mul_eq_mul_right (Int.ne_of_gt hc) heq
+theorem Int.lt_of_lt_mul_pos {a b c : Int} (hc : 0 < c) (hlt : a * c < b * c) : a < b :=
+  Int.lt_of_mul_lt_mul_right hlt (Int.le_of_lt hc)
+theorem Int.le_of_le_mul_pos {a b c : Int} (hc : 0 < c) (hle : a * c ≤ b * c) : a ≤ b :=
+  Int.le_of_mul_le_mul_right hle hc
+
 /-! # Fraction pairs -/
 
 /--
@@ -74,34 +96,14 @@ A fraction pair is a *half integer* if it has the form w + 1/2 for some integer 
 -/
 def isHalfInteger := ∃ (w : Int), 2 * ef.num = (2 * w + 1) * ef.den
 
-/- We often just need to know that the denominator of `ef` is nonnegative or nonzero. -/
-theorem nonneg : 0 ≤ ef.den := Int.le_of_lt ef.pos
-theorem ne_zero : ef.den ≠ 0 := Int.ne_of_gt ef.pos
-
-/-
-The proofs below often involve either multiplying both sides of an equality or
-inequality by a denominator, or the reverse operation of cancelling a denominator from
-both sides. The following lemmas help with spelling those operations clearly.
--/
-theorem eq_mul_den {a b : Int} (heq : a = b) : a * ef.den = b * ef.den := by rw [heq]
-theorem lt_mul_den {a b : Int} (hlt : a < b) : a * ef.den < b * ef.den :=
-  Int.mul_lt_mul_of_pos_right hlt ef.pos
-theorem le_mul_den {a b : Int} (hle : a ≤ b) : a * ef.den ≤ b * ef.den :=
-  Int.mul_le_mul_of_nonneg_right hle ef.nonneg
-theorem eq_of_eq_mul_den {a b : Int} (heq : a * ef.den = b * ef.den) : a = b :=
-  Int.eq_of_mul_eq_mul_right ef.ne_zero heq
-theorem lt_of_lt_mul_den {a b : Int} (hlt : a * ef.den < b * ef.den) : a < b :=
-  Int.lt_of_mul_lt_mul_right hlt ef.nonneg
-theorem le_of_le_mul_den {a b : Int} (hle : a * ef.den ≤ b * ef.den) : a ≤ b :=
-  Int.le_of_mul_le_mul_right hle ef.pos
-
 /--
 Two fraction pairs that are numerically equal and have equal denominator are equal.
 -/
 theorem eq_of_eq_den {ef gh : FractionPair}
     (h_deneq : ef.den = gh.den) (heq : ef.num * gh.den = gh.num * ef.den) :
     ef = gh := by
-  rw [FractionPair.mk.injEq]; exact ⟨ eq_of_eq_mul_den gh (h_deneq ▸ heq), h_deneq ⟩
+  rw [FractionPair.mk.injEq]
+  exact ⟨ Int.eq_of_eq_mul_pos gh.pos (h_deneq ▸ heq), h_deneq ⟩
 
 end FractionPair
 
@@ -175,11 +177,15 @@ theorem better_refl (ef : args.Candidate) : args.better ef ef := by
 theorem better_trans {ef gh ij : args.Candidate} (h1 : args.better ef gh)
     (h2 : args.better gh ij) : args.better ef ij := by
   rcases h1 with h1 | ⟨h1, d1⟩ <;> rcases h2 with h2 | ⟨h2, d2⟩
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.lt_mul_den h2])
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.lt_mul_den h1, ef.eq_mul_den h2])
-  · left; exact gh.lt_of_lt_mul_den (by grind only [ij.eq_mul_den h1, ef.lt_mul_den h2])
+  · left; exact Int.lt_of_lt_mul_pos gh.pos
+      (by grind only [Int.lt_mul_pos ij.pos h1, Int.lt_mul_pos ef.pos h2])
+  · left; exact Int.lt_of_lt_mul_pos gh.pos
+      (by grind only [Int.lt_mul_pos ij.pos h1, Int.eq_mul_pos ef.pos h2])
+  · left; exact Int.lt_of_lt_mul_pos gh.pos
+      (by grind only [Int.eq_mul_pos ij.pos h1, Int.lt_mul_pos ef.pos h2])
   · right
-    exact ⟨gh.eq_of_eq_mul_den (by grind only [ij.eq_mul_den h1, ef.eq_mul_den h2]),
+    exact ⟨Int.eq_of_eq_mul_pos gh.pos
+        (by grind only [Int.eq_mul_pos ij.pos h1, Int.eq_mul_pos ef.pos h2]),
       Int.le_trans d1 d2⟩
 
 /-- The `better` relation is total. -/
@@ -392,7 +398,7 @@ In both this case and the `b = 0` case we have `(k + 1)b ≤ a`.
 -/
 theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
   rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
-  · exact (Int.le_ediv_iff_mul_le hlt).mp (st.rs.lt_of_lt_mul_den
+  · exact (Int.le_ediv_iff_mul_le hlt).mp (Int.lt_of_lt_mul_pos st.s_pos
       (by grind only [k, u, LoopState.loopCondition, st.exited, st.u_le_limit]))
   · grind only [st.b_lt_a, st.b_nonneg]
 
@@ -415,7 +421,8 @@ def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
 theorem lev_refl : st.lev ef ef := Int.le_refl _
 theorem lev_trans {ef gh ij : FractionPair}
     (h1 : st.lev ef gh) (h2 : st.lev gh ij) : st.lev ef ij :=
-  gh.le_of_le_mul_den (by grind only [ij.le_mul_den h1, ef.le_mul_den h2])
+  Int.le_of_le_mul_pos gh.pos
+    (by grind only [Int.le_mul_pos ij.pos h1, Int.le_mul_pos ef.pos h2])
 
 /-! ## Bracket facts -/
 
@@ -469,7 +476,8 @@ theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
 
 /-- The two distances split `n` between them. -/
 theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, args.mn.eq_mul_den st.bracket_det]
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross,
+    Int.eq_mul_pos args.n_pos st.bracket_det]
 
 /-- Distance for values ≤ r/s. -/
 theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
@@ -500,7 +508,8 @@ theorem lev_rs_or_tu_lev (yz : args.Candidate) :
     st.lev yz st.rs ∨ st.lev st.tu yz := by
   have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
       + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
-    grind only [yz.eq_mul_den st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
+    grind only [
+      Int.eq_mul_pos yz.pos st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
   cases Int.pos_or_pos_of_mul_add_mul_pos st.s_pos st.u_pos lc
   · right; grind only [lev]
   · left; grind only [lev]
@@ -509,14 +518,14 @@ theorem lev_rs_or_tu_lev (yz : args.Candidate) :
 theorem den_le_of_eqv_rs {yz : args.Candidate} (yz_eqv_rs : st.eqv yz st.rs) :
     st.s ≤ yz.den := by
   have : yz.den = st.s * ((st.t * yz.den - yz.num * st.u) * st.v) := by
-    grind only [st.tu.eq_mul_den yz_eqv_rs, yz.eq_mul_den st.bracket_det]
+    grind only [Int.eq_mul_pos st.u_pos yz_eqv_rs, Int.eq_mul_pos yz.pos st.bracket_det]
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- if y/z = t/u then u ≤ z (because t/u is in lowest terms). -/
 theorem den_le_of_tu_eqv {yz : args.Candidate} (tu_eqv_yz : st.eqv st.tu yz) :
     st.u ≤ yz.den := by
   have : yz.den = st.u * ((yz.num * st.s - st.r * yz.den) * st.v) := by
-    grind only [st.rs.eq_mul_den tu_eqv_yz, yz.eq_mul_den st.bracket_det]
+    grind only [Int.eq_mul_pos st.s_pos tu_eqv_yz, Int.eq_mul_pos yz.pos st.bracket_det]
   exact this ▸ Int.divisor_le_mul (this ▸ yz.pos)
 
 /-- r/s is at least as good as anything beyond it. -/
@@ -525,8 +534,9 @@ theorem better_rs_of_lev {yz : args.Candidate} (h : st.lev yz st.rs) :
   unfold Arguments.better
   rw [st.dist_rs, st.dist_of_lev_rs h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
-  · left; grind only [args.mn.lt_mul_den hlt]
-  · right; exact ⟨by grind only [args.mn.eq_mul_den heq], st.den_le_of_eqv_rs heq⟩
+  · left; grind only [Int.lt_mul_pos args.n_pos hlt]
+  · right
+    exact ⟨by grind only [Int.eq_mul_pos args.n_pos heq], st.den_le_of_eqv_rs heq⟩
 
 /-- t/u is at least as good as anything beyond it. -/
 theorem better_tu_of_lev {yz : args.Candidate} (h : st.lev st.tu yz) :
@@ -534,8 +544,9 @@ theorem better_tu_of_lev {yz : args.Candidate} (h : st.lev st.tu yz) :
   unfold Arguments.better
   rw [st.dist_tu, st.dist_of_tu_lev h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
-  · left; grind only [args.mn.lt_mul_den hlt]
-  · right; exact ⟨by grind only [args.mn.eq_mul_den heq], st.den_le_of_tu_eqv heq⟩
+  · left; grind only [Int.lt_mul_pos args.n_pos hlt]
+  · right
+    exact ⟨by grind only [Int.eq_mul_pos args.n_pos heq], st.den_le_of_tu_eqv heq⟩
 
 /-- One of the two endpoints is at least as good as any candidate. -/
 theorem better_rs_or_better_tu (yz : args.Candidate) :
@@ -554,9 +565,10 @@ theorem eq_rs_of_lev_of_best (h : st.lev yz st.rs) (yz_best : args.best yz) :
   rw [st.dist_rs, st.dist_of_lev_rs h] at yz_rs
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · -- y/z < r/s makes r/s strictly better than y/z, contradicting yz_rs
-    grind only [args.mn.lt_mul_den hlt]
+    grind only [Int.lt_mul_pos args.n_pos hlt]
   · -- y/z = r/s as fractions, so s ≤ z; yz_rs gives z ≤ s
-    have ⟨_, z_le_s⟩ := Or.resolve_left yz_rs (by grind only [args.mn.eq_mul_den heq])
+    have ⟨_, z_le_s⟩ :=
+      Or.resolve_left yz_rs (by grind only [Int.eq_mul_pos args.n_pos heq])
     exact Arguments.Candidate.eq_of_eq_den
       (Int.le_antisymm z_le_s (st.den_le_of_eqv_rs heq))
       (Int.eq_of_mul_eq_mul_right st.v_nonzero heq)
@@ -569,9 +581,10 @@ theorem eq_tu_of_lev_of_best (h : st.lev st.tu yz) (yz_best : args.best yz) :
   rw [st.dist_tu, st.dist_of_tu_lev h] at yz_tu
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · -- t/u < y/z makes t/u strictly better than y/z, contradicting yz_tu
-    grind only [args.mn.lt_mul_den hlt]
+    grind only [Int.lt_mul_pos args.n_pos hlt]
   · -- y/z = t/u as fractions, so u ≤ z; yz_tu gives z ≤ u
-    have ⟨_, z_le_u⟩ := Or.resolve_left yz_tu (by grind only [args.mn.eq_mul_den heq])
+    have ⟨_, z_le_u⟩ :=
+      Or.resolve_left yz_tu (by grind only [Int.eq_mul_pos args.n_pos heq])
     exact Arguments.Candidate.eq_of_eq_den
       (Int.le_antisymm z_le_u (st.den_le_of_tu_eqv heq))
       (Int.eq_of_mul_eq_mul_right st.v_nonzero heq.symm)
@@ -625,8 +638,9 @@ theorem rv_cases :
       grind only [st.dist_rs, st.dist_tu, st.b_eq_rs_cross, st.c_eq_tu_cross]
     · left; refine ⟨ite_eq_left (by grind only), .inr ⟨?_, ?_⟩⟩
       · grind only [st.dist_rs, st.dist_tu, st.c_eq_tu_cross,
-          args.mn.eq_mul_den st.bracket_det]
-      · exact Int.le_of_mul_le_mul_left (heq ▸ st.tu.le_mul_den st.b_le_c) st.c_pos
+          Int.eq_mul_pos args.n_pos st.bracket_det]
+      · exact Int.le_of_mul_le_mul_left
+          (heq ▸ Int.le_mul_pos st.u_pos st.b_le_c) st.c_pos
 
 /-- The returned fraction pair is a best approximation. -/
 theorem rv_best : args.best st.rv := by
@@ -682,8 +696,8 @@ theorem mnv_sub_half :
 
   -- tv = rv + 1 from the determinant condition, and wv < tv and rv < wv + 1 from above
   have : st.t * st.v = st.r * st.v + 1 := by grind only [st.bracket_det]
-  have : w * st.v < st.t * st.v := args.mn.lt_of_lt_mul_den (by grind only)
-  have : st.r * st.v < (w * st.v + 1) := args.mn.lt_of_lt_mul_den (by grind only)
+  have : w * st.v < st.t * st.v := Int.lt_of_lt_mul_pos args.n_pos (by grind only)
+  have : st.r * st.v < (w * st.v + 1) := Int.lt_of_lt_mul_pos args.n_pos (by grind only)
 
   -- hence rv = wv, and the theorem follows
   grind only [show st.r * st.v = w * st.v by omega]
@@ -692,9 +706,9 @@ theorem mnv_sub_half :
 Since t/u v - r/s v = 1/su = 1, it follows immediately that m/n v = t/u v - 1/2.
 -/
 theorem mnv_add_half : 2 * args.m * st.u * st.v = (2 * st.t * st.v - st.u) * args.n :=
-  st.rs.eq_of_eq_mul_den (by grind only [
-    args.mn.eq_mul_den st.bracket_det,
-    st.tu.eq_mul_den (st.mnv_sub_half hamb),
+  Int.eq_of_eq_mul_pos st.s_pos (by grind only [
+    Int.eq_mul_pos args.n_pos st.bracket_det,
+    Int.eq_mul_pos st.u_pos (st.mnv_sub_half hamb),
     st.s_eq_one hamb,
     st.u_eq_one hamb
   ])
@@ -702,12 +716,14 @@ theorem mnv_add_half : 2 * args.m * st.u * st.v = (2 * st.t * st.v - st.u) * arg
 /-- So r/s is better than t/u. -/
 theorem rs_better_tu : args.better st.rs st.tu := by
   right; grind only [st.dist_rs, st.dist_tu, st.s_eq_one hamb, st.u_eq_one hamb,
-    st.tu.eq_mul_den (st.mnv_sub_half hamb), st.rs.eq_mul_den (st.mnv_add_half hamb)]
+    Int.eq_mul_pos st.u_pos (st.mnv_sub_half hamb),
+    Int.eq_mul_pos st.s_pos (st.mnv_add_half hamb)]
 
 /-- And t/u is better than r/s. -/
 theorem tu_better_rs : args.better st.tu st.rs := by
   right; grind only [st.dist_rs, st.dist_tu, st.s_eq_one hamb, st.u_eq_one hamb,
-    st.rs.eq_mul_den (st.mnv_add_half hamb), st.tu.eq_mul_den (st.mnv_sub_half hamb)]
+    Int.eq_mul_pos st.s_pos (st.mnv_add_half hamb),
+    Int.eq_mul_pos st.u_pos (st.mnv_sub_half hamb)]
 
 /-- So _both_ r/s and t/u are best approximations. -/
 theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
@@ -718,7 +734,8 @@ theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
 /-- In the ambiguous case, bu = cs. -/
 theorem bu_eq_cs : st.b * st.u = st.c * st.s := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross,
-    st.tu.eq_mul_den (st.mnv_sub_half hamb), st.rs.eq_mul_den (st.mnv_add_half hamb)]
+    Int.eq_mul_pos st.u_pos (st.mnv_sub_half hamb),
+    Int.eq_mul_pos st.s_pos (st.mnv_add_half hamb)]
 
 /-- In the ambiguous case, v = 1. -/
 theorem v_eq_one : st.v = 1 := by
