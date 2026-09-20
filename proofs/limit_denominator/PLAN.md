@@ -5,6 +5,13 @@ that it survives between sessions. It is scaffolding, not one of the project's d
 when step 9 lands it gets deleted, and `README.md` and `PROOF.md` are the two that
 stay.
 
+## Progress
+
+Steps 1, 2 and 3 have landed; their commits carry the reasoning, and the tree is the
+record of what they produced, so the sections that described them have been cut. What
+they changed about the steps still to come is folded in below. Step 4 is next, and
+carries R1.
+
 ## Decisions taken
 
 1. **Option A**: each listing is proved *equal* to the mathematical function, and
@@ -16,8 +23,8 @@ stay.
    sense in which the floor is better; it is an implementation accident, and it moves
    out of the specification into separate statements.
 4. **`isAmbiguous` is named** in `Definitions/Specification.lean`.
-5. **All four new statements are public and pinned.** `Tests/Axioms.lean` goes from
-   five pins to nine.
+5. **All four new statements are public and pinned.** `Tests/Axioms.lean` ends with
+   nine pins.
 6. **`atLeastAsClose` flips** to candidate-minus-target, matching `dist`, which does
    not move. `dist`'s docstring is corrected to "from m/n to e/f" to match.
 7. **The determinant becomes the canonical route to lowest terms.** `gcd_eq_one` is
@@ -74,129 +81,48 @@ comparison the second arm wants.
 
 Worth stating, because decision 3 sharpens the PR's headline rather than blunting it.
 
-In the current tree the seventh invariant is spent on the specification's third
-clause. After the rework it is spent only on the three return-value statements —
-`rv_eq_floor` and the two listing theorems — which say that the lower of the two best
+The seventh invariant is spent only on the return-value statements — `rv_eq_floor` and
+the two listing theorems still to come — which say that the lower of the two best
 approximations is the one returned.
 
 Nothing in the specification's vocabulary needs it. `ambiguous_of_rs_and_tu_best`,
 which proves the ambiguous case is the *only* ambiguity, uses just `bracket_det`,
 `s_pos`, `limit_lt_s_add_u`, `one_le_limit` and `v_cases`. Neither does the
-characterisation, though that takes a different proof from the one in the tree. With
-`s = u = 1`, `bracket_det` makes `r/s` and `t/u` adjacent integers, and
-`mnv_sub_half` says which way round they sit: `v = 1` makes `r/s` the floor, `v = -1`
-makes `t/u` the floor and `r/s` the floor plus one. Either way `{r/s, t/u}` is
-`{⌊m/n⌋, ⌊m/n⌋ + 1}` as a set, which is what both directions want —
-`eq_rs_or_eq_tu_of_best` forwards, `rs_best_and_tu_best` back. Neither reaches the
-seventh invariant: `v_eq_one` is used only by `rs_eq_floor` and
-`tu_eq_floor_add_one`, which is how `ambiguous_best` arrives at the pair today.
-Reproving it at step 3 is what buys the sharper statement.
+characterisation. With `s = u = 1`, `bracket_det` makes `r/s` and `t/u` adjacent
+integers, and `mnv_sub_half` says which way round they sit: `v = 1` makes `r/s` the
+floor, `v = -1` makes `t/u` the floor and `r/s` the floor plus one. Either way
+`{r/s, t/u}` is `{⌊m/n⌋, ⌊m/n⌋ + 1}` as a set, which is what both directions of
+`ambiguous_best` want — `eq_rs_or_eq_tu_of_best` forwards, `rs_best_and_tu_best` back.
 
-So the appeal to the loop's history is quarantined in exactly the statements about
-the arbitrary choice, and the specification no longer depends on it at all.
+Landed at step 3. `endpoints_of_v_eq_one` and
+`endpoints_of_v_eq_neg_one` take the orientation as a hypothesis,
+`endpoints_eq_floor_pair` is their disjunction over `v_cases`, and `ambiguous_best`
+goes through that. `v_eq_one` keeps exactly two callers, `rs_eq_floor` and
+`tu_eq_floor_add_one`, now one-liners applying it to the pair, and they are reached
+only from `rv_eq_floor`.
 
-## The specification, after
-
-```lean
-def atLeastAsClose (m n r s y z : Int) : Prop :=
-  (r * n - m * s).abs * z ≤ (y * n - m * z).abs * s
-
-def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l →
-    atLeastAsClose m n r s y z
-    ∧ (atLeastAsClose m n y z r s → s ≤ z)
-
-/--
-The one case in which `isBestApproximation` does not determine the answer, for a
-positive target denominator. (For `n = 0` every `(r, 1)` is best, whatever the limit.)
--/
-def isAmbiguous (m n l : Int) : Prop := l = 1 ∧ ∃ w : Int, 2 * m = (2 * w + 1) * n
-```
-
-`isCorrectLimitDenominator` is unchanged.
-
-`Tests/SpecCheck.lean`'s Bool form of the new definition, decision 10:
-
-```lean
-def checkAmbiguous (m n l : Int) : Bool :=
-  l == 1 && 2 * m % n == 0 && (2 * m / n) % 2 == 1
-```
-
-with `checkBestApproximation` gaining `!checkAmbiguous m n l || (r == m / n && s == 1)`.
-Both readings of `%` want the grid's `0 < n`, which the existing `y := m * z / n` wants
-too; the odd-quotient test is sign-safe either way, `%` on `Int` being `emod`.
+So the appeal to the loop's history is quarantined in exactly the statements about the
+arbitrary choice, and the specification does not depend on it. Checked rather than
+argued: stubbing `v_eq_one` with `sorry` leaves all three public specification
+statements at Lean's three axioms, with no `sorryAx`.
 
 ## The four new public statements
 
-All four exist already inside `Experiment.lean`; this is repackaging in the
-specification's vocabulary.
+The first two landed at step 3. The two that remain repackage `rv_eq_floor`, one per
+listing:
 
 ```lean
-theorem isBestApproximation_unique_of_not_ambiguous (hn : 0 < n)
-    (hamb : ¬ isAmbiguous m n l)
-    (h₁ : isBestApproximation m n l r₁ s₁) (h₂ : isBestApproximation m n l r₂ s₂) :
-    r₁ = r₂ ∧ s₁ = s₂                                      -- non_ambiguous_best
-
-theorem isBestApproximation_iff_of_ambiguous (hn : 0 < n) (hamb : isAmbiguous m n l) :
-    isBestApproximation m n l r s ↔
-      (r, s) = (m / n, 1) ∨ (r, s) = (m / n + 1, 1)         -- ambiguous_best
-
 theorem limitDenominatorSimplified_returns_floor_of_ambiguous
     (hn : 0 < n) (hamb : isAmbiguous m n l) :
     returns (limitDenominatorSimplified m n l) (m / n, 1)   -- rv_eq_floor
 theorem limitDenominatorStdlib_returns_floor_of_ambiguous ... -- likewise, under `valid`
 ```
 
-Every one of them needs `0 < n`, per decision 9; the two listing statements take it
-from `valid` anyway.
+Both need `0 < n`, per decision 9, and take it from `valid` anyway.
 
 Under the stdlib listing's `valid` the target is in lowest terms, so its ambiguous case
 is `n = 2` with `m` odd and `l = 1` — which fails `n ≤ l`, so the fast path is never the
 ambiguous one, and that theorem lives wholly on the loop path.
-
-## The bridge
-
-```lean
-theorem best_iff_isBestApproximation {args : Arguments} (ef : args.Candidate) :
-    args.best ef ↔ isBestApproximation args.m args.n args.limit ef.num ef.den
-
-theorem ambiguous_iff_isAmbiguous (args : Arguments) :
-    args.ambiguous ↔ isAmbiguous args.m args.n args.limit := Iff.rfl
-```
-
-Forwards: clause 1 is either arm of `better ef gh`; clause 2 kills the strict arm and
-reads `s ≤ z` off the other. Backwards: clause 1 strict gives the first arm, and on
-equality clause 2 gives the second. With decision 6 both directions are unfoldings.
-
-The second is decision 11: `Iff.rfl` puts the coincidence on the kernel, and the four
-new statements route through it rather than through a `show`.
-
-## Lowest terms, the new route
-
-```lean
-theorem Int.gcd_eq_one_of_bezout {g h r s : Int} (hb : g * r + h * s = 1) :
-    Int.gcd r s = 1
-```
-
-cheap: `(gcd r s : Int)` divides `r` and `s`, hence divides `1`. The reverse direction
-is *not* available — core has no extended-gcd Bézout identity (no `gcdA`, no
-`gcd_eq_gcd_ab`), and this project is Mathlib-free — so the determinant route is the
-only constructive one.
-
-`isBestApproximation.gcd_eq_one` then runs: spec → `best` (the bridge, backwards) →
-`eq_rs_or_eq_tu_of_best` → coefficients off `bracket_det` → `Int.gcd_eq_one_of_bezout`.
-
-**This needs `0 < n`, to build the `Arguments`, which the current statement does not
-assume.** Per decision 9 it gains that hypothesis rather than a tail covering the other
-signs: no negation lemma carrying a negative `n` to a positive one, and no separate
-`n = 0` case where every candidate is equidistant and clause 2 forces `s = 1`. The
-theorem stops saying anything outside `0 < n`, which is where the project's interest
-stops too.
-
-The hypothesis lands at step 3, with the proof that uses it. Added at step 1, on top of
-the existing proof, it would be an unused binder — `unusedVariables` warns, and
-`--wfail` turns that into a failure.
 
 ## `v` in the simplified listing
 
@@ -265,41 +191,11 @@ touch the trusted surface — step 1 the specification, step 3 the first two new
 statements and `gcd_eq_one`'s hypothesis, step 5 the listing — and each is small enough
 to review alone.
 
-1. **The specification.** `isBestApproximation` drops clause 3; `atLeastAsClose` flips;
-   `isAmbiguous` is added. Adjust `gcd_eq_one` and `isBestApproximation_self` for both
-   changes, keeping both statements as they stand, drop a bullet from each of the two
-   `Bracketing.isBestApproximation_*`, and flip and trim `Tests/SpecCheck.lean`'s
-   `checkAtLeastAsClose` and `checkCandidate`,
-   which gains `checkAmbiguous` and decision 10's conjunct. Delete
-   `isBestApproximation_unique`.
-
-   Two docstrings go with it. `isBestApproximation`'s says the three clauses pin down
-   the representation as well as the value, and sketches why — an unreduced pair
-   beaten on the second clause by its own reduction — which is the spec-level proof
-   decision 7 retires; it also points at `gcd_eq_one` by module. `checkCandidate`'s
-   says "three clauses" too.
-
-   The flip is not free in the layer that is about to die. `Bracket.lean` hands out its
-   bounds in the old orientation, on `(m * s - r * n).abs`, and `omega` and `grind`
-   treat `.abs` as an atom, so the two `Bracketing.isBestApproximation_*` proofs need
-   rewriting through `Int.abs_neg` to take them; `gcd_eq_one` needs its residual
-   equation negated. Throwaway work on code step 7 deletes, and the price of a
-   trusted-surface diff that can be read on its own.
-
-   **This opens a window** in which the tree proves neither uniqueness nor the
-   tie-break; step 3 closes most of it, step 4 the rest. Behaviour stays covered
-   throughout: `Tests/Vectors.lean` pins all four ambiguous cases, and decision 10's
-   conjunct keeps `SpecCheck` testing the tie direction across the window.
-2. **Unify `Int.abs`.** New `Definitions/IntAbs.lean`; `Experiment.lean` drops its own
-   copy and its duplicate lemmas. A merge, not a drop: `Int.abs_eq`, the
-   `a.abs = b ↔ a = b ∨ a = -b` form, has no counterpart in `SupportLemmas.lean` and
-   moves there, and that file's `Int.abs_mul` is `private` and has to stop being.
-   Clears the handoff's recorded blocker: with a public, exposed `Int.abs` in scope,
-   `dist` can go public whenever wanted.
+1. **The specification.** Landed.
+2. **Unify `Int.abs`.** Landed.
 3. **The bridge**, and on it: uniqueness, the ambiguous characterisation, and
-   `gcd_eq_one`'s new proof. Written into `Experiment.lean` where it stands; no
-   listing touched. `gcd_eq_one` gains its `0 < n` here, with the proof that uses it.
-   The first two of decision 5's four pins land here.
+   `gcd_eq_one`'s new proof. Landed, at the end of `Experiment.lean`, which imports
+   `Definitions.Specification` for that section alone.
 4. **The simplified listing onto the new core**, plus its ambiguous-case theorem and
    its pin.
 5. **`v` back in the simplified listing.** The listing, its docstring, and the extra
@@ -323,14 +219,18 @@ to review alone.
    ambiguous-case theorem — the last pin — never reaches.
 7. **Delete the dead chain.**
 8. **Split and rename `Experiment.lean`** into the modules the target layout lists. Not
-   a pure move: `Experiment.lean` carries no `public` or `@[expose]` marker anywhere
-   today, which is what lets its own `Int.abs` coexist with the specification's. The
-   split makes most of its declarations public, and `@[expose]` every definition
+   a pure move: today only the three statements step 3 exposed are `public`, and
+   nothing is `@[expose]`. The split makes most of its declarations public, and `@[expose]` every definition
    another module unfolds — `Arguments.dist`, `better`, `ambiguous`, `floor`,
    `floorAddOne`, `Candidate.isReduced` and `LoopState.loopCondition` at least. The
    lint gate then applies to them, and `floor`, `floorAddOne`, `u`, `rs`, `tu` and
    `lev` carry a block comment or nothing where they will need docstrings. After (7),
    because it wants the names `Bracket.lean` and `BestApproximation.lean` back.
+
+   It also moves the closing specification section to `BestApproximation.lean` and
+   drops the `Definitions.Specification` import step 3 added, which is what makes
+   decision 11 true of the split layout, and takes `Tests/Axioms.lean`'s import of
+   `Experiment` away again.
 9. **Docs.** README §§ the listing, "What is proved", "Project structure" — which has
    no `Experiment.lean` row even now — "`while` loops and simultaneous assignment",
    whose six-tuple and `forIn_loop_invariant` citation both go, and the
