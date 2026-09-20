@@ -3,7 +3,7 @@
 Working document for the rework of the proof layer onto `Experiment.lean`, tracked so
 that it survives between sessions. It is scaffolding, not one of the project's docs:
 when step 9 lands it gets deleted, and `README.md` and `PROOF.md` are the two that
-stay. Started from `a3983376`.
+stay.
 
 ## Decisions taken
 
@@ -23,7 +23,7 @@ stay. Started from `a3983376`.
 7. **The determinant becomes the canonical route to lowest terms.** `gcd_eq_one` is
    reproved through Bézout coefficients read off `bracket_det`; the spec-level proof
    is retired.
-8. **Seven modules** for the core.
+8. **The core is split into per-layer modules**, the ones the target layout lists.
 9. **The four new statements and `gcd_eq_one` carry `0 < n`.** Under two clauses
    `n = 0` stops being vacuous — every `(r, 1)` is then best, so uniqueness fails
    outside the ambiguous case — and for `n < 0` Lean's `m / n` is not the floor, so the
@@ -206,9 +206,8 @@ than opening one, and no edit there is needed for the two listings to agree.
 | --- | --- |
 | `Definitions/IntAbs.lean` | `Int.abs` alone, imported by the spec and by the proofs |
 | `Definitions/Specification.lean` | two-clause `isBestApproximation`, flipped `atLeastAsClose`, `isAmbiguous` |
-| `Proofs/SupportLemmas.lean` | `Int.abs` lemmas, the arithmetic facts, the gcd/dvd facts |
-| `Proofs/FractionPair.lean` | `FractionPair`, `isHalfInteger`, the mul-den algebra |
-| `Proofs/Arguments.lean` | `Arguments`, `Candidate`, `dist`/`better`/`best`, `ambiguous`, `floor` |
+| `Proofs/SupportLemmas.lean` | `Int.abs` lemmas, the arithmetic facts, the positive-factor family, the gcd/dvd facts |
+| `Proofs/Arguments.lean` | `Arguments`, `Candidate` with `isReduced` and `eq_of_eq_den`, `dist`/`better`/`best`, `ambiguous`, `floor` |
 | `Proofs/LoopState.lean` | `LoopState`, `initialLoopState`, `nextLoopState`, `runLoop`, `b_pos` |
 | `Proofs/Bracket.lean` | `PostLoopState`, `k`/`t`/`u`, `lev`/`eqv`, the bracket, distances |
 | `Proofs/Algorithm.lean` | `rv`, the ambiguous case, `postLoopState`, `limitDenominator` |
@@ -283,15 +282,15 @@ to review alone.
    still carries the fast path, which the ambiguous-case theorem — the last pin — never
    reaches.
 7. **Delete the dead chain.**
-8. **Split and rename `Experiment.lean`** into the seven modules. Not a pure move:
-   `Experiment.lean` carries no `public` or `@[expose]` marker anywhere today, which is
-   what lets its own `Int.abs` coexist with the specification's. The split makes most
-   of its declarations public, and `@[expose]` every definition another module unfolds
-   — `Arguments.dist`, `better`, `ambiguous`, `floor`, `floorAddOne`, `isHalfInteger`
-   and `LoopState.loopCondition` at least. The lint gate then applies to them, and
-   `ambiguous`, `floor`, `floorAddOne`, `u`, `rs`, `tu` and `lev` have block comments
-   where they will need docstrings. After (7), because it wants the names
-   `Bracket.lean` and `BestApproximation.lean` back.
+8. **Split and rename `Experiment.lean`** into the modules the target layout lists. Not
+   a pure move: `Experiment.lean` carries no `public` or `@[expose]` marker anywhere
+   today, which is what lets its own `Int.abs` coexist with the specification's. The
+   split makes most of its declarations public, and `@[expose]` every definition
+   another module unfolds — `Arguments.dist`, `better`, `ambiguous`, `floor`,
+   `floorAddOne`, `Candidate.isReduced` and `LoopState.loopCondition` at least. The
+   lint gate then applies to them, and `floor`, `floorAddOne`, `u`, `rs`, `tu` and
+   `lev` carry a block comment or nothing where they will need docstrings. After (7),
+   because it wants the names `Bracket.lean` and `BestApproximation.lean` back.
 9. **Docs.** README §§ the listing, "What is proved", "Project structure" — which has
    no `Experiment.lean` row even now — "`while` loops and simultaneous assignment",
    whose six-tuple and `forIn_loop_invariant` citation both go, and the
@@ -301,8 +300,8 @@ to review alone.
    PR #19's description. The largest single chunk, and prose rather
    than proof.
 10. **Optional.** The two listings agree, as a theorem. Needs
-    `args.limitDenominator = args.mn` when `n ≤ limit` and the target is in lowest
-    terms, to cover the stdlib fast path.
+    `args.limitDenominator.num = args.m ∧ args.limitDenominator.den = args.n` when
+    `n ≤ limit` and the target is in lowest terms, to cover the stdlib fast path.
 
 ## Risks
 
