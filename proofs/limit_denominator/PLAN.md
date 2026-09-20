@@ -7,9 +7,9 @@ stay.
 
 ## Progress
 
-Steps 1 to 4 have landed; their commits carry the reasoning, and the tree is the
+Steps 1 to 5 have landed; their commits carry the reasoning, and the tree is the
 record of what they produced, so the sections that described them have been cut. What
-they changed about the steps still to come is folded in below. Step 5 is next.
+they changed about the steps still to come is folded in below. Step 6 is next.
 
 R1 is settled. `fun_induction LoopState.runLoop` drives a goal about `forIn` without
 complaint, and `SimplifiedCorrectness.forIn_eq_runLoop` is the two-case proof it
@@ -132,30 +132,6 @@ Under the stdlib listing's `valid` the target is in lowest terms, so its ambiguo
 is `n = 2` with `m` odd and `l = 1` — which fails `n ≤ l`, so the fast path is never the
 ambiguous one, and that theorem lives wholly on the loop path.
 
-## `v` in the simplified listing
-
-```python
-a, b, p, q, r, s, v = n, m % n, 1, 0, m // n, 1, 1
-while 0 < b and q + a // b * s <= l:
-    a, b, p, q, r, s, v = b, a % b, r, s, p + a // b * r, q + a // b * s, -v
-k = (l - q) // s
-t, u = p + k * r, q + k * s
-return (r, s) if 2 * b * u <= n else (t, u)
-```
-
-Both Python lines fit in 88 columns, at 58 and 84 characters. The Lean does not: the
-loop body's simultaneous assignment goes from 84 characters to 91, so that one line
-wraps.
-
-**Checked:** no `unusedVariables` warning — `do`-block mutables all become part of the
-desugared loop state, so `--wfail` is not at risk and no `set_option` is needed. The
-listing's docstring goes from "two changes" to one, the enforced preconditions, which
-tightens the claim that this is the issue's listing; same edit in README beside its
-copy.
-
-The issue already carries `v` in its invariants, so this closes a divergence rather
-than opening one, and no edit there is needed for the two listings to agree.
-
 ## Target layout
 
 | Module | Contents |
@@ -209,14 +185,11 @@ to review alone.
    declarations are `public` and eleven of those `@[expose]`, each one because
    `SimplifiedCorrectness.lean` names it or unfolds it, and the rest of the file stays
    private. The sixteen docstrings the lint gate then wanted are written.
-5. **`v` back in the simplified listing.** The listing, its docstring, and the extra
-   component threaded through `SimplifiedCorrectness`: `LoopTuple`, the body's
-   destructuring and both of its tuples, the tail's destructuring, the fold's initial
-   tuple, the statements of the two body-reduction lemmas, `loopTuple` itself, and the
-   three `show` lines that spell a state out. The projection gains a component rather
-   than becoming the identity, `LoopState` carrying proof fields as well. All
-   definitions and statements; the induction does not move, the seventh component
-   matching `nextLoopState`'s `v := -st.v` by the same `rfl` as the other six.
+5. **`v` back in the simplified listing.** Landed. The enforced preconditions are now
+   the listing's only divergence from the issue's, which README and PROOF.md both say.
+   PROOF.md's § "The orientation in the state" keeps the observation that `v` is a
+   function of the rest of the state and drops the conclusion that the code therefore
+   omits it; the rest of that section still describes `Bracketing` and waits for (9).
 6. **The stdlib listing**, plus its ambiguous-case theorem. Needs `LoopState.b_pos` (the
    numerator/denominator recovery is derivable from `a_eq_pq_cross`, `b_eq_rs_cross`
    and `det`, so the existing proof transfers), the peeled first iteration and the
@@ -261,8 +234,8 @@ to review alone.
   `a * s + b * q = n` coming back from `a_eq_pq_cross`, `b_eq_rs_cross` and `det`, and
   its two hypotheses — lowest terms, and `limit < n` — are about `args`, so the
   induction threads nothing that varies.
-- **R3.** PROOF.md. §§ "Removing the orientation from the state" (reversed outright),
-  "Vocabulary", "Loop invariants", "After the loop" with "The degenerate tie", "The
+- **R3.** PROOF.md. §§ "The orientation in the state" (its second half still on
+  `Bracketing`), "Vocabulary", "Loop invariants", "After the loop" with "The degenerate tie", "The
   bracket", "Choosing between the two candidates" and "Discharging the three clauses"
   all describe machinery or decisions being replaced. §§ "The specification", "Why the
   seventh invariant", "What the stdlib listing adds" and "What the informal proof needs

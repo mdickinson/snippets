@@ -45,27 +45,22 @@ def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
     if n <= 0:
         raise ValueError("denominator should be positive")
 
-    a, b, p, q, r, s = n, m % n, 1, 0, m // n, 1
+    a, b, p, q, r, s, v = n, m % n, 1, 0, m // n, 1, 1
     while 0 < b and q + a // b * s <= l:
-        a, b, p, q, r, s = b, a % b, r, s, p + a // b * r, q + a // b * s
+        a, b, p, q, r, s, v = b, a % b, r, s, p + a // b * r, q + a // b * s, -v
     k = (l - q) // s
     t, u = p + k * r, q + k * s
     return (r, s) if 2 * b * u <= n else (t, u)
 ```
 
-This is the issue's listing with two changes. The issue carries a seventh variable `v`,
-alternating between `1` and `-1`, which it uses in the statements of the invariants but
-which does not affect the result. `v` turns out to equal `p*s - r*q` throughout, so the
-proof recovers it from the state rather than tracking it, and the listing drops it. See
-[PROOF.md](PROOF.md) for that step.
-
-The second change is the two guards. The issue's listing states a positive `l` and a
-positive `n` as preconditions in its docstring and tests neither; here both are enforced,
-which is what lets the proof say that *every* input either gets a correct answer or an
-exception. Without the `n` check, a negative `n` returns a plausible-looking wrong answer:
-`m = 22, n = -7, l = 5` gives `-4/1`, which is out by `6/7`, where the best approximation
-to `22/-7` with denominator at most `5` is `-16/5`, out by `2/35`. The message for the `n`
-guard is this project's own; the `l` guard's is CPython's, verbatim.
+This is the issue's listing with one change, the two guards. The issue states a positive
+`l` and a positive `n` as preconditions in its docstring and tests neither; here both
+are enforced, which is what lets the proof say that *every* input either gets a correct
+answer or an exception. Without the `n` check, a negative `n` returns a
+plausible-looking wrong answer: `m = 22, n = -7, l = 5` gives `-4/1`, which is out by
+`6/7`, where the best approximation to `22/-7` with denominator at most `5` is `-16/5`,
+out by `2/35`. The message for the `n` guard is this project's own; the `l` guard's is
+CPython's, verbatim.
 
 The relationship between this listing and the body of `Fraction.limit_denominator` in
 `Lib/fractions.py` is close but not line-for-line: the standard library version operates
@@ -362,9 +357,10 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   if n ≤ 0 then
     throw <| .valueError "denominator should be positive"
 
-  let mut (a, b, p, q, r, s) := (n, ← m % n, 1, 0, ← m // n, 1)
+  let mut (a, b, p, q, r, s, v) := (n, ← m % n, 1, 0, ← m // n, 1, 1)
   while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
-    (a, b, p, q, r, s) := (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s)
+    (a, b, p, q, r, s, v) :=
+      (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s, -v)
   let k ← (l - q) // s
   let (t, u) := (p + k * r, q + k * s)
   return if 2 * b * u ≤ n then (r, s) else (t, u)
@@ -452,9 +448,9 @@ rewrite into a recursive helper is needed, so the loop in the Lean listing is a 
 `while`.
 
 Python's tuple assignment in the loop body is genuinely simultaneous — the right-hand
-side mentions the old `a`, `b`, `p`, `q`, `r` and `s` — and Lean's `let mut (a, b, p, q,
-r, s) := …` and six-way reassignment `(a, b, p, q, r, s) := …` translate it directly,
-with the same simultaneity.
+side mentions the old `a`, `b`, `p`, `q`, `r`, `s` and `v` — and Lean's
+`let mut (a, b, p, q, r, s, v) := …` and seven-way reassignment
+`(a, b, p, q, r, s, v) := …` translate it directly, with the same simultaneity.
 
 ### `while True` with a `break`
 
@@ -485,7 +481,7 @@ reading them against each other, and the proof layer renames the state back.
 ### Reading `←`
 
 For readers new to Lean's `do` notation: `←` unwraps a computation that might raise. In
-`let mut (a, b, p, q, r, s) := (n, ← m % n, …)`, the subexpression `m % n` has type
+`let mut (a, b, p, q, r, s, v) := (n, ← m % n, …)`, the subexpression `m % n` has type
 `PyExcept Int`, and `← m % n` is the `Int` inside it, with any exception propagated out of
 the whole `do` block automatically. So each `←` marks a place where the Python could raise
 `ZeroDivisionError`. This use inside a larger expression is called a *nested action*; see

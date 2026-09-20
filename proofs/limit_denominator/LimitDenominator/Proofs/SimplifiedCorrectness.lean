@@ -13,31 +13,31 @@ and `afterLoop` — folds the translation onto them, identifies the loop with
 `runLoop`, and reads the result off. All of the mathematics has already happened,
 in `Experiment`.
 
-The six-tuple state appears only here. `LoopState` carries the same six numbers with
-their invariants and the orientation attached, and `loopTuple` is the projection
-onto the tuple.
+The seven-tuple state appears only here. `LoopState` carries the same seven numbers
+with their invariants attached, and `loopTuple` is the projection that forgets them.
 -/
 
-/-- The mutable state of the loop: `(a, b, p, q, r, s)`. -/
-abbrev LoopTuple := Int × Int × Int × Int × Int × Int
+/-- The mutable state of the loop: `(a, b, p, q, r, s, v)`. -/
+abbrev LoopTuple := Int × Int × Int × Int × Int × Int × Int
 
 /--
 The loop body, named. This is definitionally what `limitDenominatorSimplified`'s `do` block
 desugars to, so `limitDenominatorSimplified_fold` folds the loop onto it by `rfl`.
 -/
 def loopBody (l : Int) (_u : Unit) (state : LoopTuple) : PyExcept (ForInStep LoopTuple) :=
-  let ⟨a, b, p, q, r, s⟩ := state
+  let ⟨a, b, p, q, r, s, v⟩ := state
   do
     let cond ← pure (0 < b : Bool) <&&> (do return q + (← pyFloordiv a b) * s ≤ l)
     if cond = true then
       pure (ForInStep.yield
-        (b, ← pyMod a b, r, s, p + (← pyFloordiv a b) * r, q + (← pyFloordiv a b) * s))
+        (b, ← pyMod a b, r, s, p + (← pyFloordiv a b) * r, q + (← pyFloordiv a b) * s,
+          -v))
     else
-      pure (ForInStep.done (a, b, p, q, r, s))
+      pure (ForInStep.done (a, b, p, q, r, s, v))
 
 /-- The tail of the `do` block, named likewise: the extended candidate and the final choice. -/
 def afterLoop (n l : Int) (state : LoopTuple) : PyExcept (Int × Int) :=
-  let ⟨_a, b, p, q, r, s⟩ := state
+  let ⟨_a, b, p, q, r, s, _v⟩ := state
   do
     let k ← pyFloordiv (l - q) s
     pure (if 2 * b * (q + k * s) ≤ n then (r, s) else (p + k * r, q + k * s))
@@ -45,7 +45,8 @@ def afterLoop (n l : Int) (state : LoopTuple) : PyExcept (Int × Int) :=
 /-- `limitDenominatorSimplified` on a valid target, as a loop followed by its tail. -/
 theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     limitDenominatorSimplified m n l =
-      forIn Lean.Loop.mk (n, m % n, 1, 0, m / n, 1) (loopBody l) >>= afterLoop n l := by
+      forIn Lean.Loop.mk (n, m % n, 1, 0, m / n, 1, 1) (loopBody l)
+        >>= afterLoop n l := by
   rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_right (by omega),
     pyMod_ok_bind hn, pyFloordiv_ok_bind hn]
   rfl
@@ -56,18 +57,19 @@ theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) 
 With `b` zero, Python's `and` short-circuits: the right operand — which would divide by zero — is
 never evaluated, and the loop exits.
 -/
-theorem loopBody_of_zero (l a p q r s : Int) :
-    loopBody l () (a, 0, p, q, r, s) = pure (ForInStep.done (a, 0, p, q, r, s)) := by
+theorem loopBody_of_zero (l a p q r s v : Int) :
+    loopBody l () (a, 0, p, q, r, s, v) =
+      pure (ForInStep.done (a, 0, p, q, r, s, v)) := by
   rw [loopBody, show decide ((0 : Int) < 0) = false from by decide, andM_pure_false, pure_bind,
     ite_eq_right (by decide)]
 
 /-- With `b` positive, the body divides safely and the exit test is the Python condition. -/
-theorem loopBody_of_pos {l a b p q r s : Int} (hb : 0 < b) :
-    loopBody l () (a, b, p, q, r, s) =
+theorem loopBody_of_pos {l a b p q r s v : Int} (hb : 0 < b) :
+    loopBody l () (a, b, p, q, r, s, v) =
       if q + a / b * s ≤ l then
-        pure (ForInStep.yield (b, a % b, r, s, p + a / b * r, q + a / b * s))
+        pure (ForInStep.yield (b, a % b, r, s, p + a / b * r, q + a / b * s, -v))
       else
-        pure (ForInStep.done (a, b, p, q, r, s)) := by
+        pure (ForInStep.done (a, b, p, q, r, s, v)) := by
   rw [loopBody, decide_eq_true hb, andM_pure_true, pyFloordiv_ok_bind hb, pure_bind]
   simp only [decide_eq_true_eq]
   split
@@ -78,14 +80,14 @@ theorem loopBody_of_pos {l a b p q r s : Int} (hb : 0 < b) :
 
 /-- The six numbers a loop state carries, as the tuple the `do` block threads. -/
 def loopTuple {args : Arguments} (st : LoopState args) : LoopTuple :=
-  (st.a, st.b, st.p, st.q, st.r, st.s)
+  (st.a, st.b, st.p, st.q, st.r, st.s, st.v)
 
 /-- Where the loop condition holds, one iteration of the body is one `nextLoopState`. -/
 theorem loopBody_of_loopCondition {args : Arguments} {st : LoopState args}
     (hst : st.loopCondition) :
     loopBody args.limit () (loopTuple st) =
       pure (ForInStep.yield (loopTuple (st.nextLoopState hst))) := by
-  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s) = _
+  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s, st.v) = _
   rw [loopBody_of_pos hst.1, ite_eq_left hst.2]
   rfl
 
@@ -93,10 +95,10 @@ theorem loopBody_of_loopCondition {args : Arguments} {st : LoopState args}
 theorem loopBody_of_not_loopCondition {args : Arguments} {st : LoopState args}
     (hst : ¬ st.loopCondition) :
     loopBody args.limit () (loopTuple st) = pure (ForInStep.done (loopTuple st)) := by
-  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s) =
-    pure (ForInStep.done (st.a, st.b, st.p, st.q, st.r, st.s))
+  show loopBody args.limit () (st.a, st.b, st.p, st.q, st.r, st.s, st.v) =
+    pure (ForInStep.done (st.a, st.b, st.p, st.q, st.r, st.s, st.v))
   rcases (by have := st.b_nonneg; omega : st.b = 0 ∨ 0 < st.b) with hb | hb
-  · rw [hb]; exact loopBody_of_zero args.limit st.a st.p st.q st.r st.s
+  · rw [hb]; exact loopBody_of_zero args.limit st.a st.p st.q st.r st.s st.v
   · rw [loopBody_of_pos hb, ite_eq_right (fun hle => hst ⟨hb, hle⟩)]
 
 /-- The `do` block's loop, run to exhaustion, is `runLoop`. -/
@@ -111,7 +113,7 @@ theorem forIn_eq_runLoop {args : Arguments} (st : LoopState args) :
 theorem afterLoop_eq {args : Arguments} (st : PostLoopState args) :
     afterLoop args.n args.limit (loopTuple st.toLoopState) =
       pure (st.rv.num, st.rv.den) := by
-  show afterLoop args.n args.limit (st.a, st.b, st.p, st.q, st.r, st.s) = _
+  show afterLoop args.n args.limit (st.a, st.b, st.p, st.q, st.r, st.s, st.v) = _
   rw [afterLoop, pyFloordiv_ok_bind st.s_pos]
   show pure (if 2 * st.b * st.u ≤ args.n then (st.r, st.s) else (st.t, st.u)) = _
   rw [PostLoopState.rv]

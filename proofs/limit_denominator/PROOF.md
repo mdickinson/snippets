@@ -108,20 +108,20 @@ is a promise this project invents rather than one it records. The alternative is
 line below assumes `0 < n`, so without the check a negative denominator returns a wrong
 answer with no indication that anything went wrong.
 
-## Removing the orientation from the state
+## The orientation in the state
 
 The informal proof carries a seventh variable `v`, alternating between `1` and `−1`, and
 states the first loop invariant as `(p·s − r·q)·v = 1`. Multiplying that through by `v`
-gives `v = p·s − r·q`: the orientation is a function of the state. So it can be dropped
-from the code, and the invariant clause becomes the plain disjunction
+gives `v = p·s − r·q`: the orientation is a function of the rest of the state, so the
+invariant clause could equally be written as the plain disjunction
 
 ```
 p·s − r·q = 1  or  p·s − r·q = −1
 ```
 
-with no existential and no extra variable. That is one of the two ways the Python listing in
-[README.md](README.md) differs from the one in the issue; the other is that the issue's two
-stated preconditions, `0 < l` and `0 < n`, are enforced there rather than assumed.
+with no extra variable. Nothing is lost either way, and the listing in
+[README.md](README.md) carries `v` as the issue's does, which leaves the two enforced
+preconditions as the only way the two listings differ.
 
 The *proof* names it again once the loop is over. `Bracketing` (§ "After the loop") takes `v`
 as a parameter and records the informal proof's equation verbatim:

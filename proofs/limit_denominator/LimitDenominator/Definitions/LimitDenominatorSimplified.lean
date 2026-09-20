@@ -6,11 +6,10 @@ public import LimitDenominator.Definitions.PythonPrimitives
 /-!
 Lean translation of the simplified integer form of the `limit_denominator` algorithm.
 
-Here's the Python code that we'll translate. It is the listing from cpython#95723 with two
-changes. The orientation variable `v` is removed: it is a derived quantity, equal to
-`p*s - r*q` throughout, so the proofs recover it rather than carry it. And the two
-preconditions its docstring states, `0 < l` and `0 < n`, are enforced rather than assumed, so
-that every input either gets an answer or an exception, and none gets a wrong answer.
+Here's the Python code that we'll translate. It is the listing from cpython#95723
+with one change: the two preconditions its docstring states, `0 < l` and `0 < n`,
+are enforced rather than assumed, so that every input either gets an answer or an
+exception, and none gets a wrong answer.
 
     def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
         """
@@ -27,9 +26,9 @@ that every input either gets an answer or an exception, and none gets a wrong an
         if n <= 0:
             raise ValueError("denominator should be positive")
 
-        a, b, p, q, r, s = n, m % n, 1, 0, m // n, 1
+        a, b, p, q, r, s, v = n, m % n, 1, 0, m // n, 1, 1
         while 0 < b and q + a // b * s <= l:
-            a, b, p, q, r, s = b, a % b, r, s, p + a // b * r, q + a // b * s
+            a, b, p, q, r, s, v = b, a % b, r, s, p + a // b * r, q + a // b * s, -v
         k = (l - q) // s
         t, u = p + k * r, q + k * s
         return (r, s) if 2 * b * u <= n else (t, u)
@@ -48,10 +47,11 @@ def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   if n ≤ 0 then
     throw <| .valueError "denominator should be positive"
 
-  let mut (a, b, p, q, r, s) := (n, ← m % n, 1, 0, ← m // n, 1)
+  let mut (a, b, p, q, r, s, v) := (n, ← m % n, 1, 0, ← m // n, 1, 1)
   -- Keep the right operand a `do` block, or the division is hoisted past the `0 < b` test.
   while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
-    (a, b, p, q, r, s) := (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s)
+    (a, b, p, q, r, s, v) :=
+      (b, ← a % b, r, s, p + (← a // b) * r, q + (← a // b) * s, -v)
   let k ← (l - q) // s
   let (t, u) := (p + k * r, q + k * s)
   return if 2 * b * u ≤ n then (r, s) else (t, u)
