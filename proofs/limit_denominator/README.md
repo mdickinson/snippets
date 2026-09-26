@@ -82,8 +82,7 @@ command-line executable around the simplified listing — see
 The specification is in
 [`Specification.lean`](LimitDenominator/Definitions/Specification.lean). It says that a
 returned `r / s` has `0 < s ≤ l`, and that against every candidate `y / z` with `0 < z ≤ l`
-it is at least as close to the target, with ties broken towards the smaller denominator and a
-tie that survives that towards the lower value:
+it is at least as close to the target, with ties broken towards the smaller denominator:
 
 ```lean
 def isBestApproximation (m n l r s : Int) : Prop :=
@@ -91,19 +90,33 @@ def isBestApproximation (m n l r s : Int) : Prop :=
   ∀ y z : Int, 0 < z → z ≤ l →
     atLeastAsClose m n r s y z
     ∧ (atLeastAsClose m n y z r s → s ≤ z)
-    ∧ (atLeastAsClose m n y z r s → s = z → r ≤ y)
 ```
 
-All three quantified clauses are promises CPython makes — the first in its documentation, the
-other two in the algorithm notes in its source. Candidates are not required to be in lowest
+Both quantified clauses are promises CPython makes — the first in its documentation, the
+second in the algorithm notes in its source. Candidates are not required to be in lowest
 terms, so the result has to beat unreduced competitors too.
 
-CPython's fourth promise, that the result *is* in lowest terms, is deliberately absent: it
-follows from the three clauses rather than having to be asked for. An unreduced pair is
-beaten on the second clause by its own reduction, which is the same value at the same
-distance but with a smaller denominator. That is
-[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/BestApproximation.lean), and it is
-why the specification pins down the representation and not merely the value.
+CPython makes two further promises, and both are deliberately absent from the
+specification.
+
+One is that the result *is* in lowest terms. That follows from the two clauses rather
+than having to be asked for: an unreduced pair is beaten on the second clause by its own
+reduction, which is the same value at the same distance but with a smaller denominator.
+That is [`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/Experiment.lean), and
+it is why the specification pins down the representation and not merely the value.
+
+The other is which answer comes back when the two clauses do not decide. They decide in
+all but one case: when the limit is `1` and the target is midway between two integers,
+the floor and the floor plus one satisfy both clauses, being equidistant at the same
+denominator. `isAmbiguous`, beside `isBestApproximation`, names that case, and two
+theorems say that it is the only one, in the closing section of
+[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
+`isBestApproximation_unique_of_not_ambiguous`, that outside it at most one pair
+satisfies the specification, and `isBestApproximation_iff_of_ambiguous`, that inside it
+exactly those two do. CPython promises the floor there. Which of two equally good
+answers comes back is a fact about an implementation, not about what "best" means, so
+that promise is stated of each listing separately, below, rather than written into the
+specification.
 
 ### The simplified listing
 
@@ -145,6 +158,17 @@ condition, `(l - q) // s` by `0 < s` — so those two `ValueError`s are the only
 reachable, and there is no input for which the function quietly returns something that is not
 the best approximation.
 
+One more statement, about the tie-break the specification leaves open:
+
+```lean
+theorem limitDenominatorSimplified_returns_floor_of_ambiguous {m n l : Int}
+    (hn : 0 < n) (hamb : isAmbiguous m n l) :
+    returns (limitDenominatorSimplified m n l) (m / n, 1)
+```
+
+In the ambiguous case, where the floor and the floor plus one are both best, this
+listing returns the floor. That is CPython's promise, as a statement about the listing.
+
 ### The standard library listing
 
 The body of `Fraction.limit_denominator` as shipped is translated in
@@ -161,13 +185,23 @@ Here `valid` carries two conditions rather than one. Being a method, the shipped
 its target off a `Fraction`, which keeps its denominator positive and its ratio in lowest
 terms. The shipped code tests neither, and neither does the translation.
 
-Those hypotheses are load-bearing, and not only for the tie-break. A target that is not in
-lowest terms can drive the loop's `b` to zero, and with no `0 < b` in the shipped loop
-condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3` raises
-`ZeroDivisionError`, where the simplified listing returns `1/2`. So the shipped listing has
-no counterpart to `limitDenominatorSimplified_total` above — outside `valid` there is nothing
-to promise. Within it, the argument that the missing test costs nothing is in
-[PROOF.md](PROOF.md#what-the-stdlib-listing-adds).
+Those hypotheses are load-bearing, on both of the listing's paths. On the fast path a
+target that is not in lowest terms comes back as it stands:
+`limitDenominatorStdlib 2 4 5` returns `2/4`, which `1/2` beats on the second clause. On
+the loop path such a target can drive the loop's `b` to zero, and with no `0 < b` in the
+shipped loop condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3`
+raises `ZeroDivisionError`, where the simplified listing returns `1/2`. So the shipped
+listing has no counterpart to `limitDenominatorSimplified_total` above — outside `valid`
+there is nothing to promise. Within it, the argument that the missing test costs nothing
+is in [PROOF.md](PROOF.md#what-the-stdlib-listing-adds).
+
+The tie-break is pinned for this listing too:
+
+```lean
+theorem limitDenominatorStdlib_returns_floor_of_ambiguous {m n l : Int}
+    (hn : 0 < n) (hgcd : Int.gcd m n = 1) (hamb : isAmbiguous m n l) :
+    returns (limitDenominatorStdlib m n l) (m / n, 1)
+```
 
 ## Scope
 
@@ -304,26 +338,35 @@ up requires confidence in:
     [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
 - **The statements of correctness** in
   [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
-  `atLeastAsClose`, `isBestApproximation` and `isCorrectLimitDenominator`. A specification
-  that is too weak would be easy to satisfy and would prove nothing interesting. Two checks
-  on that are proved rather than argued:
-  [`isBestApproximation_unique`](LimitDenominator/Proofs/BestApproximation.lean) shows that
-  at most one pair satisfies `isBestApproximation` — among all pairs with `0 < z ≤ l`,
-  reduced or not — so the specification pins the answer down completely and cannot be met by
-  some unintended pair as well; and
-  [`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/BestApproximation.lean) shows
-  that whichever pair satisfies it is necessarily in lowest terms, so that promise is earned
-  rather than asked for.
-- **That `lake build` really checks the proofs** of the four correctness statements: the
-  three at the bottom of
+  `atLeastAsClose`, `isBestApproximation`, `isAmbiguous` and
+  `isCorrectLimitDenominator`. A specification that is too weak would be easy to satisfy
+  and would prove nothing interesting. Three checks on that are proved rather than
+  argued, in the closing section of
+  [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
+  `isBestApproximation_unique_of_not_ambiguous` and
+  `isBestApproximation_iff_of_ambiguous` together say exactly how far the specification
+  pins the answer down — among all pairs with `0 < z ≤ l`, reduced or not, to one pair
+  outside the ambiguous case and to the floor and the floor plus one inside it, so it
+  cannot be met by some unintended pair as well; and `isBestApproximation.gcd_eq_one`
+  says that whichever pair satisfies it is necessarily in lowest terms, so that promise
+  is earned rather than asked for. All three take `0 < n` as a hypothesis, and it is not
+  a convenience: with `n = 0` every `r / 1` satisfies the specification, and with
+  `n < 0` Lean's `m / n` is not the floor, so the characterisation would name the wrong
+  pair. A target denominator that is not positive is outside what the project promises
+  anything about, and the hypothesis says so.
+- **That `lake build` really checks the proofs** of the statements above: the four at
+  the bottom of
   [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) —
   `isCorrectLimitDenominator_simplified`,
-  `limitDenominatorSimplified_raises_of_denominator_nonpos` and
-  `limitDenominatorSimplified_total` — and `isCorrectLimitDenominator_stdlib` at the bottom
-  of [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean); and of
-  `isBestApproximation.gcd_eq_one`, which on its own carries the lowest-terms promise. That
-  they are proved rather than asserted does not have to be taken on trust: their axiom sets
-  are pinned by the build, as described under [Building](#building).
+  `limitDenominatorSimplified_raises_of_denominator_nonpos`,
+  `limitDenominatorSimplified_returns_floor_of_ambiguous` and
+  `limitDenominatorSimplified_total` — the two at the bottom of
+  [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) —
+  `isCorrectLimitDenominator_stdlib` and
+  `limitDenominatorStdlib_returns_floor_of_ambiguous` — and the three about the
+  specification itself. That they are proved rather than asserted does not have to be
+  taken on trust: their axiom sets are pinned by the build, as described under
+  [Building](#building).
 - **The Lean toolchain**, including its compiler and core library. It is conceivable, if very
   unlikely, that Lean has a bug that lets it accept an invalid proof.
 
@@ -437,11 +480,15 @@ the short-circuiting down, by giving `<&&>` a right operand that divides by zero
 Lean's `while` elaborates to `Lean.Loop.forIn`, built on a `partial def`, so it has no
 equation lemmas of its own. What it does have, from Lean 4.32, is
 `Lean.Loop.forIn_eq_of_monadTail`, which unfolds it one step in any monad with a
-`Lean.Order.MonadTail` instance — and `Except ε` has one. Strong induction on a measure
-turns that single step into termination, which is
-[`forIn_loop_invariant`](LimitDenominator/Proofs/WhileLoop.lean). No fuel parameter and no
-rewrite into a recursive helper is needed, so the loop in the Lean listing is a plain
-`while`.
+`Lean.Order.MonadTail` instance — and `Except ε` has one. That single step is the whole
+of [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean): one lemma peels an
+iteration off the front of the loop, the other stops it. Termination comes from the
+proof layer's own model of the loop, `runLoop` in
+[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), a recursive function on a
+state that carries the invariants with it; the correctness proof identifies the `do`
+block's loop with `runLoop` one iteration at a time, by induction on `runLoop`. No fuel
+parameter and no rewrite of the listing into a recursive helper is needed, so the loop
+in the Lean listing is a plain `while`.
 
 Python's tuple assignment in the loop body is genuinely simultaneous — the right-hand
 side mentions the old `a`, `b`, `p`, `q`, `r`, `s` and `v` — and Lean's
@@ -516,19 +563,22 @@ form of `isBestApproximation` and checks it over every target `m / n` with `1 �
 and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12`. The `z` in the
 specification are bounded, so they are enumerated; the `y` are not, so for each `z` only
 the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
-the docstring there.
+the docstring there. Two conjuncts go beyond the specification, deliberately: that the
+pair returned is in lowest terms, and that in the ambiguous case it is the floor — the
+executable counterparts of `isBestApproximation.gcd_eq_one` and of the two
+`returns_floor_of_ambiguous` theorems.
 
 Both listings are checked that way. The shipped one is checked over the grid's targets that
 are in lowest terms, which are the only ones it promises anything about, and over those it is
 also checked to agree with the simplified listing outright.
 
-**The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for each of
-the four correctness theorems and for `isBestApproximation.gcd_eq_one`, that it depends on
-`propext`, `Classical.choice` and `Quot.sound` and nothing else. Unlike the other three this
-is not an empirical check — it is a statement about the proofs, and it is what closes the gap
-`--wfail` leaves, since an outright `axiom` earns no warning. Each theorem is checked in its
-own right rather than leaning on the trichotomy to cover the other two, so reworking one
-proof cannot quietly narrow what is checked.
+**The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for
+each theorem named under [What do I need to trust?](#what-do-i-need-to-trust), that it
+depends on `propext`, `Classical.choice` and `Quot.sound` and nothing else. Unlike the
+other three this is not an empirical check — it is a statement about the proofs, and it
+is what closes the gap `--wfail` leaves, since an outright `axiom` earns no warning.
+Each theorem is checked in its own right rather than leaning on the trichotomy to cover
+the other two, so reworking one proof cannot quietly narrow what is checked.
 
 Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in
