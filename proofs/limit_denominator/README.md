@@ -67,8 +67,9 @@ The relationship between this listing and the body of `Fraction.limit_denominato
 on an already-reduced fraction, has a fast path for fractions whose denominator is already
 within the limit, uses `while True` with a `break` from the middle rather than a test at
 the top, and names its variables `p0, q0, p1, q1` rather than `p, q, r, s`. The issue
-discusses those differences. Both listings are translated into Lean and both are proved
-correct, against one shared specification — see [Scope](#scope) for where the proof stops.
+discusses those differences. Both listings are translated into Lean, both are proved
+correct against one shared specification, and the two are proved to agree — see
+[Scope](#scope) for where the proof stops.
 
 [PROOF.md](PROOF.md) is the prose companion to the Lean proof: the whole argument in
 ordinary mathematical language, with pointers into the source.
@@ -203,6 +204,25 @@ theorem limitDenominatorStdlib_returns_floor_of_ambiguous {m n l : Int}
     returns (limitDenominatorStdlib m n l) (m / n, 1)
 ```
 
+### The two listings agree
+
+On every target the shipped listing accepts, the two listings are the same function, in
+[`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean):
+
+```lean
+theorem limitDenominatorStdlib_eq_limitDenominatorSimplified {m n l : Int}
+    (hn : 0 < n) (hgcd : Int.gcd m n = 1) :
+    limitDenominatorStdlib m n l = limitDenominatorSimplified m n l
+```
+
+The same `ValueError` for a limit below one, and the same pair otherwise. The proof does
+not look inside either listing: it follows from the theorems above alone. Each listing
+is correct, so outside the ambiguous case `isBestApproximation_unique_of_not_ambiguous`
+makes their answers equal, and inside it the two `returns_floor_of_ambiguous` theorems
+make both the floor. So the specification and the tie-break together determine the
+behaviour on valid targets, and the listings' agreement is a consequence of that rather
+than of anything they share in shape.
+
 ## Scope
 
 What is proved is the arithmetic: both listings, as functions from integers to integers or an
@@ -246,6 +266,7 @@ names follow that split:
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the mathematics: the loop and its state, the bracket, the algorithm, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
+| [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
 
 Two root files import these: [`LimitDenominator.lean`](LimitDenominator.lean) the
 definitions and proofs, and
@@ -363,7 +384,9 @@ up requires confidence in:
   `limitDenominatorSimplified_total` — the two at the bottom of
   [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) —
   `isCorrectLimitDenominator_stdlib` and
-  `limitDenominatorStdlib_returns_floor_of_ambiguous` — and the three about the
+  `limitDenominatorStdlib_returns_floor_of_ambiguous` — the one in
+  [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) —
+  `limitDenominatorStdlib_eq_limitDenominatorSimplified` — and the three about the
   specification itself. That they are proved rather than asserted does not have to be
   taken on trust: their axiom sets are pinned by the build, as described under
   [Building](#building).
@@ -570,7 +593,8 @@ executable counterparts of `isBestApproximation.gcd_eq_one` and of the two
 
 Both listings are checked that way. The shipped one is checked over the grid's targets that
 are in lowest terms, which are the only ones it promises anything about, and over those it is
-also checked to agree with the simplified listing outright.
+also checked to agree with the simplified listing outright, the executable counterpart
+of `limitDenominatorStdlib_eq_limitDenominatorSimplified`.
 
 **The axiom sets.** [`Axioms.lean`](LimitDenominator/Tests/Axioms.lean) asserts, for
 each theorem named under [What do I need to trust?](#what-do-i-need-to-trust), that it

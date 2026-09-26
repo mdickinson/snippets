@@ -12,8 +12,9 @@ record of what they produced, so the sections that described them have been cut.
 they changed about the steps still to come is folded in below.
 
 Step 8, the split, is deferred (decision 13): steps 9 and 10 come first, against the
-unsplit tree, and the split is reconsidered once they have landed. Step 9 has landed;
-step 10 is next.
+unsplit tree, and the split is reconsidered once they have landed. Both have landed.
+What remains is the split, to be reconsidered with the target layout below as a proposal
+rather than a target.
 
 ## Decisions taken
 
@@ -162,16 +163,11 @@ to review alone.
    seventh invariant" now carries the quarantine argument this file used to, with the
    `sorry`-stubbing check re-run on the reworked core. PR #19's description follows
    the same shape and flags `Experiment.lean`'s name as provisional and this file as
-   scaffolding; step 10 adds its theorem there.
-10. **The two listings agree**, as a theorem. No new lemma about the
-    algorithm is needed. On the slow path both listings equal `args.limitDenominator`
-    by Option A. On the fast path the stdlib pair `(m, n)` is best by
-    `self_best_of_fast_path`, the simplified return is best by `limitDenominator_best`,
-    and `non_ambiguous_best` closes the gap — ambiguity being
-    excluded there because `0 < n ≤ l = 1` forces `n = 1`, and `2m = 2w + 1` has no
-    solution. Lowest terms is not needed for that exclusion; it stays load-bearing
-    only through `self_best_of_fast_path`. The exclusion is
-    `not_ambiguous_of_fast_path`, deleted for want of a caller and wanted back here.
-    The theorem needs a home that imports both correctness modules, and
-    `limitDenominatorSimplified_eq`, `limitDenominatorStdlib_eq` and
-    `non_ambiguous_best` become `public` for it, per decision 12.
+   scaffolding, and carries step 10's theorem.
+10. **The two listings agree**, as a theorem. Landed, as
+    `limitDenominatorStdlib_eq_limitDenominatorSimplified` in `Proofs/Agreement.lean`,
+    with its pin. Not by the route sketched here: the proof uses the pinned statements
+    alone — correctness, the tie-break theorems and
+    `isBestApproximation_unique_of_not_ambiguous` — so no fast-path exclusion is needed,
+    nothing new is `public`, and the module imports the two correctness files without
+    exposing them.

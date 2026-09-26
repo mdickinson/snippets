@@ -11,7 +11,8 @@ what a reader has to trust. This file assumes you have read the algorithm listin
 The mathematics lives in one file,
 [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), and the pointers below
 name its theorems. The two correctness files are mechanics, connecting each listing to
-that file's algorithm; § "From the listing to the algorithm" covers them.
+that file's algorithm; § "From the listing to the algorithm" covers them, and § "The two
+listings agree" the one theorem stated about both.
 
 ## Vocabulary
 
@@ -517,6 +518,21 @@ is in lowest terms with `l < n`, and then `b` is never zero (`b_pos`). Were it z
 some state, it would stay zero to the exit, since `b = 0` fails the loop condition
 (`runLoop_b_eq_zero`); and at the exit `mn_eq_rs_of_b_eq_zero` gives `n = s ≤ l`, which
 `l < n` denies. This is the argument of the issue's § "Optimization".
+
+## The two listings agree
+
+`limitDenominatorStdlib_eq_limitDenominatorSimplified`, in
+[`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean), says that on a target in
+lowest terms with positive denominator the two listings are the same function: the same
+`ValueError` below a limit of one, and the same pair above it. Its proof touches none of
+the mathematics above directly, only the two correctness theorems, the two tie-break
+theorems and `isBestApproximation_unique_of_not_ambiguous`. Below a limit of one both
+listings raise, by the first conjunct of each correctness theorem. Above it, outside the
+ambiguous case each returns a pair satisfying the specification, by the second conjunct,
+and uniqueness makes those pairs equal; inside it each returns the floor, by its
+tie-break theorem. So the agreement is a consequence of the specification determining
+the answer, and of the two listings making the same choice where it does not, and not of
+anything the listings share in shape.
 
 ## What the informal proof needs that this one does not
 
