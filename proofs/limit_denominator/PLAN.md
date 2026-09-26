@@ -12,8 +12,8 @@ record of what they produced, so the sections that described them have been cut.
 they changed about the steps still to come is folded in below.
 
 Step 8, the split, is deferred (decision 13): steps 9 and 10 come first, against the
-unsplit tree, and the split is reconsidered once they have landed. Step 9's README and
-PROOF.md have landed; PR #19's description is what is left of it, and step 10 follows.
+unsplit tree, and the split is reconsidered once they have landed. Step 9 has landed;
+step 10 is next.
 
 ## Decisions taken
 
@@ -160,8 +160,9 @@ to review alone.
    PROOF.md is largely rewritten around `Experiment.lean`'s route — the oriented order,
    `rs_best_iff`, the ambiguous case, the exit-state fast path — and its § "Why the
    seventh invariant" now carries the quarantine argument this file used to, with the
-   `sorry`-stubbing check re-run on the reworked core. PR #19's description is what
-   remains: it still describes `Bracketing`, three clauses and four pinned theorems.
+   `sorry`-stubbing check re-run on the reworked core. PR #19's description follows
+   the same shape and flags `Experiment.lean`'s name as provisional and this file as
+   scaffolding; step 10 adds its theorem there.
 10. **The two listings agree**, as a theorem. No new lemma about the
     algorithm is needed. On the slow path both listings equal `args.limitDenominator`
     by Option A. On the fast path the stdlib pair `(m, n)` is best by
