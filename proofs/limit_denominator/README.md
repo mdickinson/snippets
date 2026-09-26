@@ -260,7 +260,7 @@ names follow that split:
 
 | File | Role |
 | --- | --- |
-| [`SupportLemmas.lean`](LimitDenominator/Proofs/SupportLemmas.lean) | general `Int` facts the core library lacks |
+| [`IntLemmas.lean`](LimitDenominator/Proofs/IntLemmas.lean) | general `Int` facts the core library lacks |
 | [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | peeling one iteration off a `while` loop, or stopping it, monad-agnostically |
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the mathematics: the loop and its state, the bracket, the algorithm, and what the specification does and does not determine |

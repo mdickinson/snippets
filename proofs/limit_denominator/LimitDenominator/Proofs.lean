@@ -5,7 +5,7 @@ import LimitDenominator.Proofs.Experiment
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.SimplifiedCorrectness
 import LimitDenominator.Proofs.StdlibCorrectness
-import LimitDenominator.Proofs.SupportLemmas
+import LimitDenominator.Proofs.IntLemmas
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
