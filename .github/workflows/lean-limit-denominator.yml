@@ -1,0 +1,24 @@
+name: Lean 4 limit_denominator proof
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "proofs/limit_denominator/**"
+      - ".github/workflows/lean-limit-denominator.yml"
+  pull_request:
+    paths:
+      - "proofs/limit_denominator/**"
+      - ".github/workflows/lean-limit-denominator.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: leanprover/lean-action@v1
+        with:
+          build-args: "--wfail"
+          lint: "true"
+          lake-package-directory: proofs/limit_denominator
