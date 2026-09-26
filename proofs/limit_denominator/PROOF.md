@@ -383,13 +383,12 @@ Comparing `|r/s − m/n|` with `|t/u − m/n|` and scaling by `n·s·u` compares
 `b·u ≤ c·s` into `2·b·u ≤ n`, which is what the code computes: the return value `rv` is
 `r/s` if `2·b·u ≤ n` and `t/u` otherwise.
 
-`rv_cases` runs the trichotomy on `b·u` against `c·s`. Below, `r/s` is returned and is
-best by `rs_best_iff`. Above, `t/u` is returned and is best by `tu_best_iff`. On an
-exact tie the code returns `r/s`, and its denominator really is the smaller:
-`c·s = b·u ≤ c·u`, as `0 < u` and `b ≤ c`, gives `s ≤ u` on cancelling `c`
-(`s_le_u_of_bu_eq_cs`), which is the tie arm of `rs_best_iff`. Either way the returned
-candidate is best (`rv_best`), and `limitDenominator_best` is that statement for the
-state the algorithm actually reaches.
+`rv_best` splits on the code's own test. Below, `r/s` is returned and is best by
+`rs_best_iff`. Above, `t/u` is returned and is best by `tu_best_iff`. On an exact tie
+the code returns `r/s`, and its denominator really is the smaller: `c·s = b·u ≤ c·u`,
+as `0 < u` and `b ≤ c`, gives `s ≤ u` on cancelling `c` (`s_le_u_of_bu_eq_cs`), which
+is the tie arm of `rs_best_iff`. Either way the returned candidate is best, and
+`limitDenominator_best` is that statement for the state the algorithm actually reaches.
 
 ## The ambiguous case
 
@@ -421,10 +420,10 @@ which also records the two half-integer identities, `2·m·v = (2·r·v + 1)·n`
 
 **Which endpoints they are.** With `v = 1`, `t = r + 1` and `2·m = (2·r + 1)·n`, so
 `⌊m/n⌋ = r` (`floor_eq_of_mn_eq_add_half`): the loop candidate is `⌊m/n⌋ / 1` and the
-extended one is `(⌊m/n⌋ + 1) / 1` (`endpoints_of_v_eq_one`). With `v = −1` the roles
-swap, `t = r − 1` and `⌊m/n⌋ = t` (`endpoints_of_v_eq_neg_one`). Either way the pair is
-`{⌊m/n⌋, ⌊m/n⌋ + 1}` (`endpoints_eq_floor_pair`), and that is all the characterisation
-of the ambiguous case needs.
+extended one is `(⌊m/n⌋ + 1) / 1`. With `v = −1` the roles swap, `t = r − 1` and
+`⌊m/n⌋ = t`. Either way the pair is `{⌊m/n⌋, ⌊m/n⌋ + 1}`, with the orientation saying
+which is which (`endpoints_eq_floor_pair`), and that is all the characterisation of the
+ambiguous case needs.
 
 **Which one the code returns.** This is the one place the seventh invariant is used
 (`v_eq_one`). `s = u` written out is `s = q + k·s`, so `(1 − k)·s = q`. And `b = c` with

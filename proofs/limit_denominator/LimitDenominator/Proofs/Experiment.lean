@@ -150,10 +150,6 @@ def better (ef gh : args.Candidate) :=
   ∨
   args.dist ef * gh.den = args.dist gh * ef.den ∧ ef.den ≤ gh.den
 
-/-- The `better` relation is reflexive. -/
-theorem better_refl (ef : args.Candidate) : args.better ef ef := by
-  right; exact ⟨rfl, Int.le_rfl⟩
-
 /-- The `better` relation is transitive. -/
 theorem better_trans {ef gh ij : args.Candidate} (h1 : args.better ef gh)
     (h2 : args.better gh ij) : args.better ef ij := by
@@ -483,11 +479,6 @@ theorem mn_eq_rs_of_b_eq_zero (hmn : args.m.gcd args.n = 1) (hb : st.b = 0) :
     apply Int.gcd_eq_one_iff.mp hmn st.c <;> grind only [Int.dvd_mul_right]
   grind only
 
-/-- If `m` and `n` are coprime and `n ≤ limit` then `m = r` and `n = s`. -/
-theorem mn_eq_rs_of_fast_path (hmn : args.m.gcd args.n = 1) (hn : args.n ≤ args.limit) :
-    args.m = st.r ∧ args.n = st.s :=
-  st.mn_eq_rs_of_b_eq_zero hmn (st.b_eq_zero_of_fast_path hn)
-
 /-- Distance for values `≤ r/s`. -/
 theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
     args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v := by
@@ -634,18 +625,15 @@ theorem tu_best_iff : args.best st.tu ↔
 @[expose] public def rv : args.Candidate :=
     if 2 * st.b * st.u ≤ args.n then st.rs else st.tu
 
-/-- Whichever bound is returned is a best approximation. -/
-theorem rv_cases :
-    st.rv = st.rs ∧ args.best st.rs ∨ st.rv = st.tu ∧ args.best st.tu := by
-  have bu_cs := st.bu_add_cs_eq_n
-  rcases Int.lt_trichotomy (st.b * st.u) (st.c * st.s) with hlt | heq | hgt
-  · left; exact ⟨ite_eq_left (by grind only), by grind only [st.rs_best_iff]⟩
-  · left; refine ⟨ite_eq_left (by grind only), ?_⟩
-    grind only [st.rs_best_iff, st.s_le_u_of_bu_eq_cs]
-  · right; exact ⟨ite_eq_right (by grind only), by grind only [st.tu_best_iff]⟩
-
 /-- The returned candidate is a best approximation. -/
-theorem rv_best : args.best st.rv := by grind only [st.rv_cases]
+theorem rv_best : args.best st.rv := by
+  have := st.bu_add_cs_eq_n
+  unfold rv; split
+  · rcases Int.lt_or_eq_of_le (show st.b * st.u ≤ st.c * st.s by grind only)
+      with hlt | heq
+    · exact st.rs_best_iff.mpr (.inl hlt)
+    · exact st.rs_best_iff.mpr (.inr ⟨heq, st.s_le_u_of_bu_eq_cs heq⟩)
+  · exact st.tu_best_iff.mpr (.inl (by grind only))
 
 /-! ## The ambiguous case -/
 
@@ -686,9 +674,6 @@ theorem s_eq_one : st.s = 1 := by grind only [hamb.1, st.s_le_limit, st.s_pos]
 /-- In the ambiguous case `t/u` has denominator `1` likewise. -/
 theorem u_eq_one : st.u = 1 := by grind only [hamb.1, st.u_le_limit, st.u_pos]
 
-/-- Both denominators being `1`, so is their product. -/
-theorem su_eq_one : st.s * st.u = 1 := by grind only [st.s_eq_one, st.u_eq_one]
-
 /--
 Collected consequences of ambiguity: `bu = cs`, `r/s v + 1/2 = m/n v = t/u v - 1/2`.
 -/
@@ -697,9 +682,11 @@ theorem consequences_of_ambiguity : st.b * st.u = st.c * st.s
     ∧ 2 * args.m * st.u * st.v = (2 * st.t * st.v - st.u) * args.n := by
   obtain ⟨w, hw⟩ := (st.ambiguous_iff_alternative.mp hamb).2
   have : 2 * st.b * st.u = 2 * (w - st.r * st.u) * st.v * args.n + args.n := by
-    grind only [st.su_eq_one hamb, Int.eq_mul_pos st.u_pos st.b_eq_rs_cross]
+    grind only [st.s_eq_one hamb, st.u_eq_one hamb,
+      Int.eq_mul_pos st.u_pos st.b_eq_rs_cross]
   have : 2 * st.c * st.s = 2 * (st.t * st.s - w) * st.v * args.n - args.n := by
-    grind only [st.su_eq_one hamb, Int.eq_mul_pos st.s_pos st.c_eq_tu_cross]
+    grind only [st.s_eq_one hamb, st.u_eq_one hamb,
+      Int.eq_mul_pos st.s_pos st.c_eq_tu_cross]
   -- `0 ≤ b` and `0 < c` place `wv` in `[ruv, tsv)`, an interval of length one by
   -- `bracket_det`, so `wv = ruv`.
   have : 0 < 2 * (st.t * st.s * st.v - w * st.v) - 1 :=
@@ -709,7 +696,7 @@ theorem consequences_of_ambiguity : st.b * st.u = st.c * st.s
       (by grind only [Int.mul_nonneg st.b_nonneg (Int.le_of_lt st.u_pos)])
   have : st.t * st.s * st.v - st.r * st.u * st.v = 1 := by grind only [st.bracket_det]
   have : w * st.v - st.r * st.u * st.v = 0 := by omega
-  grind only [st.su_eq_one hamb]
+  grind only [st.s_eq_one hamb, st.u_eq_one hamb]
 
 /-- Both `r/s` and `t/u` are best approximations. -/
 theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
@@ -721,48 +708,37 @@ theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
 /-- In the ambiguous case, `bu = cs`. -/
 theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity hamb).1
 
-/-- With the bracket pointing up, `r/s` is `⌊m/n⌋/1` and `t/u` is `(⌊m/n⌋ + 1)/1`. -/
-theorem endpoints_of_v_eq_one (hv : st.v = 1) :
-    st.rs = args.floor ∧ st.tu = args.floorAddOne := by
-  grind only [
-    Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
-    st.bracket_det, st.consequences_of_ambiguity hamb,
-    args.floor_eq_of_mn_eq_add_half (w := st.r)
-  ]
-
-/-- And with it pointing down, the two endpoints swap roles. -/
-theorem endpoints_of_v_eq_neg_one (hv : st.v = -1) :
-    st.rs = args.floorAddOne ∧ st.tu = args.floor := by
-  grind only [
-    Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
-    st.bracket_det, st.consequences_of_ambiguity hamb,
-    args.floor_eq_of_mn_eq_add_half (w := st.t)
-  ]
-
-/-- Either way, the two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`. -/
+/--
+The two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`: in that order when the bracket
+points up, and swapped when it points down.
+-/
 theorem endpoints_eq_floor_pair :
-    (st.rs = args.floor ∧ st.tu = args.floorAddOne)
-    ∨ (st.rs = args.floorAddOne ∧ st.tu = args.floor) :=
-  st.v_cases.imp (st.endpoints_of_v_eq_one hamb) (st.endpoints_of_v_eq_neg_one hamb)
+    st.v = 1 ∧ st.rs = args.floor ∧ st.tu = args.floorAddOne
+    ∨ st.v = -1 ∧ st.rs = args.floorAddOne ∧ st.tu = args.floor := by
+  rcases st.v_cases with hv | hv
+  · left; grind only [
+      Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
+      st.bracket_det, st.consequences_of_ambiguity hamb,
+      args.floor_eq_of_mn_eq_add_half (w := st.r)]
+  · right; grind only [
+      Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
+      st.bracket_det, st.consequences_of_ambiguity hamb,
+      args.floor_eq_of_mn_eq_add_half (w := st.t)]
 
 /-- In the ambiguous case, `v = 1`. -/
 theorem v_eq_one : st.v = 1 := by
-  have s_eq_one := st.s_eq_one hamb
-  have u_eq_one := st.u_eq_one hamb
-  -- Since s = u = q + ks, (1 - k)s = q, so k ≤ 1.
-  have h1 : (1 - st.k) * st.s = st.q := by grind only [u]
-  -- Since 0 < a - b and a - kb = c = b, and bu = cs (so b = c), we have 0 < k * b
-  have h2 : 0 < st.k * st.b := by grind only [c, st.b_lt_a, st.bu_eq_cs hamb]
-  -- It follows from positivity of s and nonnegativity of b that k = 1.
-  have : st.k = 1 := by grind only [
-    st.s_pos, st.b_nonneg,
-    Int.mul_nonneg_iff.mp (h1 ▸ st.q_nonneg), Int.mul_pos_iff.mp h2]
-  exact st.v_eq_one_of_q_eq_zero (show st.q = 0 by grind only)
+  -- With `s = u = 1`: `bu = cs` gives `b = c = a - kb`, so `kb = a - b > 0`, and
+  -- `q = 1 - k ≥ 0`.
+  have kb_pos : 0 < st.k * st.b := by
+    grind only [c, st.b_lt_a, st.bu_eq_cs hamb, st.s_eq_one hamb, st.u_eq_one hamb]
+  exact st.v_eq_one_of_q_eq_zero (by grind only [
+    u, st.q_nonneg, st.b_nonneg, st.s_eq_one hamb, st.u_eq_one hamb,
+    Int.mul_pos_iff.mp kb_pos])
 
 /-- In the ambiguous case `⌊m/n⌋` is returned. -/
 theorem rv_eq_floor : st.rv = args.floor := by
   have : st.rv = st.rs := ite_eq_left (by grind only [st.bu_eq_cs, st.bu_add_cs_eq_n])
-  grind only [st.v_eq_one hamb, st.endpoints_of_v_eq_one hamb]
+  grind only [st.v_eq_one hamb, st.endpoints_eq_floor_pair hamb]
 
 end ambiguous
 
@@ -799,18 +775,8 @@ In the ambiguous case, the best approximations are exactly `⌊m/n⌋` and `⌊m
 theorem ambiguous_best (hamb : args.ambiguous) {yz : args.Candidate} :
     args.best yz ↔ yz = args.floor ∨ yz = args.floorAddOne := by
   let st := args.postLoopState
-  obtain ⟨rs_best, tu_best⟩ := st.rs_best_and_tu_best hamb
-  have hpair : (yz = st.rs ∨ yz = st.tu) ↔
-      (yz = args.floor ∨ yz = args.floorAddOne) := by
-    rcases st.endpoints_eq_floor_pair hamb with ⟨hrs, htu⟩ | ⟨hrs, htu⟩
-    · rw [hrs, htu]
-    · rw [hrs, htu]; exact Or.comm
-  rw [← hpair]
-  constructor
-  · exact st.eq_rs_or_eq_tu_of_best
-  · rintro (rfl | rfl)
-    · exact rs_best
-    · exact tu_best
+  grind only [st.rs_best_and_tu_best hamb, st.endpoints_eq_floor_pair hamb,
+    st.eq_rs_or_eq_tu_of_best]
 
 /-! ## Any best approximation is reduced -/
 
@@ -839,7 +805,7 @@ theorem self_best_of_fast_path (hmn : args.m.gcd args.n = 1)
   have best_rs : args.best st.rs := by
     rw [st.rs_best_iff]
     grind only [Int.mul_pos st.c_pos st.s_pos, st.b_eq_zero_of_fast_path hn]
-  grind only [st.mn_eq_rs_of_fast_path hmn hn]
+  grind only [st.mn_eq_rs_of_b_eq_zero hmn (st.b_eq_zero_of_fast_path hn)]
 
 /-! ## The return value -/
 
@@ -943,19 +909,15 @@ public theorem isBestApproximation_iff_of_ambiguous {m n l r s : Int}
   let args : Arguments := ⟨m, n, l, hn, hl⟩
   constructor
   · intro h
-    let ef : args.Candidate := ⟨r, s, h.1, h.2.1⟩
-    rcases (args.ambiguous_best hamb (yz := ef)).mp
-        ((best_iff_isBestApproximation ef).mpr h) with he | he
-    · exact Or.inl (congrArg (fun c : args.Candidate => (c.num, c.den)) he)
-    · exact Or.inr (congrArg (fun c : args.Candidate => (c.num, c.den)) he)
+    have := (args.ambiguous_best hamb).mp
+      ((best_iff_isBestApproximation ⟨r, s, h.1, h.2.1⟩).mpr h)
+    grind only [Arguments.floor, Arguments.floorAddOne]
   · intro h
     have hfloor := (best_iff_isBestApproximation args.floor).mp
       ((args.ambiguous_best hamb).mpr (Or.inl rfl))
     have hadd := (best_iff_isBestApproximation args.floorAddOne).mp
       ((args.ambiguous_best hamb).mpr (Or.inr rfl))
-    rcases h with he | he <;> rw [Prod.mk.injEq] at he <;> rw [he.1, he.2]
-    · exact hfloor
-    · exact hadd
+    grind only [Arguments.floor, Arguments.floorAddOne]
 
 /--
 The result is in lowest terms, and that is a consequence of the specification rather
