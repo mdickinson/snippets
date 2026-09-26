@@ -1,6 +1,7 @@
 module
 
 public import LimitDenominator.Definitions.Specification
+public import LimitDenominator.Proofs.Arguments
 import LimitDenominator.Proofs.IntLemmas
 
 /-!
@@ -9,23 +10,7 @@ exit, which of its two endpoints is best, the ambiguous case, and the bridge to 
 specification.
 -/
 
-/-! # Arguments -/
-
-/--
-The arguments to the `limitDenominator` algorithm consist of a (possibly non-reduced)
-fraction `m/n` with `n` positive, and the positive denominator limit. The associated
-problem is to find the "best" rational approximation to `m/n` (in a sense to be made
-precise below) with denominator at most `limit`.
--/
-public structure Arguments where
-  /-- Numerator of the fraction to be approximated. -/
-  m : Int
-  /-- Denominator of the fraction to be approximated. -/
-  n : Int
-  /-- Upper bound on the denominator of the approximation. -/
-  limit : Int
-  n_pos : 0 < n
-  one_le_limit : 1 ≤ limit
+/-! # Candidates -/
 
 /--
 A *candidate* solution to the problem is a (possibly non-reduced) fraction `num / den`
@@ -101,19 +86,6 @@ namespace Arguments
 /- We fix arguments `args` throughout this section. -/
 variable (args : Arguments)
 
-/--
-We say a set of arguments is *trivial* if the target is in lowest terms with its
-denominator already within the limit.
--/
-def trivial := Int.gcd args.m args.n = 1 ∧ args.n ≤ args.limit
-
-/--
-We say a set of arguments is *ambiguous* if the limit is `1` and `m/n` is a
-half-integer, that is, `m/n = w + 1/2` for some integer `w`. This is the only case
-where we do not have a unique best approximation.
--/
-public def ambiguous := args.limit = 1 ∧ ∃ (w : Int), 2 * args.m = (2 * w + 1) * args.n
-
 /-- `⌊m/n⌋` as a candidate, over denominator `1`. -/
 @[expose] public def floor : Candidate args :=
   ⟨args.m / args.n, 1, by decide, args.one_le_limit⟩
@@ -121,11 +93,6 @@ public def ambiguous := args.limit = 1 ∧ ∃ (w : Int), 2 * args.m = (2 * w + 
 /-- `⌊m/n⌋ + 1` as a candidate, over denominator `1`. -/
 def floorAddOne : Candidate args :=
   ⟨args.m / args.n + 1, 1, by decide, args.one_le_limit⟩
-
-/-- If `m/n = w + 1/2` then `⌊m/n⌋ = w`. -/
-theorem floor_eq_of_mn_eq_add_half {w : Int} (hw : 2 * args.m = (2 * w + 1) * args.n) :
-    args.m / args.n = w :=
-  (Int.ediv_eq_iff_of_pos args.n_pos).mpr (by grind only [args.n_pos])
 
 end Arguments
 
@@ -652,11 +619,11 @@ theorem endpoints_eq_floor_pair :
   · left; grind only [
       Arguments.floor, Arguments.floorAddOne, st.s_eq_one_and_u_eq_one hamb,
       st.bracket_det, st.consequences_of_ambiguity hamb,
-      args.floor_eq_of_mn_eq_add_half (w := st.r)]
+      args.floor_eq_of_half_integer (w := st.r)]
   · right; grind only [
       Arguments.floor, Arguments.floorAddOne, st.s_eq_one_and_u_eq_one hamb,
       st.bracket_det, st.consequences_of_ambiguity hamb,
-      args.floor_eq_of_mn_eq_add_half (w := st.t)]
+      args.floor_eq_of_half_integer (w := st.t)]
 
 /-- In the ambiguous case, `v = 1`. -/
 theorem v_eq_one : st.v = 1 := by

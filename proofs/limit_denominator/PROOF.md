@@ -8,11 +8,12 @@ source and is worth reading for its own account of the same argument.
 [README.md](README.md) covers the code being proved correct, how to check the proof, and
 what a reader has to trust. This file assumes you have read the algorithm listing there.
 
-The mathematics lives in one file,
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), and the pointers below
-name its theorems. The two correctness files are mechanics, connecting each listing to
-that file's algorithm; § "From the listing to the algorithm" covers them, and § "The two
-listings agree" the one theorem stated about both.
+The mathematics lives in
+[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), with its inputs set up in
+[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), and the pointers below name
+their theorems. The two correctness files are mechanics, connecting each listing to
+the algorithm in `Experiment.lean`; § "From the listing to the algorithm" covers them,
+and § "The two listings agree" the one theorem stated about both.
 
 ## Vocabulary
 
@@ -425,7 +426,7 @@ which also records the two half-integer identities, `2·m·v = (2·r·v + 1)·n`
 (`rs_best_and_tu_best`).
 
 **Which endpoints they are.** With `v = 1`, `t = r + 1` and `2·m = (2·r + 1)·n`, so
-`⌊m/n⌋ = r` (`floor_eq_of_mn_eq_add_half`): the pure candidate is `⌊m/n⌋ / 1` and the
+`⌊m/n⌋ = r` (`floor_eq_of_half_integer`): the pure candidate is `⌊m/n⌋ / 1` and the
 mixed one is `(⌊m/n⌋ + 1) / 1`. With `v = −1` the roles swap, `t = r − 1` and
 `⌊m/n⌋ = t`. Either way the pair is `{⌊m/n⌋, ⌊m/n⌋ + 1}`, with the orientation saying
 which is which (`endpoints_eq_floor_pair`), and that is all the characterisation of the

@@ -263,6 +263,7 @@ names follow that split:
 | [`IntLemmas.lean`](LimitDenominator/Proofs/IntLemmas.lean) | general `Int` facts the core library lacks |
 | [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | peeling one iteration off a `while` loop, or stopping it, monad-agnostically |
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
+| [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the trivial and ambiguous forms of input |
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the mathematics: the loop and its state, the bracket, the algorithm, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
