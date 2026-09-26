@@ -102,7 +102,7 @@ public structure Arguments where
 
 namespace Arguments
 
-/- In this section, fix arguments `args`. -/
+/- We fix arguments `args` throughout this section. -/
 variable (args : Arguments)
 
 /--
@@ -314,15 +314,12 @@ end LoopState
 /-! # Post-loop analysis -/
 
 /-
-A `PostLoopState` is a `LoopState` whose loop condition has gone false. The state of
-knowledge that gives us is the block of theorems below the structure: the loop's own
+A `PostLoopState` is a `LoopState` whose loop condition has gone false. The loop's own
 `r/s`, the *pure* candidate, and a second endpoint `t/u`, the *mixed* candidate built
-from `p/q` and `r/s`, bracket the target fraction `m/n`; both `r/s` and `t/u` have
-"small" denominator (`s ≤ limit` and `u ≤ limit`), but `s + u` exceeds our denominator
-limit (`s + u > limit`), and it follows that everything strictly between `r/s` and `t/u`
-has denominator exceeding `limit`. (We prove the contrapositive of this below, as
-`lev_rs_or_tu_lev`: every candidate must be outside the bracket, or equal to one or
-other of the endpoints.)
+from `p/q` and `r/s`, bracket the target fraction `m/n`. Both have denominator at most
+`limit`, but `s + u > limit`, so everything strictly between them has denominator
+exceeding `limit`: every candidate lies outside the bracket, or at one of its endpoints
+(`lev_rs_or_tu_lev`).
 
 The field `v` represents the orientation of the bracket, and from `bracket_det` it must
 be either `1` or `-1`. If `v = 1` then we have
@@ -342,7 +339,7 @@ public structure PostLoopState (args : Arguments) extends LoopState args where
 
 namespace PostLoopState
 
-/- We let `st` represent the post-loop state throughout this section. -/
+/- We fix a post-loop state `st` throughout this section. -/
 variable {args : Arguments} (st : PostLoopState args)
 
 /-! ## The bracket -/
@@ -477,7 +474,7 @@ theorem mn_eq_rs_of_b_eq_zero (hmn : args.m.gcd args.n = 1) (hb : st.b = 0) :
     apply Int.gcd_eq_one_iff.mp hmn st.c <;> grind only [Int.dvd_mul_right]
   grind only
 
-/-- Distance for values `≤ r/s`. -/
+/-- Distance to a candidate beyond `r/s`, with the orientation supplying the sign. -/
 theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
     args.dist ef = (args.m * ef.den - ef.num * args.n) * st.v := by
   have rhs_nonneg : 0 ≤ (args.m * ef.den - ef.num * args.n) * st.v :=
@@ -489,7 +486,7 @@ theorem dist_of_lev_rs {ef : args.Candidate} (h : st.lev ef st.rs) :
 theorem dist_rs : args.dist st.rs = (args.m * st.s - st.r * args.n) * st.v :=
   st.dist_of_lev_rs Int.le_rfl
 
-/-- Distance for values `≥ t/u`. -/
+/-- Distance to a candidate beyond `t/u`, likewise. -/
 theorem dist_of_tu_lev {ef : args.Candidate} (h : st.lev st.tu ef) :
     args.dist ef = (ef.num * args.n - args.m * ef.den) * st.v := by
   have rhs_nonneg : 0 ≤ (ef.num * args.n - args.m * ef.den) * st.v :=
@@ -696,15 +693,14 @@ theorem consequences_of_ambiguity : st.b * st.u = st.c * st.s
   have : w * st.v - st.r * st.u * st.v = 0 := by omega
   grind only [st.s_eq_one hamb, st.u_eq_one hamb]
 
+/-- In the ambiguous case, `bu = cs`. -/
+theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity hamb).1
+
 /-- Both `r/s` and `t/u` are best approximations. -/
 theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
   grind only [
-    st.rs_best_iff, st.tu_best_iff, st.consequences_of_ambiguity hamb,
-    st.s_eq_one hamb, st.u_eq_one hamb
+    st.rs_best_iff, st.tu_best_iff, st.bu_eq_cs hamb, st.s_eq_one hamb, st.u_eq_one hamb
   ]
-
-/-- In the ambiguous case, `bu = cs`. -/
-theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity hamb).1
 
 /--
 The two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`: in that order when `v = 1`, and
