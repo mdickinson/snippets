@@ -58,6 +58,9 @@ specification"). Being in lowest terms is not part of it, but follows from it.
 the target is a half-integer, `w + 1/2` for some integer `w`. Lean: `ambiguous` in the
 proof, `isAmbiguous` in the specification, the same formula written twice.
 
+**Trivial** — the target is in lowest terms with its denominator already within the
+limit. Lean: `trivial`.
+
 **Pure candidate** — the candidate `(r, s)` held in the loop state, and still held on
 loop exit: a convergent of `m/n`, produced by the loop alone. One of the two candidates
 the final comparison chooses between. (Not "lower bound": which side of the target it
@@ -504,9 +507,9 @@ the algorithm's exit state says what they need.
 
 **The fast path.** When the target's denominator is already within the limit, the
 shipped code returns the target itself and never reaches the loop. That answer is a best
-approximation (`self_best_of_fast_path`). With `n ≤ l`, the recovery identity
+approximation (`self_best_of_trivial`). With `n ≤ l`, the recovery identity
 `b·u + c·s = n ≤ l < s + u` says `(1 − c)·s + (1 − b)·u > 0`, so `c < 1` or `b < 1`;
-`0 < c` rules out the first, so `b = 0` (`b_eq_zero_of_fast_path`). Then the two
+`0 < c` rules out the first, so `b = 0` (`b_eq_zero_of_n_le_limit`). Then the two
 recovery identities read `m = c·r` and `n = c·s`, making `c` a common divisor of `m` and
 `n`, and lowest terms gives `c = 1`: the pure candidate *is* the target, as a pair
 (`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the pure candidate is best, `rs_best_iff`'s

@@ -102,6 +102,12 @@ namespace Arguments
 variable (args : Arguments)
 
 /--
+We say a set of arguments is *trivial* if the target is in lowest terms with its
+denominator already within the limit.
+-/
+def trivial := Int.gcd args.m args.n = 1 ∧ args.n ≤ args.limit
+
+/--
 We say a set of arguments is *ambiguous* if the limit is `1` and `m/n` is a
 half-integer, that is, `m/n = w + 1/2` for some integer `w`. This is the only case
 where we do not have a unique best approximation.
@@ -394,7 +400,7 @@ theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
 If `n ≤ limit` then `b = 0`. Proof: we have `bu + cs = n ≤ limit < s + u`, implying that
 at least one of `b` and `c` is nonpositive. But we already know that `0 < c`.
 -/
-theorem b_eq_zero_of_fast_path (h : args.n ≤ args.limit) : st.b = 0 := by
+theorem b_eq_zero_of_n_le_limit (h : args.n ≤ args.limit) : st.b = 0 := by
   have lc : (1 - st.c) * st.s + (1 - st.b) * st.u > 0 :=
     by grind only [st.bu_add_cs_eq_n, st.limit_lt_s_add_u]
   grind only [st.b_nonneg, st.c_pos, Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc]
@@ -718,21 +724,21 @@ theorem isReduced_of_best {ef : Candidate args} (hef : ef.best) :
   · exact st.isReduced_rs
   · exact st.isReduced_tu
 
-/-! ## The fast path -/
+/-! ## The trivial case -/
 
 /--
-If `m` and `n` are coprime and `n ≤ limit` then `m/n` is a best approximation to itself.
+In the trivial case `m/n` is a best approximation to itself.
 
 Proved by running the loop anyway: with `n ≤ limit` the residual `b` is zero on exit, so
 the exit state's `r/s` is `m/n` itself, and `r/s` is best.
 -/
-theorem self_best_of_fast_path (hmn : args.m.gcd args.n = 1)
-    (hn : args.n ≤ args.limit) : Candidate.best ⟨args.m, args.n, args.n_pos, hn⟩ := by
+theorem self_best_of_trivial (h : args.trivial) :
+    Candidate.best ⟨args.m, args.n, args.n_pos, h.2⟩ := by
   let st := args.postLoopState
   have best_rs : st.rs.best := by
     rw [st.rs_best_iff]
-    grind only [Int.mul_pos st.c_pos st.s_pos, st.b_eq_zero_of_fast_path hn]
-  grind only [st.mn_eq_rs_of_b_eq_zero hmn (st.b_eq_zero_of_fast_path hn)]
+    grind only [Int.mul_pos st.c_pos st.s_pos, st.b_eq_zero_of_n_le_limit h.2]
+  grind only [st.mn_eq_rs_of_b_eq_zero h.1 (st.b_eq_zero_of_n_le_limit h.2)]
 
 /-! ## The return value -/
 
@@ -868,4 +874,4 @@ approximation: the fast path, which the shipped listing takes before its loop.
 public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)
     (hgcd : Int.gcd m n = 1) : isBestApproximation m n l m n := by
   let args : Arguments := ⟨m, n, l, hn, by omega⟩
-  exact (best_iff_isBestApproximation _).mp (args.self_best_of_fast_path hgcd hl)
+  exact (best_iff_isBestApproximation _).mp (args.self_best_of_trivial ⟨hgcd, hl⟩)
