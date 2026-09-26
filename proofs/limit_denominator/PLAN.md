@@ -12,7 +12,8 @@ record of what they produced, so the sections that described them have been cut.
 they changed about the steps still to come is folded in below.
 
 Step 8, the split, is deferred (decision 13): steps 9 and 10 come first, against the
-unsplit tree, and the split is reconsidered once they have landed. Step 9 is next.
+unsplit tree, and the split is reconsidered once they have landed. Step 9's README and
+PROOF.md have landed; PR #19's description is what is left of it, and step 10 follows.
 
 ## Decisions taken
 
@@ -87,33 +88,6 @@ comparison the second arm wants.
 - The seventh-invariant finding. `LoopInvariant.p_eq_one_of_q_eq_zero` becomes
   `LoopState.v_eq_one_of_q_eq_zero` — same content, keyed on `v`.
 
-## Where the seventh invariant lands
-
-Worth stating, because decision 3 sharpens the PR's headline rather than blunting it.
-
-The seventh invariant is spent only on the return-value statements — `rv_eq_floor` and
-the two listing theorems still to come — which say that the lower of the two best
-approximations is the one returned.
-
-Nothing in the specification's vocabulary needs it. `ambiguous_of_rs_and_tu_best`,
-which proves the ambiguous case is the *only* ambiguity, uses just `bracket_det`,
-`s_pos`, `limit_lt_s_add_u`, `one_le_limit` and `v_cases`. Neither does the
-characterisation. With `s = u = 1`, `bracket_det` makes `r/s` and `t/u` adjacent
-integers, and `consequences_of_ambiguity` says which way round they sit: `v = 1` makes
-`r/s` the floor, `v = -1` makes `t/u` the floor and `r/s` the floor plus one. Either
-way `{r/s, t/u}` is `{⌊m/n⌋, ⌊m/n⌋ + 1}` as a set, which is what both directions of
-`ambiguous_best` want — `eq_rs_or_eq_tu_of_best` forwards, `rs_best_and_tu_best` back.
-
-Landed at step 3. `endpoints_of_v_eq_one` and
-`endpoints_of_v_eq_neg_one` take the orientation as a hypothesis,
-`endpoints_eq_floor_pair` is their disjunction over `v_cases`, and `ambiguous_best`
-goes through that. `v_eq_one` keeps exactly one caller, `rv_eq_floor`.
-
-So the appeal to the loop's history is quarantined in exactly the statements about the
-arbitrary choice, and the specification does not depend on it. Checked rather than
-argued: stubbing `v_eq_one` with `sorry` leaves all three public specification
-statements at Lean's three axioms, with no `sorryAx`.
-
 ## Target layout
 
 | Module | Contents |
@@ -126,7 +100,7 @@ statements at Lean's three axioms, with no `sorryAx`.
 | `Proofs/Bracket.lean` | `PostLoopState`, `k`/`t`/`u`, `lev`/`eqv`, the bracket, distances |
 | `Proofs/Algorithm.lean` | `rv`, the ambiguous case, `postLoopState`, `limitDenominator`, `b_pos`, `self_best_of_fast_path` |
 | `Proofs/BestApproximation.lean` | the specification's vocabulary: the bridge, the four statements, `gcd_eq_one`, `isBestApproximation_self` |
-| `Proofs/WhileLoop.lean` | `forIn_loop_done`, landed; loses `forIn_loop_invariant` after step 6 |
+| `Proofs/WhileLoop.lean` | unchanged: `forIn_loop_peel` and `forIn_loop_done` |
 | `Proofs/PythonTranslation.lean` | unchanged |
 | `Proofs/SimplifiedCorrectness.lean` | rewritten: fold, induct, read off |
 | `Proofs/StdlibCorrectness.lean` | the same, peeled and permuted |
@@ -157,9 +131,6 @@ to review alone.
    private. The sixteen docstrings the lint gate then wanted are written.
 5. **`v` back in the simplified listing.** Landed. The enforced preconditions are now
    the listing's only divergence from the issue's, which README and PROOF.md both say.
-   PROOF.md's § "The orientation in the state" keeps the observation that `v` is a
-   function of the rest of the state and drops the conclusion that the code therefore
-   omits it; the rest of that section still describes `Bracketing` and waits for (9).
 6. **The stdlib listing**, plus its ambiguous-case theorem. Needs `LoopState.b_pos` (the
    numerator/denominator recovery is derivable from `a_eq_pq_cross`, `b_eq_rs_cross`
    and `det`, so the existing proof transfers), the peeled first iteration and the
@@ -185,18 +156,12 @@ to review alone.
    drops the `Definitions.Specification` import step 3 added, which is what makes
    decision 11 true of the split layout, and takes `Tests/Axioms.lean`'s import of
    `Experiment` away again.
-9. **Docs.** The listing and the structure table went with steps 5 and 7, so what is
-   left is prose, plus fourteen links left dangling by the deletion — four in README
-   (lines 105, 310, 314 and 442) and ten in PROOF.md (91, 147, 168, 206, 295, 364, 388,
-   396, 452 and 460). With the split deferred (decision 13) every one of them points
-   at `Experiment.lean`, at the section that took the content over; the ones naming
-   `forIn_loop_invariant` want new text instead, and so does README's
-   `isBestApproximation_unique` citation in "What do I need to trust?", where the
-   replacement is a two-part claim of equal strength and should be spelled out as one,
-   and where `gcd_eq_one`'s new hypothesis wants a line of its own. README's
-   "`while` loops and simultaneous assignment" still describes the loop as driven by
-   `forIn_loop_invariant`. Then PROOF.md — R3 has the section list — and PR #19's
-   description. The largest single chunk, and prose rather than proof.
+9. **Docs.** README and PROOF.md landed, describing the unsplit tree per decision 13.
+   PROOF.md is largely rewritten around `Experiment.lean`'s route — the oriented order,
+   `rs_best_iff`, the ambiguous case, the exit-state fast path — and its § "Why the
+   seventh invariant" now carries the quarantine argument this file used to, with the
+   `sorry`-stubbing check re-run on the reworked core. PR #19's description is what
+   remains: it still describes `Bracketing`, three clauses and four pinned theorems.
 10. **The two listings agree**, as a theorem. No new lemma about the
     algorithm is needed. On the slow path both listings equal `args.limitDenominator`
     by Option A. On the fast path the stdlib pair `(m, n)` is best by
@@ -209,12 +174,3 @@ to review alone.
     The theorem needs a home that imports both correctness modules, and
     `limitDenominatorSimplified_eq`, `limitDenominatorStdlib_eq` and
     `non_ambiguous_best` become `public` for it, per decision 12.
-
-## Risks
-
-- **R3.** PROOF.md. §§ "The orientation in the state" (its second half still on
-  `Bracketing`), "Vocabulary", "Loop invariants", "After the loop" with "The degenerate tie", "The
-  bracket", "Choosing between the two candidates" and "Discharging the three clauses"
-  all describe machinery or decisions being replaced. §§ "The specification", "Why the
-  seventh invariant", "What the stdlib listing adds" and "What the informal proof needs
-  that this one does not" survive with edits.
