@@ -58,25 +58,27 @@ specification"). Being in lowest terms is not part of it, but follows from it.
 the target is a half-integer, `w + 1/2` for some integer `w`. Lean: `ambiguous` in the
 proof, `isAmbiguous` in the specification, the same formula written twice.
 
-**Loop candidate** — the candidate `(r, s)` held in the loop state, and still held on
-loop exit. One of the two candidates the final comparison chooses between. (Not "lower
-bound": which side of the target it lies on alternates, so that name would be right only
-half the time.) Lean: `rs`, once the loop is over.
+**Pure candidate** — the candidate `(r, s)` held in the loop state, and still held on
+loop exit: a convergent of `m/n`, produced by the loop alone. One of the two candidates
+the final comparison chooses between. (Not "lower bound": which side of the target it
+lies on alternates, so that name would be right only half the time.) Lean: `rs`, once
+the loop is over.
 
-**Extended candidate** — the candidate `(t, u)` formed after loop exit by advancing the
-*previous* loop candidate `(p, q)` as far towards the loop candidate as the denominator
-limit allows: `t = p + k·r` and `u = q + k·s`, where `k = ⌊(l − q)/s⌋`. Lean: `tu`.
+**Mixed candidate** — the candidate `(t, u)` formed after loop exit from the two most
+recent convergents: the *previous* one `(p, q)` moved towards `(r, s)` as far as the
+denominator limit allows, `t = p + k·r` and `u = q + k·s` with `k = ⌊(l − q)/s⌋`. At
+`k = 0` it is `(p, q)` itself. Lean: `tu`.
 
-**Orientation** — the value `±1` recording which side of the target the loop candidate
+**Orientation** — the value `±1` recording which side of the target the pure candidate
 lies on, written `v`. Carried in the loop state, as the listing carries it, and tied to
 the rest of the state by the invariant `(p·s − r·q)·v = 1` — see below.
 
-**Bracket** — the property that the target lies between the loop candidate and the
-extended candidate, inclusive on the loop candidate's side only. The heart of the proof:
+**Bracket** — the property that the target lies between the pure candidate and the
+mixed candidate, inclusive on the pure candidate's side only. The heart of the proof:
 every candidate strictly inside the bracket has denominator exceeding `l`.
 
-**Residual** — an oriented scaled distance from the target to a candidate. The loop
-candidate's is `b`, the extended candidate's is `c`; both are nonnegative because the
+**Residual** — an oriented scaled distance from the target to a candidate. The pure
+candidate's is `b`, the mixed candidate's is `c`; both are nonnegative because the
 orientation is folded in.
 
 **Simplified listing** — the three-argument integer function from [the issue][issue],
@@ -188,9 +190,9 @@ What naming `v` buys is that the two sides of the bracket are handled by one sta
 each. The proof's order relation `lev` is orientation-aware: `st.lev ef gh` is the
 integer inequality `e·h·v ≤ g·f·v`, which says `e/f ≤ g/h` when `v = 1` and `g/h ≤ e/f`
 when `v = −1`; `eqv` is the corresponding equality, and since `v` is nonzero it is
-equality of fractions whichever way the bracket points. In those terms the bracket reads
-`r/s ≤ m/n ≤ t/u` in either orientation, and each statement about "the loop candidate's
-side" is made once rather than once per sign.
+equality of fractions for either sign of `v`. In those terms the bracket reads
+`r/s ≤ m/n ≤ t/u` in either orientation, and each statement about what lies beyond the
+pure candidate is made once rather than once per sign.
 
 ## Loop invariants
 
@@ -271,8 +273,8 @@ A `PostLoopState` is a loop state whose condition has gone false. Write
 Then, directly from the definitions and the loop invariants:
 
 ```
-(t·s − r·u)·v = 1        bracket_det       (extending does not change the orientation)
-(t·n − m·u)·v = c        c_eq_tu_cross     (the extended candidate's residual)
+(t·s − r·u)·v = 1        bracket_det       (the mixed candidate keeps the orientation)
+(t·n − m·u)·v = c        c_eq_tu_cross     (the mixed candidate's residual)
 b·t + c·r = m            bt_add_cr_eq_m    (the target, recovered in the bracket basis)
 b·u + c·s = n            bu_add_cs_eq_n
 ```
@@ -335,20 +337,20 @@ endpoints is doing the work here, but in its determinant form.
 
 ### Candidates outside the bracket are no closer
 
-On the loop candidate's side, `y/z ≤ r/s ≤ m/n` in the oriented order, so the distance
-from the target to `y/z` needs no absolute value: it is `(m·z − y·n)·v`
-(`dist_of_lev_rs`), and the loop candidate's is `(m·s − r·n)·v = b` (`dist_rs`). The
-closeness comparison `dist rs · z ≤ dist yz · s` is then
+Beyond the pure candidate, `y/z ≤ r/s ≤ m/n` in the oriented order, so the distance from
+the target to `y/z` needs no absolute value: it is `(m·z − y·n)·v` (`dist_of_lev_rs`),
+and the pure candidate's is `(m·s − r·n)·v = b` (`dist_rs`). The closeness comparison
+`dist rs · z ≤ dist yz · s` is then
 
 ```
 (m·s − r·n)v·z ≤ (m·z − y·n)v·s
 ```
 
-whose two sides differ by `n·(r·z − y·s)·v`, which is nonnegative on this side. So the
-loop candidate is at least as close as anything on its side, strictly so unless the two
-are equal in value; and where they are, `s ≤ z` is § "The bracket"'s denominator fact,
-which is the tie arm of `better`. That is `better_rs_of_lev`: the loop candidate is
-better than every candidate on its side. `better_tu_of_lev` is the mirror image, through
+whose two sides differ by `n·(r·z − y·s)·v`, which is nonnegative there. So the pure
+candidate is at least as close as anything beyond it, strictly so unless the two are
+equal in value; and where they are, `s ≤ z` is § "The bracket"'s denominator fact, which
+is the tie arm of `better`. That is `better_rs_of_lev`: the pure candidate is better
+than every candidate beyond it. `better_tu_of_lev` is the mirror image, through
 `dist_of_tu_lev` and `dist_tu`, and putting the two together with the case split,
 
 ```
@@ -360,11 +362,11 @@ for every candidate `y/z`: one of the two endpoints is at least as good as it.
 ## Best approximations
 
 **A best approximation is an endpoint** (`eq_rs_or_eq_tu_of_best`). Let `y/z` be best.
-It lies on one side of the bracket; say the loop candidate's. Being best, it is better
-than `r/s`; but `r/s` is strictly better than anything strictly on that side, so `y/z`
-equals `r/s` in value. Then `s ≤ z` from the denominator fact, and `z ≤ s` from `y/z`
-being better than `r/s` at equal distance, so the denominators agree; and equal in value
-with equal denominators is equal as a pair (`Candidate.eq_of_eq_den`). That is
+It lies beyond one endpoint or the other; say beyond the pure candidate. Being best, it
+is better than `r/s`; but `r/s` is strictly better than anything strictly beyond it, so
+`y/z` equals `r/s` in value. Then `s ≤ z` from the denominator fact, and `z ≤ s` from
+`y/z` being better than `r/s` at equal distance, so the denominators agree; and equal in
+value with equal denominators is equal as a pair (`Candidate.eq_of_eq_den`). That is
 `eq_rs_of_lev_of_best`, and `eq_tu_of_lev_of_best` is its mirror image.
 
 **Which endpoint is best.** Since one endpoint is better than any candidate and `better`
@@ -411,7 +413,7 @@ Now assume the ambiguous case. The limit is `1`, so `s = u = 1` (`s_eq_one`,
 `u_eq_one`), and the oriented half-integer `w` with the two residual identities gives
 `2·b = 2(w − r)v·n + n` and `2·c = 2(t − w)v·n − n`. Then `0 ≤ b` and `0 < c` place
 `w·v` in the interval `[r·v, t·v)`, which has length one since `(t − r)·v = 1`, so
-`w·v = r·v`: the half-integer is the loop candidate's numerator, oriented. Substituting
+`w·v = r·v`: the half-integer is the pure candidate's numerator, oriented. Substituting
 back, `2·b = n = 2·c`, so `b = c` and `b·u = c·s`. That is `consequences_of_ambiguity`,
 which also records the two half-integer identities, `2·m·v = (2·r·v + 1)·n` and
 `2·m·v = (2·t·v − 1)·n`, in the form with `s` and `u` still in. With `b·u = c·s` and
@@ -419,8 +421,8 @@ which also records the two half-integer identities, `2·m·v = (2·r·v + 1)·n`
 (`rs_best_and_tu_best`).
 
 **Which endpoints they are.** With `v = 1`, `t = r + 1` and `2·m = (2·r + 1)·n`, so
-`⌊m/n⌋ = r` (`floor_eq_of_mn_eq_add_half`): the loop candidate is `⌊m/n⌋ / 1` and the
-extended one is `(⌊m/n⌋ + 1) / 1`. With `v = −1` the roles swap, `t = r − 1` and
+`⌊m/n⌋ = r` (`floor_eq_of_mn_eq_add_half`): the pure candidate is `⌊m/n⌋ / 1` and the
+mixed one is `(⌊m/n⌋ + 1) / 1`. With `v = −1` the roles swap, `t = r − 1` and
 `⌊m/n⌋ = t`. Either way the pair is `{⌊m/n⌋, ⌊m/n⌋ + 1}`, with the orientation saying
 which is which (`endpoints_eq_floor_pair`), and that is all the characterisation of the
 ambiguous case needs.
@@ -429,8 +431,8 @@ ambiguous case needs.
 (`v_eq_one`). `s = u` written out is `s = q + k·s`, so `(1 − k)·s = q`. And `b = c` with
 `c = a − k·b` and `b < a` gives `0 < k·b`, so `k ≥ 1` and `0 < b`. Then `(1 − k)·s = q`
 with `q ≥ 0` and `s > 0` forces `k ≤ 1`; so `k = 1` and `q = 0`, and the seventh
-invariant gives `v = 1`. So the loop candidate is the floor. And the code returns the
-loop candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`, an equality here. That is
+invariant gives `v = 1`. So the pure candidate is the floor. And the code returns the
+pure candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`, an equality here. That is
 `rv_eq_floor`, and `limitDenominator_ambiguous_case` is the same for the state the
 algorithm reaches: for example `1/2` with `l = 1`, where `0/1` and `1/1` are equally
 close and `0/1` is returned.
@@ -505,8 +507,8 @@ approximation (`self_best_of_fast_path`). With `n ≤ l`, the recovery identity
 `b·u + c·s = n ≤ l < s + u` says `(1 − c)·s + (1 − b)·u > 0`, so `c < 1` or `b < 1`;
 `0 < c` rules out the first, so `b = 0` (`b_eq_zero_of_fast_path`). Then the two
 recovery identities read `m = c·r` and `n = c·s`, making `c` a common divisor of `m` and
-`n`, and lowest terms gives `c = 1`: the loop candidate *is* the target, as a pair
-(`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the loop candidate is best, `rs_best_iff`'s
+`n`, and lowest terms gives `c = 1`: the pure candidate *is* the target, as a pair
+(`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the pure candidate is best, `rs_best_iff`'s
 first arm being `0 < c·s`. `isBestApproximation_self` is the translation across the
 bridge, and it is what the fast path of `isCorrectLimitDenominator_stdlib` discharges
 against.

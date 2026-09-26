@@ -47,7 +47,7 @@ def stdlibLoopBody (l : Int) (_u : Unit) (state : StdlibLoopTuple) :
       pure (ForInStep.yield (r, s, p + k * r, q2, b, a - k * b))
 
 /--
-The tail of the `do` block, named likewise: the extended candidate and the final choice.
+The tail of the `do` block, named likewise: the mixed candidate and the final choice.
 
 Here `n` is the *target's* denominator, the shipped code's `self._denominator`. The
 Python's own `n` is the running numerator, which is this state's `_a`, and is unused

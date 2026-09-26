@@ -316,12 +316,13 @@ end LoopState
 /-
 A `PostLoopState` is a `LoopState` whose loop condition has gone false. The state of
 knowledge that gives us is the block of theorems below the structure: the loop's own
-`r/s` and a second endpoint `t/u` form a Farey pair bracketing the target fraction
-`m/n`; both `r/s` and `t/u` have "small" denominator (`s ≤ limit` and `u ≤ limit`), but
-that `s + u` exceeds our denominator limit (`s + u > limit`), and it follows that
-everything strictly between `r/s` and `t/u` has denominator exceeding `limit`. (We prove
-the contrapositive of this below, as `lev_rs_or_tu_lev`: every candidate must be outside
-the bracket, or equal to one or other of the endpoints.)
+`r/s`, the *pure* candidate, and a second endpoint `t/u`, the *mixed* candidate built
+from `p/q` and `r/s`, bracket the target fraction `m/n`; both `r/s` and `t/u` have
+"small" denominator (`s ≤ limit` and `u ≤ limit`), but `s + u` exceeds our denominator
+limit (`s + u > limit`), and it follows that everything strictly between `r/s` and `t/u`
+has denominator exceeding `limit`. (We prove the contrapositive of this below, as
+`lev_rs_or_tu_lev`: every candidate must be outside the bracket, or equal to one or
+other of the endpoints.)
 
 The field `v` represents the orientation of the bracket, and from `bracket_det` it must
 be either `1` or `-1`. If `v = 1` then we have
@@ -352,12 +353,9 @@ exceeding the limit.
 -/
 @[expose] public def k : Int := (args.limit - st.q) / st.s
 
-/--
-Numerator of the far endpoint of the bracket: `t/u` is `p/q` advanced by `k` copies of
-`r/s`.
--/
+/-- Numerator of the mixed candidate: `t/u` is `p/q` plus `k` copies of `r/s`. -/
 @[expose] public def t : Int := st.p + st.k * st.r
-/-- Denominator of that same far endpoint. -/
+/-- Denominator of the mixed candidate. -/
 @[expose] public def u : Int := st.q + st.k * st.s
 
 /-- From the definition of `k` we have `ks ≤ limit - q`, giving `u ≤ limit`. -/
@@ -373,9 +371,9 @@ theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
 /-- Since `s ≤ limit < s + u`, it follows that `0 < u`. -/
 public theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_add_u]
 
-/-- The near bracket endpoint `r/s`, packaged as a candidate. -/
+/-- The pure candidate `r/s`, the loop's own, packaged as a `Candidate`. -/
 public abbrev rs : args.Candidate := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
-/-- The far bracket endpoint `t/u`, packaged as a candidate. -/
+/-- The mixed candidate `t/u`, packaged as a `Candidate`. -/
 public abbrev tu : args.Candidate := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 
 /--
@@ -404,7 +402,7 @@ def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
 
 /--
 `st.eqv` is defined analogously; since `v` is nonzero, it is equality of fractions
-whichever way the bracket points.
+for either sign of `v`.
 -/
 def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
 
@@ -421,11 +419,11 @@ theorem v_cases : st.v = 1 ∨ st.v = -1 :=
 /-- In particular, `v` is nonzero. -/
 theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
 
-/-- The near endpoint `r/s` is in lowest terms. -/
+/-- The pure candidate `r/s` is in lowest terms. -/
 theorem isReduced_rs : st.rs.isReduced :=
   ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
 
-/-- The far endpoint `t/u` likewise. -/
+/-- The mixed candidate `t/u` likewise. -/
 theorem isReduced_tu : st.tu.isReduced :=
   ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
 
@@ -709,8 +707,8 @@ theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
 theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity hamb).1
 
 /--
-The two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`: in that order when the bracket
-points up, and swapped when it points down.
+The two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`: in that order when `v = 1`, and
+swapped when `v = -1`.
 -/
 theorem endpoints_eq_floor_pair :
     st.v = 1 ∧ st.rs = args.floor ∧ st.tu = args.floorAddOne

@@ -35,7 +35,9 @@ def loopBody (l : Int) (_u : Unit) (state : LoopTuple) : PyExcept (ForInStep Loo
     else
       pure (ForInStep.done (a, b, p, q, r, s, v))
 
-/-- The tail of the `do` block, named likewise: the extended candidate and the final choice. -/
+/--
+The tail of the `do` block, named likewise: the mixed candidate and the final choice.
+-/
 def afterLoop (n l : Int) (state : LoopTuple) : PyExcept (Int × Int) :=
   let ⟨_a, b, p, q, r, s, _v⟩ := state
   do

@@ -41,10 +41,10 @@ def limitDenominatorCases : List (Int × Int × Int × Int × Int) :=
     (-5, 4, 2, -1, 1),
     (7, 4, 2, 2, 1),
     (-7, 4, 2, -2, 1),
-    -- Cases returning the extended candidate rather than the loop candidate.
+    -- Cases returning the mixed candidate rather than the pure candidate.
     (7, 5, 3, 4, 3),
     (-7, 5, 3, -4, 3),
-    -- Cases returning the loop candidate outright.
+    -- Cases returning the pure candidate outright.
     (3, 8, 2, 1, 2),
     (17, 12, 5, 7, 5),
     -- The limit is already large enough to represent the target exactly.
@@ -89,10 +89,10 @@ def limitDenominatorStdlibCases : List (Int × Int × Int × Int × Int) :=
     (-5, 4, 2, -1, 1),
     (7, 4, 2, 2, 1),
     (-7, 4, 2, -2, 1),
-    -- Cases returning the extended candidate rather than the loop candidate.
+    -- Cases returning the mixed candidate rather than the pure candidate.
     (7, 5, 3, 4, 3),
     (-7, 5, 3, -4, 3),
-    -- Cases returning the loop candidate outright.
+    -- Cases returning the pure candidate outright.
     (3, 8, 2, 1, 2),
     (17, 12, 5, 7, 5) ]
 

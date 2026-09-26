@@ -25,9 +25,9 @@ them.
 #guard limitDenominatorStdlibCases.any fun (_, n, l, _, _) => n ≤ l
 #guard limitDenominatorStdlibCases.any fun (_, n, l, _, _) => l < n
 
-/- Both arms of the final comparison are reached too. Which arm a case takes is not visible in
-its tuple, so unlike the split above this pins representatives: `(7, 5, 3)` returns the extended
-candidate, `(3, 8, 2)` the loop candidate. -/
+/- Both arms of the final comparison are reached too. Which arm a case takes is not
+visible in its tuple, so unlike the split above this pins representatives:
+`(7, 5, 3)` returns the mixed candidate, `(3, 8, 2)` the pure candidate. -/
 #guard limitDenominatorStdlibCases.any fun (m, n, l, _, _) => (m, n, l) == (7, 5, 3)
 #guard limitDenominatorStdlibCases.any fun (m, n, l, _, _) => (m, n, l) == (3, 8, 2)
 
