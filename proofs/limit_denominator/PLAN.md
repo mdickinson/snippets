@@ -2,14 +2,17 @@
 
 Working document for the rework of the proof layer onto `Experiment.lean`, tracked so
 that it survives between sessions. It is scaffolding, not one of the project's docs:
-when step 9 lands it gets deleted, and `README.md` and `PROOF.md` are the two that
-stay.
+it gets deleted once the last step has landed, and `README.md` and `PROOF.md` are the
+two that stay.
 
 ## Progress
 
 Steps 1 to 7 have landed; their commits carry the reasoning, and the tree is the
 record of what they produced, so the sections that described them have been cut. What
-they changed about the steps still to come is folded in below. Step 8 is next.
+they changed about the steps still to come is folded in below.
+
+Step 8, the split, is deferred (decision 13): steps 9 and 10 come first, against the
+unsplit tree, and the split is reconsidered once they have landed. Step 9 is next.
 
 ## Decisions taken
 
@@ -48,6 +51,10 @@ they changed about the steps still to come is folded in below. Step 8 is next.
     and `@[expose]` only where a consumer unfolds it. No blanket `public section` — it
     would make the whole core API, and nothing could then be changed without checking
     every module. The rule outlives the split; step 8 applies it per module.
+13. **The split waits.** Steps 9 and 10 land against the unsplit tree, so that proofs,
+    docs and PR are complete and self-consistent first; step 8's layout is then
+    reconsidered rather than assumed. Step 9's docs describe `Experiment.lean` as it
+    is, and the split, in whatever shape, will touch the docs again.
 
 ## What the decisions do to the shape
 
@@ -92,17 +99,15 @@ Nothing in the specification's vocabulary needs it. `ambiguous_of_rs_and_tu_best
 which proves the ambiguous case is the *only* ambiguity, uses just `bracket_det`,
 `s_pos`, `limit_lt_s_add_u`, `one_le_limit` and `v_cases`. Neither does the
 characterisation. With `s = u = 1`, `bracket_det` makes `r/s` and `t/u` adjacent
-integers, and `mnv_sub_half` says which way round they sit: `v = 1` makes `r/s` the
-floor, `v = -1` makes `t/u` the floor and `r/s` the floor plus one. Either way
-`{r/s, t/u}` is `{⌊m/n⌋, ⌊m/n⌋ + 1}` as a set, which is what both directions of
+integers, and `consequences_of_ambiguity` says which way round they sit: `v = 1` makes
+`r/s` the floor, `v = -1` makes `t/u` the floor and `r/s` the floor plus one. Either
+way `{r/s, t/u}` is `{⌊m/n⌋, ⌊m/n⌋ + 1}` as a set, which is what both directions of
 `ambiguous_best` want — `eq_rs_or_eq_tu_of_best` forwards, `rs_best_and_tu_best` back.
 
 Landed at step 3. `endpoints_of_v_eq_one` and
 `endpoints_of_v_eq_neg_one` take the orientation as a hypothesis,
 `endpoints_eq_floor_pair` is their disjunction over `v_cases`, and `ambiguous_best`
-goes through that. `v_eq_one` keeps exactly two callers, `rs_eq_floor` and
-`tu_eq_floor_add_one`, now one-liners applying it to the pair, and they are reached
-only from `rv_eq_floor`.
+goes through that. `v_eq_one` keeps exactly one caller, `rv_eq_floor`.
 
 So the appeal to the loop's history is quarantined in exactly the statements about the
 arbitrary choice, and the specification does not depend on it. Checked rather than
@@ -115,11 +120,11 @@ statements at Lean's three axioms, with no `sorryAx`.
 | --- | --- |
 | `Definitions/IntAbs.lean` | `Int.abs` alone, imported by the spec and by the proofs |
 | `Definitions/Specification.lean` | two-clause `isBestApproximation`, flipped `atLeastAsClose`, `isAmbiguous` |
-| `Proofs/SupportLemmas.lean` | `Int.abs` lemmas, the arithmetic facts, the positive-factor family, the gcd/dvd facts |
+| `Proofs/SupportLemmas.lean` | `Int.abs` lemmas, the arithmetic facts, the positive-factor family, `Int.gcd_eq_one_of_bezout` |
 | `Proofs/Arguments.lean` | `Arguments`, `Candidate` with `isReduced` and `eq_of_eq_den`, `dist`/`better`/`best`, `ambiguous`, `floor` |
-| `Proofs/LoopState.lean` | `LoopState`, `initialLoopState`, `nextLoopState`, `runLoop`, `b_pos` |
+| `Proofs/LoopState.lean` | `LoopState`, `initialLoopState`, `nextLoopState`, `runLoop` |
 | `Proofs/Bracket.lean` | `PostLoopState`, `k`/`t`/`u`, `lev`/`eqv`, the bracket, distances |
-| `Proofs/Algorithm.lean` | `rv`, the ambiguous case, `postLoopState`, `limitDenominator` |
+| `Proofs/Algorithm.lean` | `rv`, the ambiguous case, `postLoopState`, `limitDenominator`, `b_pos`, `self_best_of_fast_path` |
 | `Proofs/BestApproximation.lean` | the specification's vocabulary: the bridge, the four statements, `gcd_eq_one`, `isBestApproximation_self` |
 | `Proofs/WhileLoop.lean` | `forIn_loop_done`, landed; loses `forIn_loop_invariant` after step 6 |
 | `Proofs/PythonTranslation.lean` | unchanged |
@@ -183,25 +188,27 @@ to review alone.
 9. **Docs.** The listing and the structure table went with steps 5 and 7, so what is
    left is prose, plus fourteen links left dangling by the deletion — four in README
    (lines 105, 310, 314 and 442) and ten in PROOF.md (91, 147, 168, 206, 295, 364, 388,
-   396, 452 and 460). Step 8 revives the names `BestApproximation.lean` and
-   `Bracket.lean`, so those links resolve again on their own, to different contents;
-   the ones naming `LoopInvariant.lean`, `AfterLoop.lean`, `TieBreak.lean` or
-   `forIn_loop_invariant` do not, and neither does README's
+   396, 452 and 460). With the split deferred (decision 13) every one of them points
+   at `Experiment.lean`, at the section that took the content over; the ones naming
+   `forIn_loop_invariant` want new text instead, and so does README's
    `isBestApproximation_unique` citation in "What do I need to trust?", where the
    replacement is a two-part claim of equal strength and should be spelled out as one,
    and where `gcd_eq_one`'s new hypothesis wants a line of its own. README's
    "`while` loops and simultaneous assignment" still describes the loop as driven by
    `forIn_loop_invariant`. Then PROOF.md — R3 has the section list — and PR #19's
    description. The largest single chunk, and prose rather than proof.
-10. **Optional.** The two listings agree, as a theorem. No new lemma about the
+10. **The two listings agree**, as a theorem. No new lemma about the
     algorithm is needed. On the slow path both listings equal `args.limitDenominator`
     by Option A. On the fast path the stdlib pair `(m, n)` is best by
-    `isBestApproximation_self` through the bridge backwards, the simplified return is
-    best by `limitDenominator_best`, and
-    `isBestApproximation_unique_of_not_ambiguous` closes the gap — ambiguity being
+    `self_best_of_fast_path`, the simplified return is best by `limitDenominator_best`,
+    and `non_ambiguous_best` closes the gap — ambiguity being
     excluded there because `0 < n ≤ l = 1` forces `n = 1`, and `2m = 2w + 1` has no
     solution. Lowest terms is not needed for that exclusion; it stays load-bearing
-    only through `isBestApproximation_self`.
+    only through `self_best_of_fast_path`. The exclusion is
+    `not_ambiguous_of_fast_path`, deleted for want of a caller and wanted back here.
+    The theorem needs a home that imports both correctness modules, and
+    `limitDenominatorSimplified_eq`, `limitDenominatorStdlib_eq` and
+    `non_ambiguous_best` become `public` for it, per decision 12.
 
 ## Risks
 
