@@ -667,11 +667,9 @@ theorem ambiguous_of_rs_and_tu_best
 variable (hamb : args.ambiguous)
 include hamb
 
-/-- In the ambiguous case `r/s` has denominator `1`, the limit being `1`. -/
-theorem s_eq_one : st.s = 1 := by grind only [hamb.1, st.s_le_limit, st.s_pos]
-
-/-- In the ambiguous case `t/u` has denominator `1` likewise. -/
-theorem u_eq_one : st.u = 1 := by grind only [hamb.1, st.u_le_limit, st.u_pos]
+/-- In the ambiguous case `s = u = 1`, both being bounded by a limit of `1`. -/
+theorem s_eq_one_and_u_eq_one : st.s = 1 ∧ st.u = 1 := by
+  grind only [hamb.1, st.s_le_limit, st.s_pos, st.u_le_limit, st.u_pos]
 
 /--
 Collected consequences of ambiguity: `bu = cs`, `r/s v + 1/2 = m/n v = t/u v - 1/2`.
@@ -680,12 +678,11 @@ theorem consequences_of_ambiguity : st.b * st.u = st.c * st.s
     ∧ 2 * args.m * st.s * st.v = (2 * st.r * st.v + st.s) * args.n
     ∧ 2 * args.m * st.u * st.v = (2 * st.t * st.v - st.u) * args.n := by
   obtain ⟨w, hw⟩ := (st.ambiguous_iff_oriented.mp hamb).2
+  have := st.s_eq_one_and_u_eq_one hamb
   have : 2 * st.b * st.u = 2 * (w - st.r * st.u) * st.v * args.n + args.n := by
-    grind only [st.s_eq_one hamb, st.u_eq_one hamb,
-      Int.eq_mul_pos st.u_pos st.b_eq_rs_cross]
+    grind only [Int.eq_mul_pos st.u_pos st.b_eq_rs_cross]
   have : 2 * st.c * st.s = 2 * (st.t * st.s - w) * st.v * args.n - args.n := by
-    grind only [st.s_eq_one hamb, st.u_eq_one hamb,
-      Int.eq_mul_pos st.s_pos st.c_eq_tu_cross]
+    grind only [Int.eq_mul_pos st.s_pos st.c_eq_tu_cross]
   -- `0 ≤ b` and `0 < c` place `wv` in `[ruv, tsv)`, an interval of length one by
   -- `bracket_det`, so `wv = ruv`.
   have : 0 < 2 * (st.t * st.s * st.v - w * st.v) - 1 :=
@@ -695,7 +692,7 @@ theorem consequences_of_ambiguity : st.b * st.u = st.c * st.s
       (by grind only [Int.mul_nonneg st.b_nonneg (Int.le_of_lt st.u_pos)])
   have : st.t * st.s * st.v - st.r * st.u * st.v = 1 := by grind only [st.bracket_det]
   have : w * st.v - st.r * st.u * st.v = 0 := by omega
-  grind only [st.s_eq_one hamb, st.u_eq_one hamb]
+  grind only
 
 /-- In the ambiguous case, `bu = cs`. -/
 theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity hamb).1
@@ -703,8 +700,7 @@ theorem bu_eq_cs : st.b * st.u = st.c * st.s := (st.consequences_of_ambiguity ha
 /-- Both `r/s` and `t/u` are best approximations. -/
 theorem rs_best_and_tu_best : args.best st.rs ∧ args.best st.tu := by
   grind only [
-    st.rs_best_iff, st.tu_best_iff, st.bu_eq_cs hamb, st.s_eq_one hamb, st.u_eq_one hamb
-  ]
+    st.rs_best_iff, st.tu_best_iff, st.bu_eq_cs hamb, st.s_eq_one_and_u_eq_one hamb]
 
 /--
 The two endpoints are `⌊m/n⌋/1` and `(⌊m/n⌋ + 1)/1`: in that order when `v = 1`, and
@@ -715,11 +711,11 @@ theorem endpoints_eq_floor_pair :
     ∨ st.v = -1 ∧ st.rs = args.floorAddOne ∧ st.tu = args.floor := by
   rcases st.v_cases with hv | hv
   · left; grind only [
-      Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
+      Arguments.floor, Arguments.floorAddOne, st.s_eq_one_and_u_eq_one hamb,
       st.bracket_det, st.consequences_of_ambiguity hamb,
       args.floor_eq_of_mn_eq_add_half (w := st.r)]
   · right; grind only [
-      Arguments.floor, Arguments.floorAddOne, st.s_eq_one hamb, st.u_eq_one hamb,
+      Arguments.floor, Arguments.floorAddOne, st.s_eq_one_and_u_eq_one hamb,
       st.bracket_det, st.consequences_of_ambiguity hamb,
       args.floor_eq_of_mn_eq_add_half (w := st.t)]
 
@@ -728,9 +724,9 @@ theorem v_eq_one : st.v = 1 := by
   -- With `s = u = 1`: `bu = cs` gives `b = c = a - kb`, so `kb = a - b > 0`, and
   -- `q = 1 - k ≥ 0`.
   have kb_pos : 0 < st.k * st.b := by
-    grind only [c, st.b_lt_a, st.bu_eq_cs hamb, st.s_eq_one hamb, st.u_eq_one hamb]
+    grind only [c, st.b_lt_a, st.bu_eq_cs hamb, st.s_eq_one_and_u_eq_one hamb]
   exact st.v_eq_one_of_q_eq_zero (by grind only [
-    u, st.q_nonneg, st.b_nonneg, st.s_eq_one hamb, st.u_eq_one hamb,
+    u, st.q_nonneg, st.b_nonneg, st.s_eq_one_and_u_eq_one hamb,
     Int.mul_pos_iff.mp kb_pos])
 
 /-- In the ambiguous case `⌊m/n⌋` is returned. -/

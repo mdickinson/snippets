@@ -409,11 +409,12 @@ l = 1  and  2·m·v = (2·w·v + 1)·n  for some integer w
 
 which is the plain `2·m = (2·w + 1)·n` with `w` shifted by one when `v = −1`.
 
-Now assume the ambiguous case. The limit is `1`, so `s = u = 1` (`s_eq_one`,
-`u_eq_one`), and the oriented half-integer `w` with the two residual identities gives
-`2·b = 2(w − r)v·n + n` and `2·c = 2(t − w)v·n − n`. Then `0 ≤ b` and `0 < c` place
-`w·v` in the interval `[r·v, t·v)`, which has length one since `(t − r)·v = 1`, so
-`w·v = r·v`: the half-integer is the pure candidate's numerator, oriented. Substituting
+Now assume the ambiguous case. The limit is `1`, so `s = u = 1`
+(`s_eq_one_and_u_eq_one`), and the oriented half-integer `w` with the two residual
+identities gives `2·b = 2(w − r)v·n + n` and `2·c = 2(t − w)v·n − n`. Then `0 ≤ b`
+and `0 < c` place `w·v` in the interval `[r·v, t·v)`, which has length one since
+`(t − r)·v = 1`, so `w·v = r·v`: the half-integer is the pure candidate's numerator,
+oriented. Substituting
 back, `2·b = n = 2·c`, so `b = c` and `b·u = c·s`. That is `consequences_of_ambiguity`,
 which also records the two half-integer identities, `2·m·v = (2·r·v + 1)·n` and
 `2·m·v = (2·t·v − 1)·n`, in the form with `s` and `u` still in. With `b·u = c·s` and
