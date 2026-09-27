@@ -84,6 +84,10 @@ theorem mn_lev_tu : args.m * st.u * st.v ≤ st.t * args.n * st.v := by
 
 /-! ## Recovering the target -/
 
+/-- Recovery of `n` from `a` and `b`. -/
+theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
+  grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
+
 /-- Recovery of `m` from `b` and `c`. -/
 theorem bt_add_cr_eq_m : st.b * st.t + st.c * st.r = args.m := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
@@ -352,13 +356,12 @@ theorem endpoints_eq_floor_pair :
 
 /-- In the ambiguous case, `v = 1`. -/
 theorem v_eq_one : st.v = 1 := by
-  -- With `s = u = 1`: `bu = cs` gives `b = c = a - kb`, so `kb = a - b > 0`, and
-  -- `q = 1 - k ≥ 0`.
-  have kb_pos : 0 < st.k * st.b := by
-    grind only [c, st.b_lt_a, st.bu_eq_cs hamb, st.s_eq_one_and_u_eq_one hamb]
-  exact st.v_eq_one_of_q_eq_zero (by grind only [
-    u, st.q_nonneg, st.b_nonneg, st.s_eq_one_and_u_eq_one hamb,
-    Int.mul_pos_iff.mp kb_pos])
+  -- `as + bq` and `bu + cs` are both `n`. With `s = u = 1` and `b = c` that reads
+  -- `a + bq = 2b`, so `(1 - q)b = a - b` is positive, so `q < 1`, and `q = 0`.
+  have : 0 < (1 - st.q) * st.b := by grind only [st.b_lt_a, st.as_add_bq_eq_n,
+    st.bu_add_cs_eq_n, st.bu_eq_cs hamb, st.s_eq_one_and_u_eq_one hamb]
+  exact st.v_eq_one_of_q_eq_zero
+    (by grind only [st.q_nonneg, st.b_nonneg, Int.mul_pos_iff.mp this])
 
 /-- In the ambiguous case `⌊m/n⌋` is returned. -/
 theorem rv_eq_floor : st.rv = args.floor := by

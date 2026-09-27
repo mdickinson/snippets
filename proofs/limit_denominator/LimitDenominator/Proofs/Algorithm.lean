@@ -197,7 +197,7 @@ theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
   · grind only [st.b_lt_a, st.b_nonneg]
 
 /-- `c` is defined to be `a` reduced by `k` copies of `b`. -/
-@[expose] public def c := st.a - st.k * st.b
+public def c := st.a - st.k * st.b
 
 /-- `c` is the cross-multiplied distance from `m/n` to `t/u`, oriented by `v`. -/
 public theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by

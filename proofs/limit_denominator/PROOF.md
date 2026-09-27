@@ -424,14 +424,14 @@ which is which (`endpoints_eq_floor_pair`), and that is all the characterisation
 ambiguous case needs.
 
 **Which one the code returns.** This is the one place the seventh invariant is used
-(`v_eq_one`). `s = u` written out is `s = q + k·s`, so `(1 − k)·s = q`. And `b = c` with
-`c = a − k·b` and `b < a` gives `0 < k·b`, so `k ≥ 1` and `0 < b`. Then `(1 − k)·s = q`
-with `q ≥ 0` and `s > 0` forces `k ≤ 1`; so `k = 1` and `q = 0`, and the seventh
-invariant gives `v = 1`. So the pure candidate is the floor. And the code returns the
-pure candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`, an equality here. That is
-`rv_eq_floor`, and `limitDenominator_ambiguous_case` is the same for the state the
-algorithm reaches: for example `1/2` with `l = 1`, where `0/1` and `1/1` are equally
-close and `0/1` is returned.
+(`v_eq_one`). `n` is both `a·s + b·q` (`as_add_bq_eq_n`) and `b·u + c·s`
+(`bu_add_cs_eq_n`). With `s = u = 1` and `b = c` that is `a + b·q = 2·b`, so
+`(1 − q)·b = a − b`, which is positive since `b < a`. With `b ≥ 0` that forces `q < 1`,
+so `q = 0`, and the seventh invariant gives `v = 1`. So the pure candidate is the floor.
+And the code returns the pure candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`,
+an equality here. That is `rv_eq_floor`, and `limitDenominator_ambiguous_case` is the
+same for the state the algorithm reaches: for example `1/2` with `l = 1`, where `0/1`
+and `1/1` are equally close and `0/1` is returned.
 
 ## What the specification determines
 
