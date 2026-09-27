@@ -98,8 +98,7 @@ def isBetterApproximation (m n r s y z : Int) : Prop :=
   ∨ scaledDistance m n r s * z = scaledDistance m n y z * s ∧ s ≤ z
 
 def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l → isBetterApproximation m n r s y z
+  0 < s ∧ s ≤ l ∧ ∀ y z : Int, 0 < z ∧ z ≤ l → isBetterApproximation m n r s y z
 ```
 
 Closeness and the tie-break are both CPython promises, though not both documented ones:

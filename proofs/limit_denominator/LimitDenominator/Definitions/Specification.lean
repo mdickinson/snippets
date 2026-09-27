@@ -41,8 +41,7 @@ has the smaller denominator — see `isBestApproximation.gcd_eq_one`. So once th
 fixed, so is the representation.
 -/
 def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l → isBetterApproximation m n r s y z
+  0 < s ∧ s ≤ l ∧ ∀ y z : Int, 0 < z ∧ z ≤ l → isBetterApproximation m n r s y z
 
 /--
 The limit is `1` and `m / n` is a half-integer, `w + 1/2` for some integer `w`.
