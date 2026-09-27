@@ -9,8 +9,10 @@ source and is worth reading for its own account of the same argument.
 what a reader has to trust. This file assumes you have read the algorithm listing there.
 
 The mathematics lives in
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), with its inputs set up in
-[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), its candidates in
+[`Optimality.lean`](LimitDenominator/Proofs/Optimality.lean), the bracket and why the
+answer is best, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), the
+special cases and the bridge to the specification, with the inputs set up in
+[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), the candidates in
 [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) and the algorithm itself in
 [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean); the pointers below name
 their theorems. The two correctness files are mechanics, connecting each listing to

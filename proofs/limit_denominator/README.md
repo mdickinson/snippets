@@ -270,7 +270,8 @@ names follow that split:
 | [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the trivial and ambiguous forms of input |
 | [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) | candidate solutions, and when one is better than another or best |
 | [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit with its two candidates, and the return value |
-| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the analysis: the bracket on exit, which endpoint is best, the ambiguous case, and what the specification does and does not determine |
+| [`Optimality.lean`](LimitDenominator/Proofs/Optimality.lean) | the bracket on exit, the return value being best, and every best approximation being one of the two endpoints |
+| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the rest of the analysis: the ambiguous and trivial cases, uniqueness, the residual staying positive, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
 | [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
