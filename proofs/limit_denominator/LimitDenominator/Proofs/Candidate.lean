@@ -5,13 +5,13 @@ public import LimitDenominator.Proofs.Arguments
 import LimitDenominator.Proofs.IntLemmas
 
 /-!
-Candidate solutions to the problem, and the ordering on them: when one candidate is
-*better* than another, and what it means for a candidate to be *best*.
+Candidates for best approximations to a target fraction, and the ordering on them: when
+one candidate is *better* than another, and what it means for a candidate to be *best*.
 -/
 
 /--
-A *candidate* solution to the problem is a (possibly non-reduced) fraction `num / den`
-whose denominator is positive and bounded by the given limit.
+A *candidate* is a (possibly non-reduced) fraction `num / den` whose denominator is
+positive and bounded by the given limit.
 -/
 public structure Candidate (args : Arguments) where
   /-- Numerator of the candidate fraction. -/
