@@ -10,11 +10,12 @@ what a reader has to trust. This file assumes you have read the algorithm listin
 
 The mathematics lives in
 [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), with its inputs set up in
-[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) and its candidates in
-[`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean), and the pointers below name
+[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), its candidates in
+[`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) and the algorithm itself in
+[`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean); the pointers below name
 their theorems. The two correctness files are mechanics, connecting each listing to
-the algorithm in `Experiment.lean`; § "From the listing to the algorithm" covers them,
-and § "The two listings agree" the one theorem stated about both.
+that algorithm; § "From the listing to the algorithm" covers them, and § "The two
+listings agree" the one theorem stated about both.
 
 ## Vocabulary
 
@@ -238,15 +239,15 @@ of the next state as it builds it. Note that at the end of an iteration, `s ≤ 
 exactly the condition under which the loop was entered, namely `q + ⌊a/b⌋·s ≤ l`.
 
 **Termination.** `a` strictly decreases every iteration, the new `a` being the old `b`
-with `b < a`, and it stays nonnegative, since `0 ≤ b`. In Lean the measure is `a.toNat`
-(`nextLoopState_a_toNat_lt`), which is what lets `runLoop` — run the loop from a given
-state until its condition fails — be an ordinary recursive definition, with
-`runLoop_loopCondition_false` recording that the condition has indeed failed on exit. A
-`PostLoopState` is a `LoopState` with that exit fact attached, `postLoopState` is the
-one reached from `initialLoopState`, and the algorithm's answer, `limitDenominator`, is
-its return value (§ "Choosing between the two candidates"). This is the function the two
-listings are proved *equal* to (§ "From the listing to the algorithm"); everything in
-between is about it alone.
+with `b < a`, and it stays nonnegative, since `0 ≤ b`. In Lean the measure is
+`loopMeasure`, that is `a.toNat`, and `loopMeasure_decreasing` is what lets `runLoop` —
+run the loop from a given state until its condition fails — be an ordinary recursive
+definition, with `runLoop_loopCondition_false` recording that the condition has indeed
+failed on exit. A `PostLoopState` is a `LoopState` with that exit fact attached,
+`postLoopState` is the one reached from `initialLoopState`, and the algorithm's answer,
+`limitDenominator`, is its return value (§ "Choosing between the two candidates"). This
+is the function the two listings are proved *equal* to (§ "From the listing to the
+algorithm"); everything in between is about it alone.
 
 ### Why the seventh invariant
 

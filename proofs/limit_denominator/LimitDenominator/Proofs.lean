@@ -1,6 +1,7 @@
 module
 
 import LimitDenominator.Proofs.Agreement
+import LimitDenominator.Proofs.Algorithm
 import LimitDenominator.Proofs.Arguments
 import LimitDenominator.Proofs.Candidate
 import LimitDenominator.Proofs.Experiment

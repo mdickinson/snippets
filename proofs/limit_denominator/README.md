@@ -265,7 +265,8 @@ names follow that split:
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
 | [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the trivial and ambiguous forms of input |
 | [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) | candidate solutions, and when one is better than another or best |
-| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the mathematics: the loop and its state, the bracket, the algorithm, and what the specification does and does not determine |
+| [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit and the return value |
+| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the analysis: the bracket on exit, which endpoint is best, the ambiguous case, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
 | [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
@@ -509,7 +510,7 @@ equation lemmas of its own. What it does have, from Lean 4.32, is
 of [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean): one lemma peels an
 iteration off the front of the loop, the other stops it. Termination comes from the
 proof layer's own model of the loop, `runLoop` in
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), a recursive function on a
+[`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean), a recursive function on a
 state that carries the invariants with it; the correctness proof identifies the `do`
 block's loop with `runLoop` one iteration at a time, by induction on `runLoop`. No fuel
 parameter and no rewrite of the listing into a recursive helper is needed, so the loop
