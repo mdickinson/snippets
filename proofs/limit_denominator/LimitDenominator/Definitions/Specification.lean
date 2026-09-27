@@ -17,27 +17,32 @@ def returns {α : Type} (x : PyExcept α) (a : α) := x = .ok a
 def raises {α : Type} (x : PyExcept α) (e : PyException) := x = .error e
 
 /--
-`r / s` is at least as close to `m / n` as `y / z` is, for a positive denominator `n`
-and positive candidate denominators `s` and `z`. Both sides of
-`|r/s - m/n| ≤ |y/z - m/n|` are scaled by the positive quantity `n * s * z`.
+The distance from `m / n` to `r / s`, scaled by `n * s`: `|r/s - m/n| * n * s`, for
+positive denominators `n` and `s`.
 -/
-def atLeastAsClose (m n r s y z : Int) : Prop :=
-  (r * n - m * s).abs * z ≤ (y * n - m * z).abs * s
+def scaledDistance (m n r s : Int) : Int := (r * n - m * s).abs
+
+/--
+`r / s` is at least as good an approximation to `m / n` as `y / z` is: strictly closer,
+or equally close with `s ≤ z`. Both sides of each comparison are the distance scaled by
+`n * s * z`.
+-/
+def isBetterApproximation (m n r s y z : Int) : Prop :=
+  scaledDistance m n r s * z < scaledDistance m n y z * s
+  ∨ scaledDistance m n r s * z = scaledDistance m n y z * s ∧ s ≤ z
 
 /--
 What it means for `r / s` to be the best approximation to `m / n` with denominator at
 most `l`: closest, with ties broken towards the smaller denominator.
 
-Being in lowest terms is deliberately *not* stipulated here. It follows from the two
-clauses alone, because an unreduced pair is beaten on the second one by its own
-reduction — see `isBestApproximation.gcd_eq_one`. So once the value is fixed, so is
-the representation.
+Being in lowest terms is deliberately *not* stipulated here. It follows from the
+tie-break alone, because an unreduced pair is equally close as its own reduction, which
+has the smaller denominator — see `isBestApproximation.gcd_eq_one`. So once the value is
+fixed, so is the representation.
 -/
 def isBestApproximation (m n l r s : Int) : Prop :=
   0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l →
-    atLeastAsClose m n r s y z
-    ∧ (atLeastAsClose m n y z r s → s ≤ z)
+  ∀ y z : Int, 0 < z → z ≤ l → isBetterApproximation m n r s y z
 
 /--
 The limit is `1` and `m / n` is a half-integer, `w + 1/2` for some integer `w`.

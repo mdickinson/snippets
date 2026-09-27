@@ -499,27 +499,13 @@ specification's, and the only part of the file that mentions `isBestApproximatio
 -/
 
 /--
-`best` and `isBestApproximation` say the same thing of the same pair.
-
-`better`'s two arms are the specification's two clauses. Forwards, either arm gives the
-closeness clause, and the strict arm is impossible once the rival is at least as close,
-so the tie arm supplies the denominator comparison. Backwards, a strict inequality is
-the first arm and an equality feeds the second clause, which gives the second arm.
+`best` and `isBestApproximation` say the same thing of the same pair: `better` and
+`isBetterApproximation` are the same formula.
 -/
 public theorem best_iff_isBestApproximation {args : Arguments} (ef : Candidate args) :
-    ef.best ↔ isBestApproximation args.m args.n args.limit ef.num ef.den := by
-  constructor
-  · intro hbest
-    refine ⟨ef.den_pos, ef.den_limited, fun y z hz hzl => ?_⟩
-    have hb := hbest ⟨y, z, hz, hzl⟩
-    simp only [Candidate.better, Candidate.dist] at hb
-    unfold atLeastAsClose
-    omega
-  · rintro ⟨-, -, hall⟩ gh
-    have hc := hall gh.num gh.den gh.den_pos gh.den_limited
-    unfold atLeastAsClose at hc
-    simp only [Candidate.better, Candidate.dist]
-    omega
+    ef.best ↔ isBestApproximation args.m args.n args.limit ef.num ef.den :=
+  ⟨fun hbest => ⟨ef.den_pos, ef.den_limited, fun y z hz hzl => hbest ⟨y, z, hz, hzl⟩⟩,
+    fun ⟨_, _, hall⟩ gh => hall gh.num gh.den gh.den_pos gh.den_limited⟩
 
 /-- `Arguments.ambiguous` is the specification's `isAmbiguous`, formula for formula. -/
 public theorem ambiguous_iff_isAmbiguous (args : Arguments) :

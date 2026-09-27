@@ -36,22 +36,15 @@ structure carrying its two bounds as proof fields.
 
 **Distance** — from the target to a candidate, scaled by both denominators:
 `|y·n − m·z|` for `y / z`, which is `|y/z − m/n|` times the positive quantity `n·z`.
-Lean: `dist`.
+Lean: `dist` in the proof, `scaledDistance` in the specification.
 
-**At least as close** — the relation holding between two candidates when the first is no
-further from the target than the second. Stated as an integer inequality, obtained from
-`|r/s − m/n| ≤ |y/z − m/n|` by scaling by the positive quantity `n·s·z`:
-
-```
-|r·n − m·s|·z ≤ |y·n − m·z|·s
-```
-
-That is `atLeastAsClose` in the specification, and `dist rs · z ≤ dist yz · s` in the
-proof's terms.
-
-**Better** — the proof's ordering on candidates: `r / s` is better than `y / z` if it is
-strictly closer, or equally close with `s ≤ z`. Despite the name it is reflexive, and it
-is transitive. Lean: `better`.
+**Better** — the ordering on candidates: `r / s` is better than `y / z` if it is
+strictly closer, or equally close with `s ≤ z`. Closeness is compared as an integer
+inequality, obtained from `|r/s − m/n| < |y/z − m/n|` by scaling by the positive
+quantity `n·s·z`, so "strictly closer" is `|r·n − m·s|·z < |y·n − m·z|·s`, and
+"equally close" the same with `=`. Despite the name it is reflexive, and it is
+transitive. Lean: `better` in the proof, `isBetterApproximation` in the specification,
+the same formula written twice.
 
 **Best approximation** — a candidate better than every candidate. Lean: `best`; in the
 specification's vocabulary, `isBestApproximation`, and the two agree (§ "The
@@ -100,30 +93,30 @@ with denominator at most `l`. Written out
 ([`Specification.lean`](LimitDenominator/Definitions/Specification.lean)):
 
 ```lean
+def isBetterApproximation (m n r s y z : Int) : Prop :=
+  scaledDistance m n r s * z < scaledDistance m n y z * s
+  ∨ scaledDistance m n r s * z = scaledDistance m n y z * s ∧ s ≤ z
+
 def isBestApproximation (m n l r s : Int) : Prop :=
   0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l →
-    atLeastAsClose m n r s y z
-    ∧ (atLeastAsClose m n y z r s → s ≤ z)
+  ∀ y z : Int, 0 < z → z ≤ l → isBetterApproximation m n r s y z
 ```
 
-Both quantified clauses are CPython promises, though not both documented ones: *closest*
-is the docstring's, while *smaller denominator* comes from the algorithm-notes comment
-in the source. The second is conditioned on the competitor being at least as close *in
-the other direction*, so together with the first clause it only bites where the two
-distances are exactly equal.
+Closeness and the tie-break are both CPython promises, though not both documented ones:
+*closest* is the docstring's, while *smaller denominator* comes from the algorithm-notes
+comment in the source.
 
-**What the two clauses determine.** Two candidates can satisfy both clauses at once only
-by being equidistant from the target with the same denominator, and that is possible
-only in the ambiguous case, where `⌊m/n⌋ / 1` and `(⌊m/n⌋ + 1) / 1` are both best. Two
-theorems say so, in the closing section of
+**What the definition determines.** Two candidates can both be best only by being
+equidistant from the target with the same denominator, and that is possible only in the
+ambiguous case, where `⌊m/n⌋ / 1` and `(⌊m/n⌋ + 1) / 1` are both best. Two theorems say
+so, in the closing section of
 [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
 `isBestApproximation_unique_of_not_ambiguous`, that outside the ambiguous case at most
 one pair satisfies the specification, and `isBestApproximation_iff_of_ambiguous`, that
 inside it exactly those two pairs do. Both quantify over all pairs with a positive
-denominator within the limit, reduced or not. Neither is read off the clauses; both come
-through the algorithm, whose bracket is what says where the best candidates are (§ "What
-the specification determines").
+denominator within the limit, reduced or not. Neither is read off the definition; both
+come through the algorithm, whose bracket is what says where the best candidates are (§
+"What the specification determines").
 
 CPython's promise of the floor in the ambiguous case is not part of the specification,
 which says what "best" means and nothing about how an implementation chooses between two
@@ -131,26 +124,23 @@ equally good answers. It is a statement about each listing instead,
 `limitDenominatorSimplified_returns_floor_of_ambiguous` and
 `limitDenominatorStdlib_returns_floor_of_ambiguous`.
 
-**Lowest terms** is a *consequence* of the two clauses, not one of them. If `r` and `s`
-shared a factor `g > 1`, the reduced pair `(r/g, s/g)` would be a candidate too —
-positive denominator, strictly smaller, so still within the limit — and exactly as
+**Lowest terms** is a *consequence* of the tie-break, not part of the specification. If
+`r` and `s` shared a factor `g > 1`, the reduced pair `(r/g, s/g)` would be a candidate
+too — positive denominator, strictly smaller, so still within the limit — and exactly as
 close, since scaling a pair down by `g` scales its residual `r·n − m·s` down by `g`,
-which cancels against the `s` on the other side of the closeness relation. The second
-clause applied to it would give `s ≤ s/g`, which is false. So the specification pins
-down the representation and not merely the value, and CPython's `gcd(r, s) = 1` is
-earned rather than asked for. That is `isBestApproximation.gcd_eq_one`. The Lean proof
-does not run that argument: it goes through the algorithm too, a best approximation
-being one of the two bracket endpoints and the bracket's determinant a Bézout identity
-for each (§ "What the specification determines").
+which cancels against the `s` on the other side of the comparison. Equally close, the
+tie-break would give `s ≤ s/g`, which is false. So the specification pins down the
+representation and not merely the value, and CPython's `gcd(r, s) = 1` is earned rather
+than asked for. That is `isBestApproximation.gcd_eq_one`. The Lean proof does not run
+that argument: it goes through the algorithm too, a best approximation being one of the
+two bracket endpoints and the bracket's determinant a Bézout identity for each (§ "What
+the specification determines").
 
 **The bridge.** Everything the proof establishes is stated in its own vocabulary, of
 `Arguments`, `Candidate`, `dist`, `better` and `best`, and meets the specification's in
 that one closing section. `best_iff_isBestApproximation` says `best` and
-`isBestApproximation` agree on any candidate: `better`'s two arms are the two clauses.
-Forwards, either arm gives the closeness clause, and once the rival is at least as close
-the strict arm is impossible, so the tie arm supplies the denominator comparison.
-Backwards, a strict inequality is the first arm and an equality feeds the second clause,
-which gives the second arm. Both directions are unfoldings, finished by `omega`.
+`isBestApproximation` agree on any candidate: `better` and `isBetterApproximation` are
+the same formula, so each direction is a candidate's fields passed across.
 `ambiguous_iff_isAmbiguous` is the two formulas being one, `Iff.rfl`. Each statement
 about the specification builds an `Arguments` from `0 < n` and `1 ≤ l`, the latter from
 `0 < s ≤ l` or from `l = 1`, translates its hypotheses across the bridge, applies the

@@ -82,34 +82,39 @@ command-line executable around the simplified listing — see
 
 The specification is in
 [`Specification.lean`](LimitDenominator/Definitions/Specification.lean). It says that a
-returned `r / s` has `0 < s ≤ l`, and that against every candidate `y / z` with `0 < z ≤ l`
-it is at least as close to the target, with ties broken towards the smaller denominator:
+returned `r / s` has `0 < s ≤ l`, and that against every candidate `y / z` with `0 < z ≤
+l` it is the better approximation: strictly closer to the target, or equally close with
+the smaller denominator:
 
 ```lean
+def isBetterApproximation (m n r s y z : Int) : Prop :=
+  scaledDistance m n r s * z < scaledDistance m n y z * s
+  ∨ scaledDistance m n r s * z = scaledDistance m n y z * s ∧ s ≤ z
+
 def isBestApproximation (m n l r s : Int) : Prop :=
   0 < s ∧ s ≤ l ∧
-  ∀ y z : Int, 0 < z → z ≤ l →
-    atLeastAsClose m n r s y z
-    ∧ (atLeastAsClose m n y z r s → s ≤ z)
+  ∀ y z : Int, 0 < z → z ≤ l → isBetterApproximation m n r s y z
 ```
 
-Both quantified clauses are promises CPython makes — the first in its documentation, the
-second in the algorithm notes in its source. Candidates are not required to be in lowest
+`scaledDistance m n r s` is `|r * n - m * s|`, the distance `|r/s - m/n|` scaled by `n *
+s`, so each comparison is between distances scaled by `n * s * z`. Closeness and the
+tie-break are both promises CPython makes — the first in its documentation, the second
+in the algorithm notes in its source. Candidates are not required to be in lowest
 terms, so the result has to beat unreduced competitors too.
 
 CPython makes two further promises, and both are deliberately absent from the
 specification.
 
-One is that the result *is* in lowest terms. That follows from the two clauses rather
-than having to be asked for: an unreduced pair is beaten on the second clause by its own
-reduction, which is the same value at the same distance but with a smaller denominator.
-That is [`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/Experiment.lean), and
-it is why the specification pins down the representation and not merely the value.
+One is that the result *is* in lowest terms. That follows from the tie-break rather than
+having to be asked for: an unreduced pair is beaten by its own reduction, which is the
+same value at the same distance but with a smaller denominator. That is
+[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/Experiment.lean), and it is
+why the specification pins down the representation and not merely the value.
 
-The other is which answer comes back when the two clauses do not decide. They decide in
-all but one case: when the limit is `1` and the target is midway between two integers,
-the floor and the floor plus one satisfy both clauses, being equidistant at the same
-denominator. `isAmbiguous`, beside `isBestApproximation`, names that case, and two
+The other is which answer comes back when the specification does not decide. It decides
+in all but one case: when the limit is `1` and the target is midway between two
+integers, the floor and the floor plus one both satisfy it, being equidistant at the
+same denominator. `isAmbiguous`, beside `isBestApproximation`, names that case, and two
 theorems say that it is the only one, in the closing section of
 [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
 `isBestApproximation_unique_of_not_ambiguous`, that outside it at most one pair
@@ -188,7 +193,7 @@ terms. The shipped code tests neither, and neither does the translation.
 
 Those hypotheses are load-bearing, on both of the listing's paths. On the fast path a
 target that is not in lowest terms comes back as it stands:
-`limitDenominatorStdlib 2 4 5` returns `2/4`, which `1/2` beats on the second clause. On
+`limitDenominatorStdlib 2 4 5` returns `2/4`, which `1/2` beats on the tie-break. On
 the loop path such a target can drive the loop's `b` to zero, and with no `0 < b` in the
 shipped loop condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3`
 raises `ZeroDivisionError`, where the simplified listing returns `1/2`. So the shipped
@@ -362,7 +367,7 @@ up requires confidence in:
     [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
 - **The statements of correctness** in
   [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
-  `atLeastAsClose`, `isBestApproximation`, `isAmbiguous` and
+  `scaledDistance`, `isBetterApproximation`, `isBestApproximation`, `isAmbiguous` and
   `isCorrectLimitDenominator`. A specification that is too weak would be easy to satisfy
   and would prove nothing interesting. Three checks on that are proved rather than
   argued, in the closing section of
