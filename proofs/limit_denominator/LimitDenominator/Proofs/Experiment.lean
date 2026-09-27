@@ -57,10 +57,6 @@ def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
 
 /-! ## The determinant -/
 
-/-- The loop's own `det`, carried into the bracket basis. -/
-theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
-  grind only [t, u, st.det]
-
 /-- `v` must be either `1` or `-1`. -/
 theorem v_cases : st.v = 1 ∨ st.v = -1 :=
   Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
@@ -77,32 +73,6 @@ theorem isReduced_tu : st.tu.isReduced :=
   ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
 
 /-! ## Residuals -/
-
-/--
-If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
-algorithm step, so `k < a/b`. Proof: we have `q + ks ≤ limit` from the definition of
-`k`, and `limit < q + ⌊a/b⌋s` from the loop exit condition, so `k < ⌊a/b⌋`.
-
-In both this case and the `b = 0` case we have `(k + 1)b ≤ a`.
--/
-theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
-  rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
-  · exact (Int.le_ediv_iff_mul_le hlt).mp (Int.lt_of_lt_mul_pos st.s_pos
-      (by grind only [k, u, LoopState.loopCondition, st.exited, st.u_le_limit]))
-  · grind only [st.b_lt_a, st.b_nonneg]
-
-/-- `c` is defined to be `a` reduced by `k` copies of `b`. -/
-def c := st.a - st.k * st.b
-
-/-- `c` is the cross-multiplied distance from `m/n` to `t/u`, oriented by `v`. -/
-theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
-  grind only [c, t, u, st.a_eq_pq_cross, st.b_eq_rs_cross]
-
-/-- Since `(k + 1)b ≤ a`, we have `b ≤ c`. -/
-theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
-
-/-- `c` is positive: follows from `0 ≤ b ≤ c`, `b < a` and the definition of `c`. -/
-theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
 
 /-- One side of the bracket: `r/s ≤ m/n` when `v = 1`, and `m/n ≤ r/s` when `v = -1`. -/
 theorem rs_lev_mn : st.r * args.n * st.v ≤ args.m * st.s * st.v := by

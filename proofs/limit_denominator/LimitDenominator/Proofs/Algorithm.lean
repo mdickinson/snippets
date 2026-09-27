@@ -2,11 +2,12 @@ module
 
 public import LimitDenominator.Proofs.Arguments
 public import LimitDenominator.Proofs.Candidate
+import LimitDenominator.Proofs.IntLemmas
 
 /-!
 The algorithm, as the proof layer computes it: the loop state and its invariants, one
-iteration and the whole loop, the state on exit with its pure and mixed candidates,
-and the return value.
+iteration and the whole loop, the state on exit with its pure and mixed candidates and
+the mixed candidate's residual `c`, and the return value.
 -/
 
 /-! # In the loop -/
@@ -175,6 +176,38 @@ public theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_a
 
 /-- The mixed candidate `t/u`, packaged as a `Candidate`. -/
 public abbrev tu : Candidate args := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
+
+/-- The loop's own `det`, carried into the bracket basis. -/
+public theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
+  grind only [t, u, st.det]
+
+/-! ## The residual `c` -/
+
+/--
+If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
+algorithm step, so `k < a/b`. Proof: we have `q + ks ≤ limit` from the definition of
+`k`, and `limit < q + ⌊a/b⌋s` from the loop exit condition, so `k < ⌊a/b⌋`.
+
+In both this case and the `b = 0` case we have `(k + 1)b ≤ a`.
+-/
+theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
+  rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
+  · exact (Int.le_ediv_iff_mul_le hlt).mp (Int.lt_of_lt_mul_pos st.s_pos
+      (by grind only [k, u, LoopState.loopCondition, st.exited, st.u_le_limit]))
+  · grind only [st.b_lt_a, st.b_nonneg]
+
+/-- `c` is defined to be `a` reduced by `k` copies of `b`. -/
+@[expose] public def c := st.a - st.k * st.b
+
+/-- `c` is the cross-multiplied distance from `m/n` to `t/u`, oriented by `v`. -/
+public theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
+  grind only [c, t, u, st.a_eq_pq_cross, st.b_eq_rs_cross]
+
+/-- Since `(k + 1)b ≤ a`, we have `b ≤ c`. -/
+public theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
+
+/-- `c` is positive: follows from `0 ≤ b ≤ c`, `b < a` and the definition of `c`. -/
+public theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
 
 /-! ## The return value -/
 

@@ -269,7 +269,7 @@ names follow that split:
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
 | [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the trivial and ambiguous forms of input |
 | [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) | candidate solutions, and when one is better than another or best |
-| [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit and the return value |
+| [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit with its two candidates, and the return value |
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the analysis: the bracket on exit, which endpoint is best, the ambiguous case, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
