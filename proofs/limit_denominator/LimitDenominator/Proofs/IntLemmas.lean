@@ -45,20 +45,6 @@ public theorem Int.mul_pos_iff {a b : Int} :
     Int.mul_neg_of_pos_of_neg, Int.mul_neg_of_neg_of_pos]
 
 /--
-A product of two integers is nonnegative iff both are nonnegative or both are
-nonpositive.
--/
-private theorem Int.mul_nonneg_iff {a b : Int} :
-    0 ≤ a * b ↔ (0 ≤ a ∧ 0 ≤ b) ∨ (a ≤ 0 ∧ b ≤ 0) := by
-  grind only [Int.le_total 0, Int.mul_nonneg, Int.mul_nonneg_of_nonpos_of_nonpos,
-    Int.mul_nonpos_of_nonneg_of_nonpos, Int.mul_nonpos_of_nonpos_of_nonneg,
-    Int.mul_eq_zero]
-
-/-- Any divisor of a positive product is less than or equal to the product. -/
-public theorem Int.divisor_le_mul {a b : Int} (h : 0 < a * b) : a ≤ a * b := by
-  grind only [Int.mul_nonneg_iff (a := a) (b := b - 1), Int.mul_pos_iff.mp h]
-
-/--
 If a linear combination of two positive integers is positive, then at least one of the
 coefficients is positive.
 -/

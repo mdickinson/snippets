@@ -27,12 +27,6 @@ We define `st.lev` as an orientation-aware less-than-or-equal-to relation:
 -/
 def lev := ef.num * gh.den * st.v ≤ gh.num * ef.den * st.v
 
-/--
-`st.eqv` is defined analogously; since `v` is nonzero, it is equality of fractions
-for either sign of `v`.
--/
-def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
-
 /-! ## The bracket -/
 
 /-- One side of the bracket: `r/s ≤ m/n` when `v = 1`, and `m/n ≤ r/s` when `v = -1`. -/
@@ -85,39 +79,25 @@ public theorem dist_tu : st.tu.dist = (st.t * args.n - args.m * st.u) * st.v :=
 
 /-! ## Beyond an endpoint -/
 
-/-- If `y/z = r/s` then `s ≤ z` (because `r/s` is in lowest terms). -/
-theorem den_le_of_eqv_rs {yz : Candidate args} (yz_eqv_rs : st.eqv yz st.rs) :
-    st.s ≤ yz.den := by
-  have : yz.den = st.s * ((st.t * yz.den - yz.num * st.u) * st.v) := by
-    grind only [
-      Int.eq_mul_pos st.u_pos yz_eqv_rs, Int.eq_mul_pos yz.den_pos st.bracket_det]
-  exact this ▸ Int.divisor_le_mul (this ▸ yz.den_pos)
-
-/-- If `y/z = t/u` then `u ≤ z` (because `t/u` is in lowest terms). -/
-theorem den_le_of_tu_eqv {yz : Candidate args} (tu_eqv_yz : st.eqv st.tu yz) :
-    st.u ≤ yz.den := by
-  have : yz.den = st.u * ((yz.num * st.s - st.r * yz.den) * st.v) := by
-    grind only [
-      Int.eq_mul_pos st.s_pos tu_eqv_yz, Int.eq_mul_pos yz.den_pos st.bracket_det]
-  exact this ▸ Int.divisor_le_mul (this ▸ yz.den_pos)
-
-/-- `r/s` is at least as good as anything beyond it. -/
+/-- `r/s` is better than anything beyond it. -/
 theorem better_rs_of_lev {yz : Candidate args} (h : st.lev yz st.rs) :
     st.rs.better yz := by
-  unfold Candidate.better
-  rw [st.dist_rs, st.dist_of_lev_rs h]
+  unfold Candidate.better; rw [st.dist_rs, st.dist_of_lev_rs h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · left; grind only [Int.lt_mul_pos args.n_pos hlt]
-  · right; exact ⟨by grind only [Int.eq_mul_pos args.n_pos], st.den_le_of_eqv_rs heq⟩
+  · right; refine ⟨by grind only [Int.eq_mul_pos args.n_pos heq],
+      Int.le_of_dvd yz.den_pos ⟨(st.t * yz.den - yz.num * st.u) * st.v, ?_⟩⟩
+    grind only [Int.eq_mul_pos st.u_pos heq, Int.eq_mul_pos yz.den_pos st.bracket_det]
 
-/-- `t/u` is at least as good as anything beyond it. -/
+/-- `t/u` is better than anything beyond it. -/
 theorem better_tu_of_lev {yz : Candidate args} (h : st.lev st.tu yz) :
     st.tu.better yz := by
-  unfold Candidate.better
-  rw [st.dist_tu, st.dist_of_tu_lev h]
+  unfold Candidate.better; rw [st.dist_tu, st.dist_of_tu_lev h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · left; grind only [Int.lt_mul_pos args.n_pos hlt]
-  · right; exact ⟨by grind only [Int.eq_mul_pos args.n_pos], st.den_le_of_tu_eqv heq⟩
+  · right; refine ⟨by grind only [Int.eq_mul_pos args.n_pos heq],
+      Int.le_of_dvd yz.den_pos ⟨(yz.num * st.s - st.r * yz.den) * st.v, ?_⟩⟩
+    grind only [Int.eq_mul_pos st.s_pos heq, Int.eq_mul_pos yz.den_pos st.bracket_det]
 
 /-- One of the two endpoints is at least as good as any candidate. -/
 theorem better_rs_or_better_tu (yz : Candidate args) :

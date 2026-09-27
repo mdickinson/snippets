@@ -186,10 +186,10 @@ determinant. `v_cases` reads `v = 1` or `v = −1` off it, and `v_nonzero` follo
 What naming `v` buys is that the two sides of the bracket are handled by one statement
 each. The proof's order relation `lev` is orientation-aware: `st.lev ef gh` is the
 integer inequality `e·h·v ≤ g·f·v`, which says `e/f ≤ g/h` when `v = 1` and `g/h ≤ e/f`
-when `v = −1`; `eqv` is the corresponding equality, and since `v` is nonzero it is
-equality of fractions for either sign of `v`. In those terms the bracket reads
-`r/s ≤ m/n ≤ t/u` in either orientation, and each statement about what lies beyond the
-pure candidate is made once rather than once per sign.
+when `v = −1`; since `v` is nonzero, its equality case is equality of fractions for
+either sign of `v`. In those terms the bracket reads `r/s ≤ m/n ≤ t/u` in either
+orientation, and each statement about what lies beyond the pure candidate is made once
+rather than once per sign.
 
 ## Loop invariants
 
@@ -325,12 +325,13 @@ positive (`Int.pos_or_pos_of_lincomb_pos`), so one cross-product is at most `0`;
 `t/u ≤ y/z`. This is the only case split in the rest of the argument.
 
 **Denominators at the endpoints.** The same identity says how a candidate that *equals*
-an endpoint in value can still lose to it. If `y/z = r/s` (`eqv yz rs`) then the second
-cross-product vanishes and the identity reads `z = (t·z − y·u)v·s`, exhibiting `z` as a
-multiple of `s` — a positive multiple, since `z` is positive — so `s ≤ z`
-(`den_le_of_eqv_rs`; `Int.divisor_le_mul` is the arithmetic). Symmetrically `u ≤ z` for
-a candidate equal to `t/u` (`den_le_of_tu_eqv`). The lowest-terms property of the
-endpoints is doing the work here, but in its determinant form.
+an endpoint in value can still lose to it. If `y/z = r/s`, the equality case of
+`y/z ≤ r/s`, then the second cross-product vanishes and the identity reads
+`z = (t·z − y·u)v·s`, exhibiting `z` as a multiple of `s` — a positive multiple, since
+`z` is positive — so `s ≤ z` (the tie arm of `better_rs_of_lev`, with core's
+`Int.le_of_dvd` as the arithmetic). Symmetrically `u ≤ z` for a candidate equal to
+`t/u`, in `better_tu_of_lev`. The lowest-terms property of the endpoints is doing the
+work here, but in its determinant form.
 
 ### Candidates outside the bracket are no closer
 
