@@ -181,6 +181,13 @@ public abbrev tu : Candidate args := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 public theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
   grind only [t, u, st.det]
 
+/-- `v` must be either `1` or `-1`. -/
+public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
+  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
+
+/-- In particular, `v` is nonzero. -/
+public theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
+
 /-! ## The residual `c` -/
 
 /--

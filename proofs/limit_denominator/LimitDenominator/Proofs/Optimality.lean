@@ -16,14 +16,7 @@ namespace PostLoopState
 /- We fix a post-loop state `st` throughout this section. -/
 variable {args : Arguments} (st : PostLoopState args)
 
-/-! ## The orientation -/
-
-/-- `v` must be either `1` or `-1`. -/
-public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
-  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
-
-/-- In particular, `v` is nonzero. -/
-theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
+/-! ## Orientation-aware order -/
 
 /- Generic candidates. -/
 variable (ef gh : Candidate args)
