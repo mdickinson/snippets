@@ -369,11 +369,14 @@ in value with equal denominators is equal as a pair
 
 **Which endpoint is best.** Since one endpoint is better than any candidate and `better`
 is transitive, `r/s` is best exactly when it is better than `t/u`; and with
-`dist rs = b` and `dist tu = c` that unfolds to
+`dist rs = b` and `dist tu = c` that unfolds to `b·u < c·s`, or `b·u = c·s` and `s ≤ u`.
+The denominator comparison on a tie comes for free: `c·s = b·u ≤ c·u`, as `0 < u` and
+`b ≤ c`, gives `s ≤ u` on cancelling `c` (`s_le_u_of_bu_eq_cs`). So on a tie the pure
+candidate is always best, and the mixed one only when the denominators agree:
 
 ```
-best rs  ↔  b·u < c·s  or  (b·u = c·s and s ≤ u)          (rs_best_iff)
-best tu  ↔  c·s < b·u  or  (c·s = b·u and u ≤ s)          (tu_best_iff)
+best rs  ↔  b·u ≤ c·s                                 (rs_best_iff)
+best tu  ↔  c·s < b·u  or  (c·s = b·u and s = u)      (tu_best_iff)
 ```
 
 ## Choosing between the two candidates
@@ -384,12 +387,10 @@ Comparing `|r/s − m/n|` with `|t/u − m/n|` and scaling by `n·s·u` compares
 computes: the return value `rv` is `r/s` if `2·b·u ≤ n` and `t/u` otherwise, which is to
 say `r/s` if `b·u ≤ c·s` (`rv_eq_ite_bu_le_cs`).
 
-`rv_best` splits on that restated test. Below, `r/s` is returned and is best by
-`rs_best_iff`. Above, `t/u` is returned and is best by `tu_best_iff`. On an exact tie
-the code returns `r/s`, and its denominator really is the smaller: `c·s = b·u ≤ c·u`,
-as `0 < u` and `b ≤ c`, gives `s ≤ u` on cancelling `c` (`s_le_u_of_bu_eq_cs`), which
-is the tie arm of `rs_best_iff`. Either way the returned candidate is best, and
-`limitDenominator_best` is that statement for the state the algorithm actually reaches.
+`rv_best` splits on that restated test. At or below a tie, `r/s` is returned and is best
+by `rs_best_iff`; above, `t/u` is returned and is best by `tu_best_iff`. Either way the
+returned candidate is best, and `limitDenominator_best` is that statement for the state
+the algorithm actually reaches.
 
 ## The ambiguous case
 
@@ -509,7 +510,7 @@ approximation (`self_best_of_trivial`). With `n ≤ l`, the recovery identity
 recovery identities read `m = c·r` and `n = c·s`, making `c` a common divisor of `m` and
 `n`, and lowest terms gives `c = 1`: the pure candidate *is* the target, as a pair
 (`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the pure candidate is best, `rs_best_iff`'s
-first arm being `0 < c·s`. `isBestApproximation_self` is the translation across the
+condition being `0 ≤ c·s`. `isBestApproximation_self` is the translation across the
 bridge, and it is what the fast path of `isCorrectLimitDenominator_stdlib` discharges
 against.
 

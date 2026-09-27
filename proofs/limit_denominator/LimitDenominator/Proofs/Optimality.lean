@@ -157,33 +157,36 @@ public theorem eq_rs_or_eq_tu_of_best (yz_best : yz.best) :
   (st.lev_rs_or_tu_lev yz).imp (st.eq_rs_of_lev_of_best · yz_best)
     (st.eq_tu_of_lev_of_best · yz_best)
 
-/-- `r/s` is best iff `bu < cs` or `bu = cs` and `s ≤ u`. -/
-public theorem rs_best_iff : st.rs.best ↔
-    st.b * st.u < st.c * st.s ∨ st.b * st.u = st.c * st.s ∧ st.s ≤ st.u := by
-  have : st.rs.best ↔ st.rs.better st.tu :=
+/-- If `bu = cs` then it follows from `b ≤ c` that `s ≤ u`. -/
+theorem s_le_u_of_bu_eq_cs (h : st.b * st.u = st.c * st.s) : st.s ≤ st.u :=
+  Int.le_of_le_mul_pos st.c_pos (by grind only [Int.le_mul_pos st.u_pos st.b_le_c])
+
+/-- `r/s` is best iff `bu ≤ cs`. -/
+public theorem rs_best_iff : st.rs.best ↔ st.b * st.u ≤ st.c * st.s := by
+  have hbest : st.rs.best ↔ st.rs.better st.tu :=
     ⟨(· st.tu), fun h yz =>
       (st.better_rs_or_better_tu yz).elim id (Candidate.better_trans h)⟩
-  grind only [
-    Candidate.better, st.dist_rs, st.dist_tu, st.b_eq_rs_cross, st.c_eq_tu_cross]
+  have := st.s_le_u_of_bu_eq_cs
+  simp only [hbest, Candidate.better, st.dist_rs, st.dist_tu, st.b_eq_rs_cross,
+    st.c_eq_tu_cross]
+  omega
 
-/-- `t/u` is best iff `cs < bu` or `cs = bu` and `u ≤ s`. -/
+/-- `t/u` is best iff `cs < bu` or `cs = bu` and `s = u`. -/
 public theorem tu_best_iff : st.tu.best ↔
-    st.c * st.s < st.b * st.u ∨ st.c * st.s = st.b * st.u ∧ st.u ≤ st.s := by
-  have : st.tu.best ↔ st.tu.better st.rs :=
+    st.c * st.s < st.b * st.u ∨ st.c * st.s = st.b * st.u ∧ st.s = st.u := by
+  have hbest : st.tu.best ↔ st.tu.better st.rs :=
     ⟨(· st.rs), fun h yz =>
       (st.better_rs_or_better_tu yz).elim (Candidate.better_trans h) id⟩
-  grind only [
-    Candidate.better, st.dist_tu, st.dist_rs, st.c_eq_tu_cross, st.b_eq_rs_cross]
+  have := st.s_le_u_of_bu_eq_cs
+  simp only [hbest, Candidate.better, st.dist_tu, st.dist_rs, st.c_eq_tu_cross,
+    st.b_eq_rs_cross]
+  omega
 
 /-! ## The return value -/
 
 /-- Recovery of `n` from `b` and `c`. -/
 public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
-
-/-- If `bu = cs` then it follows from `b ≤ c` that `s ≤ u`. -/
-theorem s_le_u_of_bu_eq_cs (h : st.b * st.u = st.c * st.s) : st.s ≤ st.u :=
-  Int.le_of_le_mul_pos st.c_pos (by grind only [Int.le_mul_pos st.u_pos st.b_le_c])
 
 /-- The code's test `2bu ≤ n` is `bu ≤ cs`, since `bu + cs = n`. -/
 theorem two_bu_le_n_iff_bu_le_cs :
@@ -197,11 +200,7 @@ public theorem rv_eq_ite_bu_le_cs :
 
 /-- The returned candidate is a best approximation. -/
 theorem rv_best : st.rv.best := by
-  rw [st.rv_eq_ite_bu_le_cs]; split
-  · rcases Int.lt_or_eq_of_le ‹_› with hlt | heq
-    · exact st.rs_best_iff.mpr (.inl hlt)
-    · exact st.rs_best_iff.mpr (.inr ⟨heq, st.s_le_u_of_bu_eq_cs heq⟩)
-  · exact st.tu_best_iff.mpr (.inl (by omega))
+  grind only [st.rv_eq_ite_bu_le_cs, st.rs_best_iff, st.tu_best_iff]
 
 end PostLoopState
 
