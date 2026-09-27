@@ -16,6 +16,15 @@ namespace PostLoopState
 /- We fix a post-loop state `st` throughout this section. -/
 variable {args : Arguments} (st : PostLoopState args)
 
+/-! ## The orientation -/
+
+/-- `v` must be either `1` or `-1`. -/
+public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
+  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
+
+/-- In particular, `v` is nonzero. -/
+theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
+
 /- Generic candidates. -/
 variable (ef gh : Candidate args)
 
@@ -31,12 +40,7 @@ for either sign of `v`.
 -/
 def eqv := ef.num * gh.den * st.v = gh.num * ef.den * st.v
 
-/-- `v` must be either `1` or `-1`. -/
-public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
-  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
-
-/-- In particular, `v` is nonzero. -/
-theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
+/-! ## The bracket -/
 
 /-- One side of the bracket: `r/s ≤ m/n` when `v = 1`, and `m/n ≤ r/s` when `v = -1`. -/
 theorem rs_lev_mn : st.r * args.n * st.v ≤ args.m * st.s * st.v := by
@@ -46,9 +50,21 @@ theorem rs_lev_mn : st.r * args.n * st.v ≤ args.m * st.s * st.v := by
 theorem mn_lev_tu : args.m * st.u * st.v ≤ st.t * args.n * st.v := by
   grind only [st.c_eq_tu_cross, st.c_pos]
 
-/-- Recovery of `n` from `b` and `c`. -/
-public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
+/--
+A candidate lies outside the bracket, or at one of its endpoints: anything strictly
+inside has denominator at least `s + u`, which exceeds the limit.
+-/
+theorem lev_rs_or_tu_lev (yz : Candidate args) :
+    st.lev yz st.rs ∨ st.lev st.tu yz := by
+  have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
+      + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
+    grind only [
+      Int.eq_mul_pos yz.den_pos st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
+  cases Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc
+  · right; grind only [lev]
+  · left; grind only [lev]
+
+/-! ## Distances -/
 
 /-- Distance to a candidate beyond `r/s`, with the orientation supplying the sign. -/
 theorem dist_of_lev_rs {ef : Candidate args} (h : st.lev ef st.rs) :
@@ -74,19 +90,7 @@ theorem dist_of_tu_lev {ef : Candidate args} (h : st.lev st.tu ef) :
 public theorem dist_tu : st.tu.dist = (st.t * args.n - args.m * st.u) * st.v :=
   st.dist_of_tu_lev Int.le_rfl
 
-/--
-A candidate lies outside the bracket, or at one of its endpoints: anything strictly
-inside has denominator at least `s + u`, which exceeds the limit.
--/
-theorem lev_rs_or_tu_lev (yz : Candidate args) :
-    st.lev yz st.rs ∨ st.lev st.tu yz := by
-  have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
-      + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
-    grind only [
-      Int.eq_mul_pos yz.den_pos st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
-  cases Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc
-  · right; grind only [lev]
-  · left; grind only [lev]
+/-! ## Beyond an endpoint -/
 
 /-- If `y/z = r/s` then `s ≤ z` (because `r/s` is in lowest terms). -/
 theorem den_le_of_eqv_rs {yz : Candidate args} (yz_eqv_rs : st.eqv yz st.rs) :
@@ -126,6 +130,8 @@ theorem better_tu_of_lev {yz : Candidate args} (h : st.lev st.tu yz) :
 theorem better_rs_or_better_tu (yz : Candidate args) :
     st.rs.better yz ∨ st.tu.better yz :=
   (st.lev_rs_or_tu_lev yz).imp st.better_rs_of_lev st.better_tu_of_lev
+
+/-! ## Best approximations -/
 
 variable {yz : Candidate args}
 
@@ -168,6 +174,12 @@ public theorem tu_best_iff : st.tu.best ↔
       (st.better_rs_or_better_tu yz).elim (Candidate.better_trans h) id⟩
   grind only [
     Candidate.better, st.dist_tu, st.dist_rs, st.c_eq_tu_cross, st.b_eq_rs_cross]
+
+/-! ## The return value -/
+
+/-- Recovery of `n` from `b` and `c`. -/
+public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
 
 /-- If `bu = cs` then it follows from `b ≤ c` that `s ≤ u`. -/
 theorem s_le_u_of_bu_eq_cs (h : st.b * st.u = st.c * st.s) : st.s ≤ st.u :=
