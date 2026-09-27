@@ -200,34 +200,18 @@ variable {yz : Candidate args}
 /-- A best approximation beyond `r/s` is `r/s` itself. -/
 theorem eq_rs_of_lev_of_best (h : st.lev yz st.rs) (yz_best : yz.best) :
     yz = st.rs := by
-  have yz_rs : yz.better st.rs := yz_best st.rs
-  unfold Candidate.better at yz_rs
-  rw [st.dist_rs, st.dist_of_lev_rs h] at yz_rs
-  rcases Int.lt_or_eq_of_le h with hlt | heq
-  · -- y/z < r/s makes r/s strictly better than y/z, contradicting yz_rs
-    grind only [Int.lt_mul_pos args.n_pos hlt]
-  · -- y/z = r/s as fractions, so s ≤ z; yz_rs gives z ≤ s
-    have ⟨_, z_le_s⟩ :=
-      Or.resolve_left yz_rs (by grind only [Int.eq_mul_pos args.n_pos heq])
-    exact Candidate.eq_of_den_eq_of_cross_eq
-      (Int.le_antisymm z_le_s (st.den_le_of_eqv_rs heq))
-      (Int.eq_of_mul_eq_mul_right st.v_nonzero heq)
+  rcases st.better_rs_of_lev h <;> rcases yz_best st.rs <;> try omega
+  exact Candidate.eq_of_den_eq_of_cross_eq (by grind only)
+    (Int.eq_of_eq_mul_pos args.n_pos (Int.eq_of_mul_eq_mul_right st.v_nonzero
+      (by grind only [st.dist_rs, st.dist_of_lev_rs h])))
 
 /-- A best approximation beyond `t/u` is `t/u` itself. -/
 theorem eq_tu_of_lev_of_best (h : st.lev st.tu yz) (yz_best : yz.best) :
     yz = st.tu := by
-  have yz_tu : yz.better st.tu := yz_best st.tu
-  unfold Candidate.better at yz_tu
-  rw [st.dist_tu, st.dist_of_tu_lev h] at yz_tu
-  rcases Int.lt_or_eq_of_le h with hlt | heq
-  · -- t/u < y/z makes t/u strictly better than y/z, contradicting yz_tu
-    grind only [Int.lt_mul_pos args.n_pos hlt]
-  · -- y/z = t/u as fractions, so u ≤ z; yz_tu gives z ≤ u
-    have ⟨_, z_le_u⟩ :=
-      Or.resolve_left yz_tu (by grind only [Int.eq_mul_pos args.n_pos heq])
-    exact Candidate.eq_of_den_eq_of_cross_eq
-      (Int.le_antisymm z_le_u (st.den_le_of_tu_eqv heq))
-      (Int.eq_of_mul_eq_mul_right st.v_nonzero heq.symm)
+  rcases st.better_tu_of_lev h <;> rcases yz_best st.tu <;> try omega
+  exact Candidate.eq_of_den_eq_of_cross_eq (by grind only)
+    (Int.eq_of_eq_mul_pos args.n_pos (Int.eq_of_mul_eq_mul_right st.v_nonzero
+      (by grind only [st.dist_tu, st.dist_of_tu_lev h])))
 
 /-- Any best approximation is equal to either `r/s` or `t/u`. -/
 theorem eq_rs_or_eq_tu_of_best (yz_best : yz.best) :

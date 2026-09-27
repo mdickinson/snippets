@@ -358,11 +358,12 @@ for every candidate `y/z`: one of the two endpoints is at least as good as it.
 
 **A best approximation is an endpoint** (`eq_rs_or_eq_tu_of_best`). Let `y/z` be best.
 It lies beyond one endpoint or the other; say beyond the pure candidate. Being best, it
-is better than `r/s`; but `r/s` is strictly better than anything strictly beyond it, so
-`y/z` equals `r/s` in value. Then `s ≤ z` from the denominator fact, and `z ≤ s` from
-`y/z` being better than `r/s` at equal distance, so the denominators agree; and equal in
-value with equal denominators is equal as a pair (`Candidate.eq_of_den_eq_of_cross_eq`).
-That is `eq_rs_of_lev_of_best`, and `eq_tu_of_lev_of_best` is its mirror image.
+is better than `r/s`, and `r/s` is better than it (`better_rs_of_lev`). A strict arm on
+either side contradicts the other, so both are ties: equally distant, with `s ≤ z` and
+`z ≤ s`. Equally distant on the same side of the target means equal in value, and equal
+in value with equal denominators is equal as a pair
+(`Candidate.eq_of_den_eq_of_cross_eq`). That is `eq_rs_of_lev_of_best`, and
+`eq_tu_of_lev_of_best` is its mirror image.
 
 **Which endpoint is best.** Since one endpoint is better than any candidate and `better`
 is transitive, `r/s` is best exactly when it is better than `t/u`; and with
