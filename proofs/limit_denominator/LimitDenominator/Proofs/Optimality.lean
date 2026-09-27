@@ -47,9 +47,7 @@ theorem lev_rs_or_tu_lev (yz : Candidate args) :
       + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
     grind only [
       Int.eq_mul_pos yz.den_pos st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
-  cases Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc
-  · right; grind only [lev]
-  · left; grind only [lev]
+  cases Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc <;> grind only [lev]
 
 /-! ## Distances -/
 
@@ -79,9 +77,10 @@ public theorem dist_tu : st.tu.dist = (st.t * args.n - args.m * st.u) * st.v :=
 
 /-! ## Beyond an endpoint -/
 
+variable {yz : Candidate args}
+
 /-- `r/s` is better than anything beyond it. -/
-theorem better_rs_of_lev {yz : Candidate args} (h : st.lev yz st.rs) :
-    st.rs.better yz := by
+theorem better_rs_of_lev (h : st.lev yz st.rs) : st.rs.better yz := by
   unfold Candidate.better; rw [st.dist_rs, st.dist_of_lev_rs h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · left; grind only [Int.lt_mul_pos args.n_pos hlt]
@@ -90,8 +89,7 @@ theorem better_rs_of_lev {yz : Candidate args} (h : st.lev yz st.rs) :
     grind only [Int.eq_mul_pos st.u_pos heq, Int.eq_mul_pos yz.den_pos st.bracket_det]
 
 /-- `t/u` is better than anything beyond it. -/
-theorem better_tu_of_lev {yz : Candidate args} (h : st.lev st.tu yz) :
-    st.tu.better yz := by
+theorem better_tu_of_lev (h : st.lev st.tu yz) : st.tu.better yz := by
   unfold Candidate.better; rw [st.dist_tu, st.dist_of_tu_lev h]
   rcases Int.lt_or_eq_of_le h with hlt | heq
   · left; grind only [Int.lt_mul_pos args.n_pos hlt]
@@ -106,12 +104,10 @@ theorem better_rs_or_better_tu (yz : Candidate args) :
 
 /-! ## Best approximations -/
 
-variable {yz : Candidate args}
-
 /-- A best approximation beyond `r/s` is `r/s` itself. -/
 theorem eq_rs_of_lev_of_best (h : st.lev yz st.rs) (yz_best : yz.best) :
     yz = st.rs := by
-  rcases st.better_rs_of_lev h <;> rcases yz_best st.rs <;> try omega
+  cases st.better_rs_of_lev h <;> cases yz_best st.rs <;> try omega
   exact Candidate.eq_of_den_eq_of_cross_eq (by grind only)
     (Int.eq_of_eq_mul_pos args.n_pos (Int.eq_of_mul_eq_mul_right st.v_nonzero
       (by grind only [st.dist_rs, st.dist_of_lev_rs h])))
@@ -119,7 +115,7 @@ theorem eq_rs_of_lev_of_best (h : st.lev yz st.rs) (yz_best : yz.best) :
 /-- A best approximation beyond `t/u` is `t/u` itself. -/
 theorem eq_tu_of_lev_of_best (h : st.lev st.tu yz) (yz_best : yz.best) :
     yz = st.tu := by
-  rcases st.better_tu_of_lev h <;> rcases yz_best st.tu <;> try omega
+  cases st.better_tu_of_lev h <;> cases yz_best st.tu <;> try omega
   exact Candidate.eq_of_den_eq_of_cross_eq (by grind only)
     (Int.eq_of_eq_mul_pos args.n_pos (Int.eq_of_mul_eq_mul_right st.v_nonzero
       (by grind only [st.dist_tu, st.dist_of_tu_lev h])))
