@@ -185,15 +185,23 @@ public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
 theorem s_le_u_of_bu_eq_cs (h : st.b * st.u = st.c * st.s) : st.s ≤ st.u :=
   Int.le_of_le_mul_pos st.c_pos (by grind only [Int.le_mul_pos st.u_pos st.b_le_c])
 
+/-- The code's test `2bu ≤ n` is `bu ≤ cs`, since `bu + cs = n`. -/
+theorem two_bu_le_n_iff_bu_le_cs :
+    2 * st.b * st.u ≤ args.n ↔ st.b * st.u ≤ st.c * st.s := by
+  grind only [st.bu_add_cs_eq_n]
+
+/-- The return value, with the code's test restated: `r/s` if `bu ≤ cs`, else `t/u`. -/
+public theorem rv_eq_ite_bu_le_cs :
+    st.rv = if st.b * st.u ≤ st.c * st.s then st.rs else st.tu := by
+  simp only [rv, st.two_bu_le_n_iff_bu_le_cs]
+
 /-- The returned candidate is a best approximation. -/
 theorem rv_best : st.rv.best := by
-  have := st.bu_add_cs_eq_n
-  unfold rv; split
-  · rcases Int.lt_or_eq_of_le (show st.b * st.u ≤ st.c * st.s by grind only)
-      with hlt | heq
+  rw [st.rv_eq_ite_bu_le_cs]; split
+  · rcases Int.lt_or_eq_of_le ‹_› with hlt | heq
     · exact st.rs_best_iff.mpr (.inl hlt)
     · exact st.rs_best_iff.mpr (.inr ⟨heq, st.s_le_u_of_bu_eq_cs heq⟩)
-  · exact st.tu_best_iff.mpr (.inl (by grind only))
+  · exact st.tu_best_iff.mpr (.inl (by omega))
 
 end PostLoopState
 

@@ -192,7 +192,8 @@ theorem v_eq_one : st.v = 1 := by
 
 /-- In the ambiguous case `⌊m/n⌋` is returned. -/
 theorem rv_eq_floor : st.rv = args.floor := by
-  have : st.rv = st.rs := ite_eq_left (by grind only [st.bu_eq_cs, st.bu_add_cs_eq_n])
+  have : st.rv = st.rs :=
+    st.rv_eq_ite_bu_le_cs ▸ ite_eq_left (Int.le_of_eq (st.bu_eq_cs hamb))
   grind only [st.v_eq_one hamb, st.endpoints_eq_floor_pair hamb]
 
 end ambiguous

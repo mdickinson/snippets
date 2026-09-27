@@ -380,10 +380,11 @@ best tu  ↔  c·s < b·u  or  (c·s = b·u and u ≤ s)          (tu_best_iff)
 
 Comparing `|r/s − m/n|` with `|t/u − m/n|` and scaling by `n·s·u` compares `b·u` with
 `c·s`, as `rs_best_iff` says. Adding `b·u` to both sides and using `b·u + c·s = n` makes
-`b·u ≤ c·s` into `2·b·u ≤ n`, which is what the code computes: the return value `rv` is
-`r/s` if `2·b·u ≤ n` and `t/u` otherwise.
+`b·u ≤ c·s` into `2·b·u ≤ n` (`two_bu_le_n_iff_bu_le_cs`), which is what the code
+computes: the return value `rv` is `r/s` if `2·b·u ≤ n` and `t/u` otherwise, which is to
+say `r/s` if `b·u ≤ c·s` (`rv_eq_ite_bu_le_cs`).
 
-`rv_best` splits on the code's own test. Below, `r/s` is returned and is best by
+`rv_best` splits on that restated test. Below, `r/s` is returned and is best by
 `rs_best_iff`. Above, `t/u` is returned and is best by `tu_best_iff`. On an exact tie
 the code returns `r/s`, and its denominator really is the smaller: `c·s = b·u ≤ c·u`,
 as `0 < u` and `b ≤ c`, gives `s ≤ u` on cancelling `c` (`s_le_u_of_bu_eq_cs`), which
