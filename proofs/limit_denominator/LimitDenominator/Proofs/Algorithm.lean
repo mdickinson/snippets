@@ -142,6 +142,11 @@ namespace PostLoopState
 /- We fix a post-loop state `st` throughout this section. -/
 variable {args : Arguments} (st : PostLoopState args)
 
+/-! ## The pure candidate -/
+
+/-- The pure candidate `r/s`, the loop's own, packaged as a `Candidate`. -/
+public abbrev rs : Candidate args := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
+
 /-! ## The mixed candidate -/
 
 /--
@@ -168,8 +173,6 @@ public theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
 /-- Since `s ≤ limit < s + u`, it follows that `0 < u`. -/
 public theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_add_u]
 
-/-- The pure candidate `r/s`, the loop's own, packaged as a `Candidate`. -/
-public abbrev rs : Candidate args := ⟨st.r, st.s, st.s_pos, st.s_le_limit⟩
 /-- The mixed candidate `t/u`, packaged as a `Candidate`. -/
 public abbrev tu : Candidate args := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 
