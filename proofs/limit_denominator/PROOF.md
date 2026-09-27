@@ -10,7 +10,8 @@ what a reader has to trust. This file assumes you have read the algorithm listin
 
 The mathematics lives in
 [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), with its inputs set up in
-[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), and the pointers below name
+[`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) and its candidates in
+[`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean), and the pointers below name
 their theorems. The two correctness files are mechanics, connecting each listing to
 the algorithm in `Experiment.lean`; § "From the listing to the algorithm" covers them,
 and § "The two listings agree" the one theorem stated about both.
