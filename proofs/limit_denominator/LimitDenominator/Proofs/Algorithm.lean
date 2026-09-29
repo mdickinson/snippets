@@ -216,6 +216,14 @@ public theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
 /-- `c` is positive: follows from `0 ≤ b ≤ c`, `b < a` and the definition of `c`. -/
 public theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
 
+/-- Recovery of `m` from `b` and `c`. -/
+public theorem bt_add_cr_eq_m : st.b * st.t + st.c * st.r = args.m := by
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
+
+/-- Recovery of `n` from `b` and `c`. -/
+public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
+
 /-! ## The return value -/
 
 /-- `st.rv` is the return value from `limitDenominator` — either `r/s` or `t/u`. -/

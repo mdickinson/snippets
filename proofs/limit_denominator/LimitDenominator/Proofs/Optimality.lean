@@ -153,10 +153,6 @@ public theorem tu_best_iff : st.tu.best ↔
 
 /-! ## The return value -/
 
-/-- Recovery of `n` from `b` and `c`. -/
-public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
-
 /-- The code's test `2bu ≤ n` is `bu ≤ cs`, since `bu + cs = n`. -/
 theorem two_bu_le_n_iff_bu_le_cs :
     2 * st.b * st.u ≤ args.n ↔ st.b * st.u ≤ st.c * st.s := by

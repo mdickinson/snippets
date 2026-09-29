@@ -56,10 +56,6 @@ variable (ef gh : Candidate args)
 theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
   grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
 
-/-- Recovery of `m` from `b` and `c`. -/
-theorem bt_add_cr_eq_m : st.b * st.t + st.c * st.r = args.m := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
-
 /--
 If `n ≤ limit` then `b = 0`. Proof: we have `bu + cs = n ≤ limit < s + u`, implying that
 at least one of `b` and `c` is nonpositive. But we already know that `0 < c`.
