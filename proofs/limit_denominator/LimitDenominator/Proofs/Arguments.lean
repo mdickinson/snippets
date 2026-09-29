@@ -1,8 +1,7 @@
 module
 
 /-!
-The arguments to the `limitDenominator` algorithm, and the two special cases: the
-trivial case and the ambiguous case.
+The arguments to the `limitDenominator` algorithm, and the ambiguous case.
 -/
 
 /--
@@ -20,13 +19,6 @@ public structure Arguments where
   one_le_limit : 1 ≤ limit
 
 namespace Arguments
-
-/--
-A set of arguments is *trivial* if the target is reduced and its denominator is already
-within the limit.
--/
-@[expose] public def trivial (args : Arguments) :=
-  Int.gcd args.m args.n = 1 ∧ args.n ≤ args.limit
 
 /--
 A set of arguments is *ambiguous* if the limit is `1` and `m/n` is a half-integer, that

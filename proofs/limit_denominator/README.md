@@ -267,12 +267,13 @@ names follow that split:
 | [`IntLemmas.lean`](LimitDenominator/Proofs/IntLemmas.lean) | general `Int` facts the core library lacks |
 | [`WhileLoop.lean`](LimitDenominator/Proofs/WhileLoop.lean) | peeling one iteration off a `while` loop, or stopping it, monad-agnostically |
 | [`PythonTranslation.lean`](LimitDenominator/Proofs/PythonTranslation.lean) | bridges from `pyFloordiv`, `pyMod` and `<&&>` to plain `Int` |
-| [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the trivial and ambiguous forms of input |
+| [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean) | the arguments to the algorithm, and the ambiguous form of input |
 | [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) | candidate solutions, and when one is better than another or best |
 | [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit with its two candidates, and the return value |
 | [`BaseAnalysis.lean`](LimitDenominator/Proofs/BaseAnalysis.lean) | the bracket on exit, the return value being best, and every best approximation being one of the two endpoints |
 | [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean) | reduced candidates, and every best approximation being reduced |
-| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the rest of the analysis: the ambiguous and trivial cases, uniqueness, the residual staying positive, and what the specification does and does not determine |
+| [`Optimizations.lean`](LimitDenominator/Proofs/Optimizations.lean) | the shipped listing's two optimizations, valid for a reduced target: the fast path for a trivial input, and the missing `0 < b` test |
+| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the rest of the analysis: the ambiguous case, uniqueness, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
 | [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
