@@ -22,8 +22,9 @@ the listing's shape rather than the algorithm's:
   computes exactly the initial loop state, which the state before it is not: `s` there
   is `q1 = 0`.
 * **`0 < b` is derived rather than tested.** The shipped loop condition omits that test,
-  so the divisor's positivity comes from `LoopState.b_pos`, and that is where the
-  target's being reduced earns its place among the hypotheses.
+  so the divisor's positivity comes from `LoopState.b_pos`, and the break test's
+  agreement with the loop condition from `LoopState.loopCondition_iff`. That is where
+  the target's being reduced earns its place among the hypotheses.
 
 The fast path is none of this: it discharges against the specification directly.
 -/
@@ -105,15 +106,13 @@ theorem stdlibLoopBody_of_loopCondition {args : Arguments} {st : LoopState args}
 
 /-- Where it fails, the body breaks and carries the state out as it stands. -/
 theorem stdlibLoopBody_of_not_loopCondition {args : Arguments} {st : LoopState args}
-    (hb : 0 < st.b) (hst : ¬ st.loopCondition) :
+    (hgcd : Int.gcd args.m args.n = 1) (hlim : args.limit < args.n)
+    (hst : ¬ st.loopCondition) :
     stdlibLoopBody args.limit () (stdlibTuple st) =
       pure (ForInStep.done (stdlibTuple st)) := by
-  have hgt : args.limit < st.q + st.a / st.b * st.s := by
-    by_cases hle : st.q + st.a / st.b * st.s ≤ args.limit
-    · exact absurd ⟨hb, hle⟩ hst
-    · omega
+  have hgt := mt (st.loopCondition_iff hgcd hlim).mpr hst
   show stdlibLoopBody args.limit () (st.p, st.q, st.r, st.s, st.a, st.b) = _
-  rw [stdlibLoopBody, pyFloordiv_ok_bind hb]
+  rw [stdlibLoopBody, pyFloordiv_ok_bind (st.b_pos hgcd hlim)]
   simp only []
   rw [ite_eq_left (by omega)]
   rfl
@@ -129,8 +128,7 @@ theorem forIn_eq_runLoop_stdlib {args : Arguments} (hgcd : Int.gcd args.m args.n
   fun_induction LoopState.runLoop st with
   | case1 st hst ih => rw [forIn_loop_peel _ (stdlibLoopBody_of_loopCondition hst), ih]
   | case2 st hst =>
-    exact forIn_loop_done _
-      (stdlibLoopBody_of_not_loopCondition (st.b_pos hgcd hlim) hst)
+    exact forIn_loop_done _ (stdlibLoopBody_of_not_loopCondition hgcd hlim hst)
 
 /-- The tail of the `do` block is the post-loop state's return value. -/
 theorem stdlibAfterLoop_eq {args : Arguments} (st : PostLoopState args) :

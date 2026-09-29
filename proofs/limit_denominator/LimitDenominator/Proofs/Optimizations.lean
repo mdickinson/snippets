@@ -83,4 +83,13 @@ public theorem b_pos {args : Arguments} (st : LoopState args)
   grind only [pst.s_le_limit,
     pst.mn_eq_rs_of_b_eq_zero hgcd (by grind only [st.runLoop_b_eq_zero])]
 
+/--
+For a reduced target whose denominator exceeds the limit, the loop condition's `0 < b`
+conjunct always holds, leaving the shipped listing's own test.
+-/
+public theorem loopCondition_iff {args : Arguments} (st : LoopState args)
+    (hgcd : Int.gcd args.m args.n = 1) (hlim : args.limit < args.n) :
+    st.loopCondition ↔ st.q + st.a / st.b * st.s ≤ args.limit :=
+  ⟨And.right, fun h => ⟨st.b_pos hgcd hlim, h⟩⟩
+
 end LoopState

@@ -526,7 +526,8 @@ leaving its division by `b` unguarded. It needs no guard: past the fast path the
 is reduced with `l < n`, and then `b` is never zero (`b_pos`). Were it zero at
 some state, it would stay zero to the exit, since `b = 0` fails the loop condition
 (`runLoop_b_eq_zero`); and at the exit `mn_eq_rs_of_b_eq_zero` gives `n = s ≤ l`, which
-`l < n` denies. This is the argument of the issue's § "Optimization".
+`l < n` denies. So the division is safe, and the loop condition is the shipped test
+alone (`loopCondition_iff`). This is the argument of the issue's § "Optimization".
 
 ## The two listings agree
 
