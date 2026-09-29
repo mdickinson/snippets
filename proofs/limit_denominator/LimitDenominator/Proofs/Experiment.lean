@@ -52,10 +52,6 @@ variable (ef gh : Candidate args)
 
 /-! ## Recovering the target -/
 
-/-- Recovery of `n` from `a` and `b`. -/
-theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
-  grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
-
 /-! ## Distances -/
 
 /-! ## The bracket -/

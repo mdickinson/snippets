@@ -62,6 +62,10 @@ namespace LoopState
 
 variable {args : Arguments} (st : LoopState args)
 
+/-- Recovery of `n` from `a` and `b`. -/
+public theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
+  grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
+
 /-- The state before the first iteration. -/
 @[expose] public def initialLoopState (args : Arguments) : LoopState args where
   a := args.n
