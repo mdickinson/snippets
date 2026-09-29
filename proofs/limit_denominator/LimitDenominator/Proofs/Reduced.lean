@@ -2,8 +2,8 @@ module
 
 public import LimitDenominator.Proofs.Algorithm
 public import LimitDenominator.Proofs.Candidate
+import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.IntLemmas
-import LimitDenominator.Proofs.Optimality
 
 /-!
 Reduced candidates, and the proof that both bracket endpoints, and hence any best

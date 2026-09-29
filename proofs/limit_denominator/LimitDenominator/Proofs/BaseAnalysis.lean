@@ -6,9 +6,9 @@ public import LimitDenominator.Proofs.Candidate
 import LimitDenominator.Proofs.IntLemmas
 
 /-!
-Optimality of the algorithm's answer: on exit from the loop the pure and mixed
-candidates bracket the target, the returned one is a best approximation, and every
-best approximation is one of the two.
+The analysis of the algorithm for an arbitrary target: on exit from the loop the pure
+and mixed candidates bracket the target, the returned one is a best approximation, and
+every best approximation is one of the two.
 -/
 
 namespace PostLoopState

@@ -4,8 +4,8 @@ public import LimitDenominator.Definitions.Specification
 public import LimitDenominator.Proofs.Algorithm
 public import LimitDenominator.Proofs.Arguments
 public import LimitDenominator.Proofs.Candidate
+import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.IntLemmas
-import LimitDenominator.Proofs.Optimality
 import LimitDenominator.Proofs.Reduced
 
 /-!

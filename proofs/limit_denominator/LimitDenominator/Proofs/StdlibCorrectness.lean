@@ -2,7 +2,7 @@ module
 
 public import LimitDenominator.Definitions.LimitDenominatorStdlib
 public import LimitDenominator.Proofs.Experiment
-import LimitDenominator.Proofs.Optimality
+import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.WhileLoop
 

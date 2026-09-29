@@ -9,8 +9,8 @@ source and is worth reading for its own account of the same argument.
 what a reader has to trust. This file assumes you have read the algorithm listing there.
 
 The mathematics lives in
-[`Optimality.lean`](LimitDenominator/Proofs/Optimality.lean), the bracket and why the
-answer is best, [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean), why it is
+[`BaseAnalysis.lean`](LimitDenominator/Proofs/BaseAnalysis.lean), the bracket and why
+the answer is best, [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean), why it is
 reduced, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), the special
 cases and the bridge to the specification, with the inputs set up in
 [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), the candidates in

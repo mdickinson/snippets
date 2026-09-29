@@ -3,9 +3,9 @@ module
 import LimitDenominator.Proofs.Agreement
 import LimitDenominator.Proofs.Algorithm
 import LimitDenominator.Proofs.Arguments
+import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.Candidate
 import LimitDenominator.Proofs.Experiment
-import LimitDenominator.Proofs.Optimality
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.Reduced
 import LimitDenominator.Proofs.SimplifiedCorrectness
