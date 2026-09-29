@@ -26,7 +26,8 @@ the listing's shape rather than the algorithm's:
   agreement with the loop condition from `LoopState.loopCondition_iff`. That is where
   the target's being reduced earns its place among the hypotheses.
 
-The fast path is none of this: it discharges against the specification directly.
+The fast path is none of this: there the listing returns the target, which is what the
+algorithm returns too (`Arguments.limitDenominator_trivial_case`).
 -/
 
 /-- The mutable state of the loop: `(p, q, r, s, a, b)`, the shipped
@@ -140,12 +141,16 @@ theorem stdlibAfterLoop_eq {args : Arguments} (st : PostLoopState args) :
   rw [PostLoopState.rv]
   split <;> rfl
 
-/-- Past the fast path, the listing computes the algorithm, end to end. -/
-theorem limitDenominatorStdlib_eq (args : Arguments) (hgcd : Int.gcd args.m args.n = 1)
-    (hlim : args.limit < args.n) :
+/-- On a reduced target the listing computes the algorithm, fast path included. -/
+theorem limitDenominatorStdlib_eq (args : Arguments)
+    (hgcd : Int.gcd args.m args.n = 1) :
     limitDenominatorStdlib args.m args.n args.limit =
       pure (args.limitDenominator.num, args.limitDenominator.den) := by
   have hl : 0 < args.limit := by have := args.one_le_limit; omega
+  rcases (by omega : args.n ≤ args.limit ∨ args.limit < args.n) with hfast | hlim
+  · -- The fast path returns the target itself, which is what the algorithm returns.
+    rw [args.limitDenominator_trivial_case ⟨hgcd, hfast⟩, limitDenominatorStdlib,
+      ite_eq_right (by omega), ite_eq_left hfast]
   rw [limitDenominatorStdlib_fold hl hlim,
     forIn_loop_peel _ (stdlibLoopBody_initial args.n_pos hl)]
   show forIn Lean.Loop.mk (stdlibTuple (LoopState.initialLoopState args)) _ >>= _ = _
@@ -165,32 +170,22 @@ public theorem isCorrectLimitDenominator_stdlib :
     intro m n l hl
     rw [limitDenominatorStdlib, ite_eq_left (show l < 1 by omega)]
     rfl
-  · intro m n l ⟨hn, hgcd⟩ hl
-    rcases (by omega : n ≤ l ∨ l < n) with hfast | hslow
-    · -- The fast path returns the target itself.
-      refine ⟨m, n, ?_, isBestApproximation_self hn hfast hgcd⟩
-      rw [limitDenominatorStdlib, ite_eq_right (by omega), ite_eq_left hfast]
-      rfl
-    -- Otherwise the listing computes the algorithm, whose answer is best.
+  · -- The listing computes the algorithm, whose answer is best.
+    intro m n l ⟨hn, hgcd⟩ hl
     let args : Arguments := ⟨m, n, l, hn, by omega⟩
     exact ⟨args.limitDenominator.num, args.limitDenominator.den,
-      limitDenominatorStdlib_eq args hgcd hslow,
+      limitDenominatorStdlib_eq args hgcd,
       (best_iff_isBestApproximation _).mp args.limitDenominator_best⟩
 
 /--
 In the ambiguous case the two best approximations are `⌊m/n⌋` and `⌊m/n⌋ + 1`, and the
-listing returns the lower of them. A reduced target is ambiguous only at `n = 2`
-with `l = 1`, so the fast path is never the ambiguous one and this lives wholly on the
-loop path.
+listing returns the lower of them.
 -/
 public theorem limitDenominatorStdlib_returns_floor_of_ambiguous {m n l : Int}
     (hn : 0 < n) (hgcd : Int.gcd m n = 1) (hamb : isAmbiguous m n l) :
     returns (limitDenominatorStdlib m n l) (m / n, 1) := by
-  obtain ⟨hl, w, hw⟩ := hamb
-  have hslow : l < n := by
-    rcases (by omega : n = 1 ∨ 1 < n) with rfl | h1 <;> omega
-  let args : Arguments := ⟨m, n, l, hn, by omega⟩
-  have heq := limitDenominatorStdlib_eq args hgcd hslow
-  have hamb' := (ambiguous_iff_isAmbiguous args).mpr ⟨hl, w, hw⟩
+  let args : Arguments := ⟨m, n, l, hn, by have := hamb.1; omega⟩
+  have heq := limitDenominatorStdlib_eq args hgcd
+  have hamb' := (ambiguous_iff_isAmbiguous args).mpr hamb
   rw [args.limitDenominator_ambiguous_case hamb'] at heq
   exact heq

@@ -47,18 +47,18 @@ theorem mn_eq_rs_of_b_eq_zero {args : Arguments} (st : PostLoopState args)
 end PostLoopState
 
 /--
-In the trivial case `m/n` is a best approximation to itself.
+In the trivial case the algorithm returns `m/n` itself, so returning it early changes
+nothing.
 
 Proved by running the loop anyway: with `n ≤ limit` the residual `b` is zero on exit, so
-the exit state's `r/s` is `m/n` itself, and `r/s` is best.
+the exit state's `r/s` is `m/n` itself, and `r/s` is what is returned.
 -/
-public theorem Arguments.self_best_of_trivial (args : Arguments) (h : args.trivial) :
-    Candidate.best ⟨args.m, args.n, args.n_pos, h.2⟩ := by
+public theorem Arguments.limitDenominator_trivial_case (args : Arguments)
+    (h : args.trivial) : args.limitDenominator = ⟨args.m, args.n, args.n_pos, h.2⟩ := by
   let st := args.postLoopState
-  have best_rs : st.rs.best := by
-    rw [st.rs_best_iff]
-    grind only [Int.mul_pos st.c_pos st.s_pos, st.b_eq_zero_of_n_le_limit h.2]
-  grind only [st.mn_eq_rs_of_b_eq_zero h.1 (st.b_eq_zero_of_n_le_limit h.2)]
+  have hb := st.b_eq_zero_of_n_le_limit h.2
+  grind only [Arguments.limitDenominator, st.rv_eq_ite_bu_le_cs,
+    st.mn_eq_rs_of_b_eq_zero h.1 hb, Int.mul_pos st.c_pos st.s_pos]
 
 /-! ## No `0 < b` test -/
 

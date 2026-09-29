@@ -281,12 +281,3 @@ public theorem isBestApproximation.gcd_eq_one {m n l r s : Int} (hn : 0 < n)
   let args : Arguments := ⟨m, n, l, hn, hl⟩
   let ef : Candidate args := ⟨r, s, h.1, h.2.1⟩
   exact args.reduced_of_best ((best_iff_isBestApproximation ef).mpr h)
-
-/--
-A reduced target whose denominator is already within the limit is its own best
-approximation: the fast path, which the shipped listing takes before its loop.
--/
-public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)
-    (hgcd : Int.gcd m n = 1) : isBestApproximation m n l m n := by
-  let args : Arguments := ⟨m, n, l, hn, by omega⟩
-  exact (best_iff_isBestApproximation _).mp (args.self_best_of_trivial ⟨hgcd, hl⟩)

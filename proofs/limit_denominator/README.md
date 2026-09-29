@@ -275,7 +275,7 @@ names follow that split:
 | [`Optimizations.lean`](LimitDenominator/Proofs/Optimizations.lean) | the shipped listing's two optimizations, valid for a reduced target: the fast path for a trivial input, and the missing `0 < b` test |
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the rest of the analysis: the ambiguous case, uniqueness, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
-| [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
+| [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path returns what the loop would |
 | [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
 
 Two root files import these: [`LimitDenominator.lean`](LimitDenominator.lean) the

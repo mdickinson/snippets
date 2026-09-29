@@ -510,16 +510,17 @@ trade on its target being reduced. Both are proved by running the loop anyway:
 the algorithm's exit state says what they need.
 
 **The fast path.** When the target's denominator is already within the limit, the
-shipped code returns the target itself and never reaches the loop. That answer is a best
-approximation (`self_best_of_trivial`). With `n ≤ l`, the recovery identity
+shipped code returns the target itself and never reaches the loop. The loop would have
+returned the same pair, so the fast path changes nothing observable
+(`limitDenominator_trivial_case`). With `n ≤ l`, the recovery identity
 `b·u + c·s = n ≤ l < s + u` says `(1 − c)·s + (1 − b)·u > 0`, so `c < 1` or `b < 1`;
 `0 < c` rules out the first, so `b = 0` (`b_eq_zero_of_n_le_limit`). Then the two
 recovery identities read `m = c·r` and `n = c·s`, making `c` a common divisor of `m` and
 `n`, so `c = 1` as the target is reduced: the pure candidate *is* the target, as a pair
-(`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the pure candidate is best, `rs_best_iff`'s
-condition being `0 ≤ c·s`. `isBestApproximation_self` is the translation across the
-bridge, and it is what the fast path of `isCorrectLimitDenominator_stdlib` discharges
-against.
+(`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the code's test `b·u ≤ c·s` is `0 ≤ c·s`,
+so the pure candidate is the one returned. On a reduced target, then, the shipped
+listing computes the algorithm on both paths (`limitDenominatorStdlib_eq`), and its
+correctness rests on `limitDenominator_best` alone, as the simplified listing's does.
 
 **No `0 < b` test.** The shipped loop condition tests only `q2 > max_denominator`,
 leaving its division by `b` unguarded. It needs no guard: past the fast path the target
