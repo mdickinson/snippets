@@ -5,7 +5,7 @@ public import LimitDenominator.Definitions.IntAbs
 /-!
 General `Int` facts missing from the core library: basic properties of `Int.abs`, the
 signs of products, multiplying and cancelling a positive factor, and the Bézout route to
-lowest terms.
+coprimality.
 -/
 
 /-! ## Absolute value -/
@@ -91,10 +91,10 @@ public theorem Int.le_of_le_mul_pos {a b c : Int} (hc : 0 < c) (hle : a * c ≤ 
     a ≤ b :=
   Int.le_of_mul_le_mul_right hle hc
 
-/-! ## Lowest terms -/
+/-! ## Coprimality -/
 
 /--
-A Bézout identity certifies lowest terms: any common divisor of `r` and `s` divides the
+A Bézout identity certifies coprimality: any common divisor of `r` and `s` divides the
 combination, hence divides `1`.
 -/
 public theorem Int.gcd_eq_one_of_bezout {g h r s : Int} (hb : g * r + h * s = 1) :

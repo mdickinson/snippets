@@ -10,7 +10,7 @@ one candidate is *better* than another, and what it means for a candidate to be 
 -/
 
 /--
-A *candidate* is a (possibly non-reduced) fraction `num / den` whose denominator is
+A *candidate* is a (possibly reducible) fraction `num / den` whose denominator is
 positive and bounded by the given limit.
 -/
 public structure Candidate (args : Arguments) where
@@ -24,10 +24,6 @@ public structure Candidate (args : Arguments) where
 namespace Candidate
 
 variable {args : Arguments}
-
-/-- A candidate is *reduced* if its numerator and denominator are coprime. -/
-@[expose] public def isReduced (ef : Candidate args) :=
-  ∃ (g h : Int), g * ef.num + h * ef.den = 1
 
 /-- Two candidates that are numerically equal and have equal denominator are equal. -/
 public theorem eq_of_den_eq_of_cross_eq {ef gh : Candidate args}

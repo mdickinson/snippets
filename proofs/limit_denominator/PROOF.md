@@ -10,8 +10,9 @@ what a reader has to trust. This file assumes you have read the algorithm listin
 
 The mathematics lives in
 [`Optimality.lean`](LimitDenominator/Proofs/Optimality.lean), the bracket and why the
-answer is best, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), the
-special cases and the bridge to the specification, with the inputs set up in
+answer is best, [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean), why it is
+reduced, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), the special
+cases and the bridge to the specification, with the inputs set up in
 [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), the candidates in
 [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) and the algorithm itself in
 [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean); the pointers below name
@@ -24,7 +25,7 @@ listings agree" the one theorem stated about both.
 The proof uses a small fixed vocabulary, matching the names in the Lean source.
 
 **Target** — the fraction `m / n` being approximated, as a pair of integers with `n`
-strictly positive and `m` of either sign. Not necessarily in lowest terms.
+strictly positive and `m` of either sign. Not necessarily reduced.
 
 **Denominator limit** — the strictly positive upper bound `l` on the denominator of the
 result. (`max_denominator` is Python's parameter name; `l` is the concept.) In Lean the
@@ -32,9 +33,13 @@ target and the limit travel together as an `Arguments`, a structure whose fields
 `m`, `n` and `limit` together with proofs of `0 < n` and `1 ≤ limit`.
 
 **Candidate** — a pair of integers `(y, z)` with `0 < z ≤ l`, standing for the fraction
-`y / z`. Not required to be in lowest terms: the specification quantifies over all such
-pairs, so the result must beat unreduced competitors too. Lean: `Candidate`, again a
+`y / z`. Not required to be reduced: the specification quantifies over all such
+pairs, so the result must beat reducible competitors too. Lean: `Candidate`, again a
 structure carrying its two bounds as proof fields.
+
+**Reduced** — a pair whose two integers are coprime, `gcd(y, z) = 1`, so that the
+fraction it stands for is in lowest terms. Lean: `reduced`, for candidates; for the
+target, `trivial` states it directly.
 
 **Distance** — from the target to a candidate, scaled by both denominators:
 `|y·n − m·z|` for `y / z`, which is `|y/z − m/n|` times the positive quantity `n·z`.
@@ -50,14 +55,13 @@ the same formula written twice.
 
 **Best approximation** — a candidate better than every candidate. Lean: `best`; in the
 specification's vocabulary, `isBestApproximation`, and the two agree (§ "The
-specification"). Being in lowest terms is not part of it, but follows from it.
+specification"). Being reduced is not part of it, but follows from it.
 
 **Ambiguous** — the one situation in which two candidates are best: the limit is `1` and
 the target is a half-integer, `w + 1/2` for some integer `w`. Lean: `ambiguous` in the
 proof, `isAmbiguous` in the specification, the same formula written twice.
 
-**Trivial** — the target is in lowest terms with its denominator already within the
-limit. Lean: `trivial`.
+**Trivial** — the target is reduced and its denominator is already within the limit. Lean: `trivial`.
 
 **Pure candidate** — the candidate `(r, s)` held in the loop state, and still held on
 loop exit: a convergent of `m/n`, produced by the loop alone. One of the two candidates
@@ -125,8 +129,8 @@ equally good answers. It is a statement about each listing instead,
 `limitDenominatorSimplified_returns_floor_of_ambiguous` and
 `limitDenominatorStdlib_returns_floor_of_ambiguous`.
 
-**Lowest terms** is a *consequence* of the tie-break, not part of the specification. If
-`r` and `s` shared a factor `g > 1`, the reduced pair `(r/g, s/g)` would be a candidate
+**Being reduced** is a *consequence* of the tie-break, not part of the specification. If
+`r` and `s` shared a factor `g > 1`, the pair `(r/g, s/g)` would be a candidate
 too — positive denominator, strictly smaller, so still within the limit — and exactly as
 close, since scaling a pair down by `g` scales its residual `r·n − m·s` down by `g`,
 which cancels against the `s` on the other side of the comparison. Equally close, the
@@ -286,9 +290,10 @@ u ≤ l < u + s
 (`u_le_limit`, `limit_lt_s_add_u`) and hence `0 < u` (`u_pos`), since `l < u + s` and
 `s ≤ l` give `u > l − s ≥ 0`. Both bounds on `u` come from that one display, and neither
 needs the sign of `k`. With those, `r/s` and `t/u` are both candidates, `rs` and `tu`;
-and both are in lowest terms, `bracket_det` being a Bézout identity for each of them
-(`isReduced_rs`, `isReduced_tu`). That determinant is the proof's whole route to
-coprimality; nothing anywhere reasons about divisibility.
+and both are reduced, `bracket_det` being a Bézout identity for each of them
+(`reduced_rs`, `reduced_tu`, through `Int.gcd_eq_one_of_bezout`, which turns a Bézout
+identity into a gcd of one). That determinant is the proof's whole route to
+coprimality.
 
 For `b ≤ c` and `0 < c`, first `(k + 1)·b ≤ a` (`k_upper`), by splitting on how the loop
 exited. If `b = 0` it is `0 ≤ a`, from `0 ≤ b < a`. Otherwise `0 < b` and
@@ -330,8 +335,8 @@ an endpoint in value can still lose to it. If `y/z = r/s`, the equality case of
 `z = (t·z − y·u)v·s`, exhibiting `z` as a multiple of `s` — a positive multiple, since
 `z` is positive — so `s ≤ z` (the tie arm of `better_rs_of_lev`, with core's
 `Int.le_of_dvd` as the arithmetic). Symmetrically `u ≤ z` for a candidate equal to
-`t/u`, in `better_tu_of_lev`. The lowest-terms property of the endpoints is doing the
-work here, but in its determinant form.
+`t/u`, in `better_tu_of_lev`. The endpoints' being reduced is doing the work here, but
+in its determinant form.
 
 ### Candidates outside the bracket are no closer
 
@@ -453,10 +458,9 @@ that is the ambiguous case; so outside it they are the same. Across the bridge t
 `endpoints_eq_floor_pair`, backwards by `rs_best_and_tu_best`. Across the bridge,
 `isBestApproximation_iff_of_ambiguous`.
 
-**Lowest terms** (`isReduced_of_best`). A best candidate is an endpoint, and both
-endpoints are reduced by the determinant. Across the bridge, and through
-`Int.gcd_eq_one_of_bezout`, which turns a Bézout identity into `Int.gcd r s = 1`, this
-is `isBestApproximation.gcd_eq_one`.
+**Best means reduced** (`reduced_of_best`). A best candidate is an endpoint, and both
+endpoints are reduced by the determinant. Across the bridge, this is
+`isBestApproximation.gcd_eq_one`.
 
 ## From the listing to the algorithm
 
@@ -500,7 +504,7 @@ denominator, so it cannot raise; and the state it lands on is exactly
 Everything above is written for the simplified listing. The stdlib listing runs the same
 calculation on the same state, so the invariants, the bracket and the tie-breaking carry
 over unchanged. Two of its differences are mathematical rather than mechanical, and both
-trade on its target being in lowest terms. Both are proved by running the loop anyway:
+trade on its target being reduced. Both are proved by running the loop anyway:
 the algorithm's exit state says what they need.
 
 **The fast path.** When the target's denominator is already within the limit, the
@@ -509,7 +513,7 @@ approximation (`self_best_of_trivial`). With `n ≤ l`, the recovery identity
 `b·u + c·s = n ≤ l < s + u` says `(1 − c)·s + (1 − b)·u > 0`, so `c < 1` or `b < 1`;
 `0 < c` rules out the first, so `b = 0` (`b_eq_zero_of_n_le_limit`). Then the two
 recovery identities read `m = c·r` and `n = c·s`, making `c` a common divisor of `m` and
-`n`, and lowest terms gives `c = 1`: the pure candidate *is* the target, as a pair
+`n`, so `c = 1` as the target is reduced: the pure candidate *is* the target, as a pair
 (`mn_eq_rs_of_b_eq_zero`). And with `b = 0` the pure candidate is best, `rs_best_iff`'s
 condition being `0 ≤ c·s`. `isBestApproximation_self` is the translation across the
 bridge, and it is what the fast path of `isCorrectLimitDenominator_stdlib` discharges
@@ -517,7 +521,7 @@ against.
 
 **No `0 < b` test.** The shipped loop condition tests only `q2 > max_denominator`,
 leaving its division by `b` unguarded. It needs no guard: past the fast path the target
-is in lowest terms with `l < n`, and then `b` is never zero (`b_pos`). Were it zero at
+is reduced with `l < n`, and then `b` is never zero (`b_pos`). Were it zero at
 some state, it would stay zero to the exit, since `b = 0` fails the loop condition
 (`runLoop_b_eq_zero`); and at the exit `mn_eq_rs_of_b_eq_zero` gives `n = s ≤ l`, which
 `l < n` denies. This is the argument of the issue's § "Optimization".
@@ -525,8 +529,8 @@ some state, it would stay zero to the exit, since `b = 0` fails the loop conditi
 ## The two listings agree
 
 `limitDenominatorStdlib_eq_limitDenominatorSimplified`, in
-[`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean), says that on a target in
-lowest terms with positive denominator the two listings are the same function: the same
+[`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean), says that on a reduced
+target with positive denominator the two listings are the same function: the same
 `ValueError` below a limit of one, and the same pair above it. Its proof touches none of
 the mathematics above directly, only the two correctness theorems, the two tie-break
 theorems and `isBestApproximation_unique_of_not_ambiguous`. Below a limit of one both

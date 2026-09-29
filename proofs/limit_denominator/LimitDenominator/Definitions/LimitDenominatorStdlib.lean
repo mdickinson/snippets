@@ -34,10 +34,10 @@ elided: the algorithm notes, and the note on the final comparison.
 
 Being a method, it needs two things stripped to become a function on integers. The attributes
 `self._numerator` and `self._denominator` become parameters. And
-`Fraction._from_coprime_ints`, which builds a `Fraction` from a pair it trusts to be in lowest
-terms without checking, becomes the pair itself.
+`Fraction._from_coprime_ints`, which builds a `Fraction` from a pair it trusts to be reduced
+without checking, becomes the pair itself.
 
-So the target's positive denominator and lowest-terms properties — which a `Fraction`
+So the target's positive denominator and its being reduced — which a `Fraction`
 maintains, and which this listing therefore never tests — are not tested here either. They are
 hypotheses of the correctness statement instead.
 

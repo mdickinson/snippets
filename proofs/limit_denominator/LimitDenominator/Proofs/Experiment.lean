@@ -6,6 +6,7 @@ public import LimitDenominator.Proofs.Arguments
 public import LimitDenominator.Proofs.Candidate
 import LimitDenominator.Proofs.IntLemmas
 import LimitDenominator.Proofs.Optimality
+import LimitDenominator.Proofs.Reduced
 
 /-!
 The rest of the analysis of the algorithm: the ambiguous and trivial cases, uniqueness
@@ -46,14 +47,6 @@ variable {args : Arguments} (st : PostLoopState args)
 variable (ef gh : Candidate args)
 
 /-! ## The determinant -/
-
-/-- The pure candidate `r/s` is in lowest terms. -/
-theorem isReduced_rs : st.rs.isReduced :=
-  ⟨-st.u * st.v, st.t * st.v, by grind only [st.bracket_det]⟩
-
-/-- The mixed candidate `t/u` likewise. -/
-theorem isReduced_tu : st.tu.isReduced :=
-  ⟨st.s * st.v, -st.r * st.v, by grind only [st.bracket_det]⟩
 
 /-! ## Residuals -/
 
@@ -226,17 +219,6 @@ theorem ambiguous_best (hamb : args.ambiguous) {yz : Candidate args} :
 
 /-! ## Any best approximation is reduced -/
 
-/--
-A best approximation is one of the two bracket endpoints, and both of those are in
-lowest terms.
--/
-theorem isReduced_of_best {ef : Candidate args} (hef : ef.best) :
-    ef.isReduced := by
-  let st := args.postLoopState
-  rcases st.eq_rs_or_eq_tu_of_best hef with rfl | rfl
-  · exact st.isReduced_rs
-  · exact st.isReduced_tu
-
 /-! ## The trivial case -/
 
 /--
@@ -273,7 +255,7 @@ theorem runLoop_b_eq_zero (hst : st.b = 0) : st.runLoop.b = 0 := by
   fun_induction runLoop st <;> grind only [loopCondition]
 
 /--
-For a target in lowest terms whose denominator exceeds the limit, the residual `b` stays
+For a reduced target whose denominator exceeds the limit, the residual `b` stays
 positive.
 
 Proved by running the loop on from `st`: were `b` zero it would stay zero to exit, where
@@ -348,7 +330,7 @@ public theorem isBestApproximation_iff_of_ambiguous {m n l r s : Int}
     grind only [Arguments.floor, Arguments.floorAddOne]
 
 /--
-The result is in lowest terms, and that is a consequence of the specification rather
+The result is reduced, and that is a consequence of the specification rather
 than a part of it.
 
 A pair satisfying the specification is one of the two bracket endpoints, and the
@@ -359,11 +341,10 @@ public theorem isBestApproximation.gcd_eq_one {m n l r s : Int} (hn : 0 < n)
   have hl : 1 ≤ l := by have := h.1; have := h.2.1; omega
   let args : Arguments := ⟨m, n, l, hn, hl⟩
   let ef : Candidate args := ⟨r, s, h.1, h.2.1⟩
-  obtain ⟨g, k, hb⟩ := args.isReduced_of_best ((best_iff_isBestApproximation ef).mpr h)
-  exact Int.gcd_eq_one_of_bezout hb
+  exact args.reduced_of_best ((best_iff_isBestApproximation ef).mpr h)
 
 /--
-A target in lowest terms whose denominator is already within the limit is its own best
+A reduced target whose denominator is already within the limit is its own best
 approximation: the fast path, which the shipped listing takes before its loop.
 -/
 public theorem isBestApproximation_self {m n l : Int} (hn : 0 < n) (hl : n ≤ l)

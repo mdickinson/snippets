@@ -98,14 +98,14 @@ def isBestApproximation (m n l r s : Int) : Prop :=
 `scaledDistance m n r s` is `|r * n - m * s|`, the distance `|r/s - m/n|` scaled by `n *
 s`, so each comparison is between distances scaled by `n * s * z`. Closeness and the
 tie-break are both promises CPython makes — the first in its documentation, the second
-in the algorithm notes in its source. Candidates are not required to be in lowest
-terms, so the result has to beat unreduced competitors too.
+in the algorithm notes in its source. Candidates are not required to be reduced,
+so the result has to beat reducible competitors too.
 
 CPython makes two further promises, and both are deliberately absent from the
 specification.
 
-One is that the result *is* in lowest terms. That follows from the tie-break rather than
-having to be asked for: an unreduced pair is beaten by its own reduction, which is the
+One is that the result *is* reduced. That follows from the tie-break rather than
+having to be asked for: a reducible pair is beaten by its own reduction, which is the
 same value at the same distance but with a smaller denominator. That is
 [`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/Experiment.lean), and it is
 why the specification pins down the representation and not merely the value.
@@ -187,11 +187,11 @@ theorem isCorrectLimitDenominator_stdlib :
 ```
 
 Here `valid` carries two conditions rather than one. Being a method, the shipped code reads
-its target off a `Fraction`, which keeps its denominator positive and its ratio in lowest
-terms. The shipped code tests neither, and neither does the translation.
+its target off a `Fraction`, which keeps its denominator positive and its ratio reduced.
+The shipped code tests neither, and neither does the translation.
 
 Those hypotheses are load-bearing, on both of the listing's paths. On the fast path a
-target that is not in lowest terms comes back as it stands:
+reducible target comes back as it stands:
 `limitDenominatorStdlib 2 4 5` returns `2/4`, which `1/2` beats on the tie-break. On
 the loop path such a target can drive the loop's `b` to zero, and with no `0 < b` in the
 shipped loop condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3`
@@ -236,7 +236,7 @@ returns, and `Fraction._from_coprime_ints`, CPython's *unchecked* constructor, w
 translation replaces with the numerator/denominator pair itself.
 
 Nor is the invariant a `Fraction` maintains proved here — that is its constructor's job, not
-this algorithm's. A positive denominator and a ratio in lowest terms are hypotheses of
+this algorithm's. A positive denominator and a reduced ratio are hypotheses of
 `isCorrectLimitDenominator_stdlib`, not conclusions. Bundling them into a Lean type instead
 would put a coprimality proof in the definitions layer, the one layer a reader is asked to
 read: `_from_coprime_ints` verifies nothing, so a proof field of that shape could only be
@@ -271,6 +271,7 @@ names follow that split:
 | [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) | candidate solutions, and when one is better than another or best |
 | [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean) | the algorithm as the proof layer computes it: the loop state, running the loop, the state on exit with its two candidates, and the return value |
 | [`Optimality.lean`](LimitDenominator/Proofs/Optimality.lean) | the bracket on exit, the return value being best, and every best approximation being one of the two endpoints |
+| [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean) | reduced candidates, and every best approximation being reduced |
 | [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the rest of the analysis: the ambiguous and trivial cases, uniqueness, the residual staying positive, and what the specification does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path is separate |
@@ -377,7 +378,7 @@ up requires confidence in:
   pins the answer down — among all pairs with `0 < z ≤ l`, reduced or not, to one pair
   outside the ambiguous case and to the floor and the floor plus one inside it, so it
   cannot be met by some unintended pair as well; and `isBestApproximation.gcd_eq_one`
-  says that whichever pair satisfies it is necessarily in lowest terms, so that promise
+  says that whichever pair satisfies it is necessarily reduced, so that promise
   is earned rather than asked for. All three take `0 < n` as a hypothesis, and it is not
   a convenience: with `n = 0` every `r / 1` satisfies the specification, and with
   `n < 0` Lean's `m / n` is not the floor, so the characterisation would name the wrong
@@ -577,7 +578,7 @@ while a truthy one raises.
 `(m, n, l, r, s)` tuples, one list per listing, every one of them checked against
 `Fraction.limit_denominator` in CPython 3.14. Both lists cover the documentation's examples,
 integer targets, negative targets, halfway ties at a limit of one and at larger limits, and
-cases returning each of the two candidates. The simplified listing's adds unreduced targets,
+cases returning each of the two candidates. The simplified listing's adds reducible targets,
 and its integer targets exit the loop immediately with `b = 0`, so the short-circuiting `and`
 is what stops the division by zero there. The shipped listing's adds the fast path, on its
 boundary and one below.
@@ -595,12 +596,12 @@ and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12`. The `z` in the
 specification are bounded, so they are enumerated; the `y` are not, so for each `z` only
 the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
 the docstring there. Two conjuncts go beyond the specification, deliberately: that the
-pair returned is in lowest terms, and that in the ambiguous case it is the floor — the
+pair returned is reduced, and that in the ambiguous case it is the floor — the
 executable counterparts of `isBestApproximation.gcd_eq_one` and of the two
 `returns_floor_of_ambiguous` theorems.
 
-Both listings are checked that way. The shipped one is checked over the grid's targets that
-are in lowest terms, which are the only ones it promises anything about, and over those it is
+Both listings are checked that way. The shipped one is checked over the grid's reduced
+targets, which are the only ones it promises anything about, and over those it is
 also checked to agree with the simplified listing outright, the executable counterpart
 of `limitDenominatorStdlib_eq_limitDenominatorSimplified`.
 
@@ -616,7 +617,7 @@ Separately from Lean, the Python listing at the top of this README was
 differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in
 1…39, `m` in −80…80, `l` in 1…24) with no mismatches, asserting `gcd(r, s) = 1` and
 `0 < s ≤ l` throughout. `limitDenominatorStdlib` was differential-tested against the same
-function in the same way, over 94,207 cases: targets in lowest terms with `1 ≤ n ≤ 40`,
+function in the same way, over 94,207 cases: reduced targets with `1 ≤ n ≤ 40`,
 `−80 ≤ m ≤ 80` and `1 ≤ l ≤ 24`, plus this README's examples and a few wide ones, again with
 identical output throughout.
 

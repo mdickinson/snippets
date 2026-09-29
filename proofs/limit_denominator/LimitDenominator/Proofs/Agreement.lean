@@ -10,7 +10,7 @@ The two listings agree on every target the shipped one accepts.
 -/
 
 /--
-On a target in lowest terms with positive denominator, the shipped listing and the
+On a reduced target with positive denominator, the shipped listing and the
 simplified one are the same function: the same `ValueError` for a limit below one, and
 the same pair otherwise.
 

@@ -11,8 +11,8 @@ Tests for `limitDenominatorStdlib`: the expected-value vectors, the exception ca
 executable form of the specification over a grid of targets, and agreement with the simplified
 listing over that same grid.
 
-This listing's target must be in lowest terms with a positive denominator, which the grid's
-targets are not all in, so the two grid checks skip the rest rather than expecting anything of
+This listing's target must be reduced with a positive denominator. Not all of the grid's
+targets are, so the two grid checks skip the rest rather than expecting anything of
 them.
 -/
 
@@ -44,9 +44,9 @@ divisions safe. -/
 /-! ## The specification, evaluated -/
 
 /- Being gated on `Int.gcd m n = 1`, both grid checks below could have passed vacuously. Neither
-does: a clear majority of the grid's targets are in lowest terms, and among those the tie-break
+does: a clear majority of the grid's targets are reduced, and among those the tie-break
 clause has live antecedents for either sign of `m`. To re-derive, filter `specCheckGrid` to
-targets in lowest terms and count those with a rival that ties on distance at a different
+reduced targets and count those with a rival that ties on distance at a different
 denominator. -/
 
 #guard specCheckGrid.all fun (m, n, l) =>

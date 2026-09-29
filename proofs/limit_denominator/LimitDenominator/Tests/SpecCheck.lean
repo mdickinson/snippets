@@ -48,7 +48,7 @@ what confines `m * z % n` to `[0, n)` below. Given that, the two `y` suffice:
 Two conjuncts below go beyond `isBestApproximation`, deliberately, and both are checks on
 statements the proof layer makes about the specification rather than within it. `Int.gcd r s
 == 1` is an independent empirical check of `isBestApproximation.gcd_eq_one`, which derives
-lowest terms from the tie-break instead. The ambiguous-case conjunct pins the choice the
+the same fact from the tie-break instead. The ambiguous-case conjunct pins the choice the
 specification leaves open: where two pairs satisfy it, the one returned is the floor.
 -/
 def checkBestApproximation (m n l r s : Int) : Bool :=

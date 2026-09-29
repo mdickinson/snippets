@@ -22,7 +22,7 @@ the listing's shape rather than the algorithm's:
   is `q1 = 0`.
 * **`0 < b` is derived rather than tested.** The shipped loop condition omits that test,
   so the divisor's positivity comes from `LoopState.b_pos`, and that is where the
-  target's being in lowest terms earns its place among the hypotheses.
+  target's being reduced earns its place among the hypotheses.
 
 The fast path is none of this: it discharges against the specification directly.
 -/
@@ -155,7 +155,7 @@ theorem limitDenominatorStdlib_eq (args : Arguments) (hgcd : Int.gcd args.m args
 
 /--
 Correctness of `limitDenominatorStdlib`: for a denominator limit that is not positive it
-raises the same `ValueError` as CPython, and for a target in lowest terms with positive
+raises the same `ValueError` as CPython, and for a reduced target with positive
 denominator — which is every target a `Fraction` can hold — it returns the best
 approximation.
 -/
@@ -180,7 +180,7 @@ public theorem isCorrectLimitDenominator_stdlib :
 
 /--
 In the ambiguous case the two best approximations are `⌊m/n⌋` and `⌊m/n⌋ + 1`, and the
-listing returns the lower of them. A target in lowest terms is ambiguous only at `n = 2`
+listing returns the lower of them. A reduced target is ambiguous only at `n = 2`
 with `l = 1`, so the fast path is never the ambiguous one and this lives wholly on the
 loop path.
 -/

@@ -18,7 +18,7 @@ def limitDenominatorCases : List (Int × Int × Int × Int × Int) :=
     (4321, 8765, 10000, 4321, 8765),
     (-3141592653589793, 1000000000000000, 10, -22, 7),
     (-4321, 8765, 10000, -4321, 8765),
-    -- Targets that are not in lowest terms: the result still is.
+    -- Reducible targets: the result is still reduced.
     (6, 4, 10, 3, 2),
     (100, 40, 3, 5, 2),
     -- An integer target, which leaves the loop immediately with `b = 0`, so that the
@@ -52,7 +52,7 @@ def limitDenominatorCases : List (Int × Int × Int × Int × Int) :=
     (22, 7, 1000, 22, 7) ]
 
 /--
-Tuples `(m, n, l, r, s)` for the stdlib listing, whose target must be in lowest terms with a
+Tuples `(m, n, l, r, s)` for the stdlib listing, whose target must be reduced with a
 positive denominator: the closest fraction to `m / n` with denominator at most `l` is `r / s`.
 -/
 def limitDenominatorStdlibCases : List (Int × Int × Int × Int × Int) :=

@@ -35,8 +35,8 @@ def isBetterApproximation (m n r s y z : Int) : Prop :=
 What it means for `r / s` to be the best approximation to `m / n` with denominator at
 most `l`: closest, with ties broken towards the smaller denominator.
 
-Being in lowest terms is deliberately *not* stipulated here. It follows from the
-tie-break alone, because an unreduced pair is equally close as its own reduction, which
+Being reduced is deliberately *not* stipulated here. It follows from the
+tie-break alone, because a reducible pair is equally close as its own reduction, which
 has the smaller denominator — see `isBestApproximation.gcd_eq_one`. So once the value is
 fixed, so is the representation.
 -/

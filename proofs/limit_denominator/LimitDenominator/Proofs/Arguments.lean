@@ -6,7 +6,7 @@ trivial case and the ambiguous case.
 -/
 
 /--
-The arguments to `limitDenominator` comprise a (possibly non-reduced) target fraction
+The arguments to `limitDenominator` comprise a (possibly reducible) target fraction
 `m/n` with `n` positive, along with the positive denominator limit.
 -/
 public structure Arguments where
@@ -22,8 +22,8 @@ public structure Arguments where
 namespace Arguments
 
 /--
-A set of arguments is *trivial* if the target is in lowest terms with its denominator
-already within the limit.
+A set of arguments is *trivial* if the target is reduced and its denominator is already
+within the limit.
 -/
 @[expose] public def trivial (args : Arguments) :=
   Int.gcd args.m args.n = 1 ∧ args.n ≤ args.limit
