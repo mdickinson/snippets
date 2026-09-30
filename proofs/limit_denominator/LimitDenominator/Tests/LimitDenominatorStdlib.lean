@@ -3,7 +3,7 @@ module
 meta import LimitDenominator.Definitions.LimitDenominatorSimplified
 meta import LimitDenominator.Definitions.LimitDenominatorStdlib
 meta import LimitDenominator.Tests.Assertions
-meta import LimitDenominator.Tests.SpecCheck
+meta import LimitDenominator.Tests.SpecificationCheck
 meta import LimitDenominator.Tests.Vectors
 
 /-!
@@ -45,11 +45,11 @@ divisions safe. -/
 
 /- Being gated on `Int.gcd m n = 1`, both grid checks below could have passed vacuously. Neither
 does: a clear majority of the grid's targets are reduced, and among those the tie-break
-clause has live antecedents for either sign of `m`. To re-derive, filter `specCheckGrid` to
-reduced targets and count those with a rival that ties on distance at a different
-denominator. -/
+clause has live antecedents for either sign of `m`. To re-derive, filter
+`specificationCheckGrid` to reduced targets and count those with a rival that ties on
+distance at a different denominator. -/
 
-#guard specCheckGrid.all fun (m, n, l) =>
+#guard specificationCheckGrid.all fun (m, n, l) =>
   Int.gcd m n != 1 ||
     match limitDenominatorStdlib m n l with
     | .ok (r, s) => checkBestApproximation m n l r s
@@ -57,7 +57,7 @@ denominator. -/
 
 /-! ## Agreement with the simplified listing -/
 
-#guard specCheckGrid.all fun (m, n, l) =>
+#guard specificationCheckGrid.all fun (m, n, l) =>
   Int.gcd m n != 1 ||
     match limitDenominatorSimplified m n l with
     | .ok (r, s) => assertReturns (limitDenominatorStdlib m n l) (r, s)

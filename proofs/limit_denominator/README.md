@@ -592,13 +592,13 @@ limit's alone, that being the only exception a valid target can provoke.
 
 **The specification, evaluated.** Expected-value vectors barely exercise a specification
 whose substance is a `∀`-quantified optimality condition, so
-[`SpecCheck.lean`](LimitDenominator/Tests/SpecCheck.lean) defines a `Bool`-valued bounded
-form of `isBestApproximation` and checks it over every target `m / n` with `1 ≤ n ≤ 16`
-and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12`. The `z` in the
-specification are bounded, so they are enumerated; the `y` are not, so for each `z` only
-the two integers bracketing `m·z/n` are checked, which suffices for the reason given in
-the docstring there. Two conjuncts go beyond the specification, deliberately: that the
-pair returned is reduced, and that in the ambiguous case it is the floor — the
+[`SpecificationCheck.lean`](LimitDenominator/Tests/SpecificationCheck.lean) defines a
+`Bool`-valued bounded form of `isBestApproximation` and checks it over every target
+`m / n` with `1 ≤ n ≤ 16` and `-32 ≤ m ≤ 32` against every limit `1 ≤ l ≤ 12`. The `z`
+in the specification are bounded, so they are enumerated; the `y` are not, so for each
+`z` only the two integers bracketing `m·z/n` are checked, which suffices for the reason
+given in the docstring there. Two conjuncts go beyond the specification, deliberately:
+that the pair returned is reduced, and that in the ambiguous case it is the floor — the
 executable counterparts of `isBestApproximation.gcd_eq_one` and of the two
 `returns_floor_of_ambiguous` theorems.
 

@@ -63,7 +63,7 @@ def checkBestApproximation (m n l r s : Int) : Bool :=
 Targets and denominator limits for the specification check: every `m / n` with `1 ≤ n ≤ 16` and
 `-32 ≤ m ≤ 32`, against every limit `1 ≤ l ≤ 12`.
 -/
-def specCheckGrid : List (Int × Int × Int) :=
+def specificationCheckGrid : List (Int × Int × Int) :=
   (List.range 16).flatMap fun (i : Nat) =>
     (List.range 65).flatMap fun (j : Nat) =>
       (List.range 12).map fun (k : Nat) =>

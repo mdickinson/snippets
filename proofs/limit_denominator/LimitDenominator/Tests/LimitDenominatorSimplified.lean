@@ -2,7 +2,7 @@ module
 
 meta import LimitDenominator.Definitions.LimitDenominatorSimplified
 meta import LimitDenominator.Tests.Assertions
-meta import LimitDenominator.Tests.SpecCheck
+meta import LimitDenominator.Tests.SpecificationCheck
 meta import LimitDenominator.Tests.Vectors
 
 /-!
@@ -41,7 +41,7 @@ in its tuple, so this pins representatives: `(7, 5, 3)` returns the mixed candid
 
 /-! ## The specification, evaluated -/
 
-#guard specCheckGrid.all fun (m, n, l) =>
+#guard specificationCheckGrid.all fun (m, n, l) =>
   match limitDenominatorSimplified m n l with
   | .ok (r, s) => checkBestApproximation m n l r s
   | .error _ => false
