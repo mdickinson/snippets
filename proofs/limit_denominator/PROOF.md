@@ -12,9 +12,10 @@ The mathematics lives in
 [`BaseAnalysis.lean`](LimitDenominator/Proofs/BaseAnalysis.lean), the bracket and why
 the answer is best, [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean), why it is
 reduced, [`Optimizations.lean`](LimitDenominator/Proofs/Optimizations.lean), the
-shipped listing's two optimizations, and
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean), the ambiguous case and the
-bridge to the specification, with the inputs set up in
+shipped listing's two optimizations,
+[`Uniqueness.lean`](LimitDenominator/Proofs/Uniqueness.lean), the ambiguous case and
+uniqueness outside it, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean),
+the bridge to the specification, with the inputs set up in
 [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), the candidates in
 [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) and the algorithm itself in
 [`Algorithm.lean`](LimitDenominator/Proofs/Algorithm.lean); the pointers below name

@@ -73,15 +73,3 @@ public theorem better_trans {ef gh ij : Candidate args} (h1 : ef.better gh)
       Int.le_trans d1 d2⟩
 
 end Candidate
-
-namespace Arguments
-
-/-- `⌊m/n⌋` as a candidate. -/
-@[expose] public def floor (args : Arguments) : Candidate args :=
-  ⟨args.m / args.n, 1, by decide, args.one_le_limit⟩
-
-/-- `⌊m/n⌋ + 1` as a candidate. -/
-@[expose] public def floorAddOne (args : Arguments) : Candidate args :=
-  ⟨args.m / args.n + 1, 1, by decide, args.one_le_limit⟩
-
-end Arguments

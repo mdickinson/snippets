@@ -5,6 +5,7 @@ public import LimitDenominator.Proofs.Experiment
 import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.Optimizations
 import LimitDenominator.Proofs.PythonTranslation
+import LimitDenominator.Proofs.Uniqueness
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
