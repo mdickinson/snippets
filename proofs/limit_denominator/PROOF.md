@@ -14,7 +14,8 @@ the answer is best, [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean), why 
 reduced, [`Optimizations.lean`](LimitDenominator/Proofs/Optimizations.lean), the
 shipped listing's two optimizations,
 [`Uniqueness.lean`](LimitDenominator/Proofs/Uniqueness.lean), the ambiguous case and
-uniqueness outside it, and [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean),
+uniqueness outside it, and
+[`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean),
 the bridge to the specification, with the inputs set up in
 [`Arguments.lean`](LimitDenominator/Proofs/Arguments.lean), the candidates in
 [`Candidate.lean`](LimitDenominator/Proofs/Candidate.lean) and the algorithm itself in
@@ -117,8 +118,8 @@ comment in the source.
 **What the definition determines.** Two candidates can both be best only by being
 equidistant from the target with the same denominator, and that is possible only in the
 ambiguous case, where `⌊m/n⌋ / 1` and `(⌊m/n⌋ + 1) / 1` are both best. Two theorems say
-so, in the closing section of
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
+so, in
+[`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean):
 `isBestApproximation_unique_of_not_ambiguous`, that outside the ambiguous case at most
 one pair satisfies the specification, and `isBestApproximation_iff_of_ambiguous`, that
 inside it exactly those two pairs do. Both quantify over all pairs with a positive
@@ -146,7 +147,7 @@ the specification determines").
 
 **The bridge.** Everything the proof establishes is stated in its own vocabulary, of
 `Arguments`, `Candidate`, `dist`, `better` and `best`, and meets the specification's in
-that one closing section. `best_iff_isBestApproximation` says `best` and
+one module, `SpecificationBridge.lean`. `best_iff_isBestApproximation` says `best` and
 `isBestApproximation` agree on any candidate: `better` and `isBetterApproximation` are
 the same formula, so each direction is a candidate's fields passed across.
 `ambiguous_iff_isAmbiguous` is the two formulas being one, `Iff.rfl`. Each statement

@@ -138,6 +138,23 @@ end LoopState
 
 /-! # On exit from the loop -/
 
+/-
+A `PostLoopState` is a `LoopState` whose loop condition has gone false. The loop's own
+`r/s`, the *pure* candidate, and a second endpoint `t/u`, the *mixed* candidate built
+from `p/q` and `r/s`, bracket the target fraction `m/n`. Both have denominator at most
+`limit`, but `s + u > limit`, so everything strictly between them has denominator
+exceeding `limit`: every candidate lies outside the bracket, or at one of its endpoints.
+
+The field `v` represents the orientation of the bracket, and from `bracket_det` it must
+be either `1` or `-1`. If `v = 1` then we have
+
+    r/s ≤ m/n < t/u
+
+and if `v = -1` then we have
+
+    t/u < m/n ≤ r/s
+-/
+
 /-- State on exiting the loop: a loop state whose loop condition has gone false. -/
 public structure PostLoopState (args : Arguments) extends LoopState args where
   exited : ¬ toLoopState.loopCondition

@@ -1,7 +1,7 @@
 module
 
 meta import LimitDenominator.Proofs.Agreement
-meta import LimitDenominator.Proofs.Experiment
+meta import LimitDenominator.Proofs.SpecificationBridge
 meta import LimitDenominator.Proofs.SimplifiedCorrectness
 meta import LimitDenominator.Proofs.StdlibCorrectness
 

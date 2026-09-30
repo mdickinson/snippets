@@ -1,7 +1,7 @@
 module
 
 public import LimitDenominator.Definitions.LimitDenominatorStdlib
-public import LimitDenominator.Proofs.Experiment
+public import LimitDenominator.Proofs.SpecificationBridge
 import LimitDenominator.Proofs.Optimizations
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.WhileLoop

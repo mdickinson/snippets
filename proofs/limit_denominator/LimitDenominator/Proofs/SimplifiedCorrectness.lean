@@ -1,7 +1,7 @@
 module
 
 public import LimitDenominator.Definitions.LimitDenominatorSimplified
-public import LimitDenominator.Proofs.Experiment
+public import LimitDenominator.Proofs.SpecificationBridge
 import LimitDenominator.Proofs.PythonTranslation
 import LimitDenominator.Proofs.WhileLoop
 
@@ -11,7 +11,7 @@ Correctness of `limitDenominatorSimplified`.
 This file is the mechanics: it names the two halves of the `do` block — `loopBody`
 and `afterLoop` — folds the translation onto them, identifies the loop with
 `runLoop`, and reads the result off. All of the mathematics has already happened, in
-the core modules, and `Experiment` is the bridge to the specification.
+the core modules, and `SpecificationBridge` is the bridge to the specification.
 
 The seven-tuple state appears only here. `LoopState` carries the same seven numbers
 with their invariants attached, and `loopTuple` is the projection that forgets them.

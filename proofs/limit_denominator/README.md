@@ -107,15 +107,15 @@ specification.
 One is that the result *is* reduced. That follows from the tie-break rather than
 having to be asked for: a reducible pair is beaten by its own reduction, which is the
 same value at the same distance but with a smaller denominator. That is
-[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/Experiment.lean), and it is
+[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/SpecificationBridge.lean), and it is
 why the specification pins down the representation and not merely the value.
 
 The other is which answer comes back when the specification does not decide. It decides
 in all but one case: when the limit is `1` and the target is midway between two
 integers, the floor and the floor plus one both satisfy it, being equidistant at the
 same denominator. `isAmbiguous`, beside `isBestApproximation`, names that case, and two
-theorems say that it is the only one, in the closing section of
-[`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
+theorems say that it is the only one, in
+[`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean):
 `isBestApproximation_unique_of_not_ambiguous`, that outside it at most one pair
 satisfies the specification, and `isBestApproximation_iff_of_ambiguous`, that inside it
 exactly those two do. CPython promises the floor there. Which of two equally good
@@ -274,7 +274,7 @@ names follow that split:
 | [`Reduced.lean`](LimitDenominator/Proofs/Reduced.lean) | reduced candidates, and every best approximation being reduced |
 | [`Optimizations.lean`](LimitDenominator/Proofs/Optimizations.lean) | the shipped listing's two optimizations, valid for a reduced target: the fast path for a trivial input, and the missing `0 < b` test |
 | [`Uniqueness.lean`](LimitDenominator/Proofs/Uniqueness.lean) | the ambiguous case, the one place two candidates are best, and the uniqueness of the best approximation everywhere else |
-| [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean) | the bridge to the specification: what it does and does not determine |
+| [`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean) | the bridge to the specification: what it does and does not determine |
 | [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) | folding the translation onto the loop and reading the result off |
 | [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) | the same for the shipped listing, whose first iteration is peeled off and whose fast path returns what the loop would |
 | [`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean) | the two listings agree, from their correctness theorems and what the specification determines |
@@ -373,8 +373,8 @@ up requires confidence in:
   `scaledDistance`, `isBetterApproximation`, `isBestApproximation`, `isAmbiguous` and
   `isCorrectLimitDenominator`. A specification that is too weak would be easy to satisfy
   and would prove nothing interesting. Three checks on that are proved rather than
-  argued, in the closing section of
-  [`Experiment.lean`](LimitDenominator/Proofs/Experiment.lean):
+  argued, in
+  [`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean):
   `isBestApproximation_unique_of_not_ambiguous` and
   `isBestApproximation_iff_of_ambiguous` together say exactly how far the specification
   pins the answer down — among all pairs with `0 < z ≤ l`, reduced or not, to one pair
