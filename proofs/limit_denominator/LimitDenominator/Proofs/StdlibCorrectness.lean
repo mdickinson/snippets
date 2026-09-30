@@ -79,7 +79,7 @@ denominator, so it cannot raise. The state it lands on is the initial loop state
 theorem stdlibLoopBody_initial {m n l : Int} (hn : 0 < n) (hl : 0 < l) :
     stdlibLoopBody l () (0, 1, 1, 0, m, n)
       = pure (ForInStep.yield (1, 0, m / n, 1, n, m % n)) := by
-  have h : m - m / n * n = m % n := by have := Int.mul_ediv_add_emod m n; grind
+  have h : m - m / n * n = m % n := by rw [Int.emod_def, Int.mul_comm]
   rw [stdlibLoopBody, pyFloordiv_ok_bind hn, ite_eq_right (by omega), h]
   simp
 
@@ -96,7 +96,7 @@ theorem stdlibLoopBody_of_loopCondition {args : Arguments} {st : LoopState args}
     stdlibLoopBody args.limit () (stdlibTuple st) =
       pure (ForInStep.yield (stdlibTuple (st.nextLoopState hst))) := by
   have hmod : st.a - st.a / st.b * st.b = st.a % st.b := by
-    have := Int.mul_ediv_add_emod st.a st.b; grind
+    rw [Int.emod_def, Int.mul_comm]
   show stdlibLoopBody args.limit () (st.p, st.q, st.r, st.s, st.a, st.b) = _
   rw [stdlibLoopBody, pyFloordiv_ok_bind hst.1]
   -- Beta-reduce the `q2` binding, which `rw` cannot see past.
