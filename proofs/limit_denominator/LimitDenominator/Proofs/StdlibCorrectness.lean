@@ -2,10 +2,8 @@ module
 
 public import LimitDenominator.Definitions.LimitDenominatorStdlib
 public import LimitDenominator.Proofs.Experiment
-import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.Optimizations
 import LimitDenominator.Proofs.PythonTranslation
-import LimitDenominator.Proofs.Uniqueness
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
@@ -174,9 +172,8 @@ public theorem isCorrectLimitDenominator_stdlib :
   · -- The listing computes the algorithm, whose answer is best.
     intro m n l ⟨hn, hgcd⟩ hl
     let args : Arguments := ⟨m, n, l, hn, by omega⟩
-    exact ⟨args.limitDenominator.num, args.limitDenominator.den,
-      limitDenominatorStdlib_eq args hgcd,
-      (best_iff_isBestApproximation _).mp args.limitDenominator_best⟩
+    exact ⟨_, _, limitDenominatorStdlib_eq args hgcd,
+      args.isBestApproximation_limitDenominator⟩
 
 /--
 In the ambiguous case the two best approximations are `⌊m/n⌋` and `⌊m/n⌋ + 1`, and the
@@ -186,7 +183,6 @@ public theorem limitDenominatorStdlib_returns_floor_of_ambiguous {m n l : Int}
     (hn : 0 < n) (hgcd : Int.gcd m n = 1) (hamb : isAmbiguous m n l) :
     returns (limitDenominatorStdlib m n l) (m / n, 1) := by
   let args : Arguments := ⟨m, n, l, hn, by have := hamb.1; omega⟩
-  have heq := limitDenominatorStdlib_eq args hgcd
-  have hamb' := (ambiguous_iff_isAmbiguous args).mpr hamb
-  rw [args.limitDenominator_ambiguous_case hamb'] at heq
-  exact heq
+  rw [returns, limitDenominatorStdlib_eq args hgcd,
+    args.limitDenominator_eq_of_isAmbiguous hamb]
+  rfl

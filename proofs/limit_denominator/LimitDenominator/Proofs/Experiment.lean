@@ -5,6 +5,7 @@ public import LimitDenominator.Proofs.Algorithm
 public import LimitDenominator.Proofs.Arguments
 public import LimitDenominator.Proofs.Candidate
 public import LimitDenominator.Proofs.Uniqueness
+import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.Reduced
 
 /-!
@@ -101,6 +102,19 @@ public theorem best_iff_isBestApproximation {args : Arguments} (ef : Candidate a
 /-- `Arguments.ambiguous` is the specification's `isAmbiguous`, formula for formula. -/
 public theorem ambiguous_iff_isAmbiguous (args : Arguments) :
     args.ambiguous ↔ isAmbiguous args.m args.n args.limit := Iff.rfl
+
+/-- The algorithm's answer satisfies the specification. -/
+public theorem Arguments.isBestApproximation_limitDenominator (args : Arguments) :
+    isBestApproximation args.m args.n args.limit
+      args.limitDenominator.num args.limitDenominator.den :=
+  (best_iff_isBestApproximation _).mp args.limitDenominator_best
+
+/-- In the specification's ambiguous case, the algorithm's answer is `(m / n, 1)`. -/
+public theorem Arguments.limitDenominator_eq_of_isAmbiguous (args : Arguments)
+    (hamb : isAmbiguous args.m args.n args.limit) :
+    (args.limitDenominator.num, args.limitDenominator.den) = (args.m / args.n, 1) := by
+  rw [args.limitDenominator_ambiguous_case ((ambiguous_iff_isAmbiguous args).mpr hamb)]
+  rfl
 
 /--
 Outside the ambiguous case the specification determines the answer: no two distinct

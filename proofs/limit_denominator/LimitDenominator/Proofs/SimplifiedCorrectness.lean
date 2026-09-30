@@ -2,9 +2,7 @@ module
 
 public import LimitDenominator.Definitions.LimitDenominatorSimplified
 public import LimitDenominator.Proofs.Experiment
-import LimitDenominator.Proofs.BaseAnalysis
 import LimitDenominator.Proofs.PythonTranslation
-import LimitDenominator.Proofs.Uniqueness
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
@@ -12,8 +10,8 @@ Correctness of `limitDenominatorSimplified`.
 
 This file is the mechanics: it names the two halves of the `do` block — `loopBody`
 and `afterLoop` — folds the translation onto them, identifies the loop with
-`runLoop`, and reads the result off. All of the mathematics has already happened,
-in `Experiment`.
+`runLoop`, and reads the result off. All of the mathematics has already happened, in
+the core modules, and `Experiment` is the bridge to the specification.
 
 The seven-tuple state appears only here. `LoopState` carries the same seven numbers
 with their invariants attached, and `loopTuple` is the projection that forgets them.
@@ -147,9 +145,8 @@ public theorem isCorrectLimitDenominator_simplified :
   · -- Otherwise the listing computes the algorithm, whose answer is best.
     intro m n l hn hl
     let args : Arguments := ⟨m, n, l, hn, by omega⟩
-    exact ⟨args.limitDenominator.num, args.limitDenominator.den,
-      limitDenominatorSimplified_eq args,
-      (best_iff_isBestApproximation _).mp args.limitDenominator_best⟩
+    exact ⟨_, _, limitDenominatorSimplified_eq args,
+      args.isBestApproximation_limitDenominator⟩
 
 /--
 A target denominator that is not positive raises a `ValueError`. The denominator limit is
@@ -170,10 +167,9 @@ public theorem limitDenominatorSimplified_returns_floor_of_ambiguous {m n l : In
     (hn : 0 < n) (hamb : isAmbiguous m n l) :
     returns (limitDenominatorSimplified m n l) (m / n, 1) := by
   let args : Arguments := ⟨m, n, l, hn, by have := hamb.1; omega⟩
-  have heq := limitDenominatorSimplified_eq args
-  have hamb' := (ambiguous_iff_isAmbiguous args).mpr hamb
-  rw [args.limitDenominator_ambiguous_case hamb'] at heq
-  exact heq
+  rw [returns, limitDenominatorSimplified_eq args,
+    args.limitDenominator_eq_of_isAmbiguous hamb]
+  rfl
 
 /--
 Every input is accounted for: the function raises one of its two `ValueError`s or returns the

@@ -469,8 +469,10 @@ endpoints are reduced by the determinant. Across the bridge, this is
 
 Everything above is about `limitDenominator`, the function on `Arguments` built from
 `runLoop`. Each listing is proved *equal* to it, and its correctness is that equality
-composed with `limitDenominator_best` and the bridge; its tie-break theorem is the same
-equality composed with `limitDenominator_ambiguous_case`.
+composed with `isBestApproximation_limitDenominator`, the bridge's form of
+`limitDenominator_best`; its tie-break theorem is the same equality composed with
+`limitDenominator_eq_of_isAmbiguous`, the bridge's form of
+`limitDenominator_ambiguous_case`.
 
 For the simplified listing
 ([`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean)),
