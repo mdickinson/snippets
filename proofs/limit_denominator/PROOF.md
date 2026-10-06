@@ -181,15 +181,17 @@ with no extra variable. Nothing is lost either way, and the listing in
 preconditions as the only way the two listings differ.
 
 The Lean state carries it too, and records the informal proof's equation verbatim as the
-invariant `det`; after the loop it is `bracket_det`,
+invariant `det`,
 
 ```
-(t·s − r·u)·v = 1
+(p·s − r·q)·v = 1
 ```
 
-extending having changed neither the determinant nor the orientation. Over the integers
-that single equation says both that `v` is a unit and that it agrees with the
-determinant. `v_cases` reads `v = 1` or `v = −1` off it, and `v_nonzero` follows.
+Over the integers that single equation says both that `v` is a unit and that it agrees
+with the determinant. `v_cases` reads `v = 1` or `v = −1` off it, and `v_nonzero`
+follows. After the loop the same equation holds with the mixed candidate `t/u` in place
+of `p/q` (`bracket_det`, § "After the loop"), extending having changed neither the
+determinant nor the orientation.
 
 What naming `v` buys is that the two sides of the bracket are handled by one statement
 each. The proof's order relation `lev` is orientation-aware: `st.lev ef gh` is the
@@ -213,7 +215,6 @@ of that type is a state together with the proof that it is a valid one:
 | `b_nonneg`, `b_lt_a` | `0 ≤ b < a` |
 | `q_nonneg` | `0 ≤ q` |
 | `s_pos`, `s_le_limit` | `0 < s ≤ l` |
-| `v_eq_one_of_q_eq_zero` | `q = 0` implies `v = 1` |
 
 `det` and the four inequalities are the informal proof's. In place of its two identities
 recovering the target, `a·r + b·p = m` and `a·s + b·q = n`, the state carries the two
@@ -228,8 +229,9 @@ other. Expanding `m` and `n` in the residual and collapsing with `det`,
 and conversely `(p·n − m·q)v·r + (m·s − r·n)v·p = m·(p·s − r·q)·v = m`. The residual
 form is the one the rest of the proof consumes: it is what makes the absolute values
 disappear on the algorithm's side, since `dist rs = |r·n − m·s| = b` (`dist_rs`),
-leaving the only surviving absolute value on the competitor. The last row is discussed
-below; it is the one clause that is not in the informal proof's list.
+leaving the only surviving absolute value on the competitor. The informal proof's
+tie-break also relies on a fact about the loop's history that the state does not carry;
+it is discussed below.
 
 Each invariant holds by inspection initially (`initialLoopState`) and by direct
 calculation across an iteration (`nextLoopState`), which takes a state and a proof that
@@ -241,35 +243,38 @@ exactly the condition under which the loop was entered, namely `q + ⌊a/b⌋·s
 with `b < a`, and it stays nonnegative, since `0 ≤ b`. In Lean the measure is
 `loopMeasure`, that is `a.toNat`, and `loopMeasure_decreasing` is what lets `runLoop` —
 run the loop from a given state until its condition fails — be an ordinary recursive
-definition, with `runLoop_loopCondition_false` recording that the condition has indeed
-failed on exit. A `PostLoopState` is a `LoopState` with that exit fact attached,
-`postLoopState` is the one reached from `initialLoopState`, and the algorithm's answer,
-`limitDenominator`, is its return value (§ "Choosing between the two candidates"). This
-is the function the two listings are proved *equal* to (§ "From the listing to the
-algorithm"); everything in between is about it alone.
+definition. A `PostLoopState` is a `LoopState` with a proof attached that the loop
+condition fails, and `runLoop` returns one, pairing the final state with the failed test
+that ended the loop. `postLoopState` is the one reached from `initialLoopState`, and the
+algorithm's answer, `limitDenominator`, is its return value (§ "Choosing between the two
+candidates"). This is the function the two listings are proved *equal* to (§ "From the
+listing to the algorithm"); everything in between is about it alone.
 
-### Why the seventh invariant
+### The loop's history
 
 The informal proof's tie-breaking argument reasons about the *history* of the loop: "an
 examination of the while loop shows that the only time `q = 0` is before entry to the
 while loop", and hence that the orientation is `+1` there. That is a statement about
-which states are reachable, and it is not implied by the other six invariants — a state
-with `q = 0`, `s = 1`, `p = −1` and `v = −1` satisfies all six, and an algorithm
+which states are reachable, and it is not implied by the loop invariants — a state with
+`q = 0`, `s = 1`, `p = −1` and `v = −1` satisfies all of them, and an algorithm
 reaching it would return the *wrong* answer on a halfway tie, returning the upper bound
 instead of the lower one.
 
-Formalising a reachability argument means putting it in the invariant, and the cheapest
-form is `q = 0 → v = 1`: it holds initially by inspection, and after any iteration the
-new `q` is the old `s`, which is positive, so the implication is vacuous.
+So it is proved about the run of the loop rather than about an arbitrary
+`PostLoopState`: `v_eq_one_of_q_eq_zero` says that the state the algorithm reaches
+satisfies `q = 0 → v = 1`, by induction along `runLoop`. The implication holds initially
+by inspection, and after any iteration the new `q` is the old `s`, which is positive, so
+the implication is vacuous.
 
-It is spent in exactly one place, `v_eq_one` in § "The ambiguous case", and from there
-only on the statements about which of the two best approximations comes back:
-`rv_eq_floor`, `limitDenominator_ambiguous_case`, and the two listing theorems. Nothing
-in the specification's own vocabulary depends on it. The characterisation of the
-ambiguous case reaches the pair `{⌊m/n⌋, ⌊m/n⌋ + 1}` without knowing which endpoint is
-which, `endpoints_eq_floor_pair` being a disjunction over `v_cases`. That is checked
-rather than argued: stubbing `v_eq_one` with `sorry` leaves all three statements about
-the specification at Lean's three axioms, with no `sorryAx` among them.
+It is spent in exactly one place, `limitDenominator_ambiguous_case` in § "The ambiguous
+case", and from there only on the statements about which of the two best approximations
+comes back: the two listing theorems, and the agreement of the two listings, which rests
+on them (§ "The two listings agree"). Nothing in the specification's own vocabulary
+depends on it. The characterisation of the ambiguous case reaches the pair
+`{⌊m/n⌋, ⌊m/n⌋ + 1}` without knowing which endpoint is which, `endpoints_eq_floor_pair`
+being a disjunction over `v_cases`. That is checked rather than argued: stubbing
+`v_eq_one_of_q_eq_zero` with `sorry` leaves all three statements about the specification
+at Lean's three axioms, with no `sorryAx` among them.
 
 ## After the loop
 
@@ -438,15 +443,17 @@ mixed one is `(⌊m/n⌋ + 1) / 1`. With `v = −1` the roles swap, `t = r − 1
 which is which (`endpoints_eq_floor_pair`), and that is all the characterisation of the
 ambiguous case needs.
 
-**Which one the code returns.** This is the one place the seventh invariant is used
-(`v_eq_one`). `n` is both `a·s + b·q` (`as_add_bq_eq_n`) and `b·u + c·s`
-(`bu_add_cs_eq_n`). With `s = u = 1` and `b = c` that is `a + b·q = 2·b`, so
-`(1 − q)·b = a − b`, which is positive since `b < a`. With `b ≥ 0` that forces `q < 1`,
-so `q = 0`, and the seventh invariant gives `v = 1`. So the pure candidate is the floor.
-And the code returns the pure candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`,
-an equality here. That is `rv_eq_floor`, and `limitDenominator_ambiguous_case` is the
-same for the state the algorithm reaches: for example `1/2` with `l = 1`, where `0/1`
-and `1/1` are equally close and `0/1` is returned.
+**Which one the code returns.** This is the one place the loop's history is used. `n` is
+both `a·s + b·q` (from the residual identities and `det`, § "Loop invariants") and
+`b·u + c·s` (`bu_add_cs_eq_n`), and `b·u = c·s`, so `a·s + b·q = 2·b·u`, which
+rearranges to `(a − b)·s = b·(2·u − q − s)`. The left side is positive, since `b < a`
+and `0 < s`, and `b ≥ 0`, so `2·u − q − s` is positive too. With `s = u = 1` that is
+`1 − q > 0`, and with `q ≥ 0` it leaves `q = 0` (`q_eq_zero`). That holds in any
+post-loop state in the ambiguous case; for the state the algorithm reaches,
+`v_eq_one_of_q_eq_zero` then gives `v = 1`, so the pure candidate is the floor. And the
+code returns the pure candidate, since `2·b·u ≤ n` is `b·u + b·u ≤ b·u + c·s`, an
+equality here. That is `limitDenominator_ambiguous_case`: for example `1/2` with
+`l = 1`, where `0/1` and `1/1` are equally close and `0/1` is returned.
 
 ## What the specification determines
 

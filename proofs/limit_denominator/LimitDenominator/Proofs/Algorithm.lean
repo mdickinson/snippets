@@ -5,49 +5,34 @@ public import LimitDenominator.Proofs.Candidate
 import LimitDenominator.Proofs.IntLemmas
 
 /-!
-The algorithm, as the proof layer computes it: the loop state and its invariants, one
-iteration and the whole loop, the state on exit with its pure and mixed candidates and
-the mixed candidate's residual `c`, and the return value.
+This module defines the `limitDenominator` algorithm and structures representing
+the loop state (with its invariants) and the post-loop state (with some basic
+consequences).
 -/
 
-/-! # In the loop -/
+/-! # The loop -/
 
-/-
-The loop is the Euclidean algorithm on `m` and `n`, tracking the continued-fraction
-convergents of `m/n` as it goes. `a > b ≥ 0` are the two most recent remainders. `r/s`
-is the most recent convergent and `p/q` the one before it, starting from `⌊m/n⌋/1` and
-`1/0`, so `q = 0` only in the initial state. Consecutive convergents lie on opposite
-sides of `m/n`; `v ∈ {1, -1}` records which way round, with `r/s ≤ m/n < p/q` when
-`v = 1` and `p/q < m/n ≤ r/s` when `v = -1`. The orientation reverses on every
-iteration.
-
-The invariants tie the remainders to the convergents. `det` is the
-consecutive-convergent identity `p * s - r * q = ±1`, with `v` as the sign.
-`a_eq_pq_cross` and `b_eq_rs_cross` say that `a` and `b` are the cross-multiplied
-distances `|p * n - m * q|` and `|m * s - r * n|` from `m/n` to the two convergents,
-again with `v` supplying the sign. `s_le_limit` is what the loop condition checked
-before stepping to this state.
--/
+/-! ## Loop state and loop invariants -/
 
 /--
-The loop state: the two latest Euclidean remainders, the two latest convergents, and
-the orientation `v`.
+The `LoopState` structure captures the loop state and the loop invariants.
 -/
 public structure LoopState (args : Arguments) where
   /-- The larger of the two most recent Euclidean remainders. -/
   a : Int
   /-- The smaller of the two most recent Euclidean remainders. -/
   b : Int
-  /-- Numerator of the previous convergent `p/q`. -/
+  /-- Numerator of the previous convergent. -/
   p : Int
-  /-- Denominator of the previous convergent `p/q`. -/
+  /-- Denominator of the previous convergent. -/
   q : Int
-  /-- Numerator of the most recent convergent `r/s`. -/
+  /-- Numerator of the most recent convergent. -/
   r : Int
-  /-- Denominator of the most recent convergent `r/s`. -/
+  /-- Denominator of the most recent convergent. -/
   s : Int
   /-- The orientation. -/
   v : Int
+  /- The loop invariants. -/
   b_nonneg : 0 ≤ b
   b_lt_a : b < a
   q_nonneg : 0 ≤ q
@@ -56,18 +41,12 @@ public structure LoopState (args : Arguments) where
   det : (p * s - r * q) * v = 1
   a_eq_pq_cross : (p * args.n - args.m * q) * v = a
   b_eq_rs_cross : (args.m * s - r * args.n) * v = b
-  v_eq_one_of_q_eq_zero : q = 0 → v = 1
 
-namespace LoopState
-
-variable {args : Arguments} (st : LoopState args)
-
-/-- Recovery of `n` from `a` and `b`. -/
-public theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
-  grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
+/-! ## Loop condition, initial loop state, and loop body -/
 
 /-- The state before the first iteration. -/
-@[expose] public def initialLoopState (args : Arguments) : LoopState args where
+@[expose] public def Arguments.initialLoopState (args : Arguments) :
+    LoopState args where
   a := args.n
   b := args.m % args.n
   p := 1
@@ -83,12 +62,21 @@ public theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
   s_le_limit := args.one_le_limit
   a_eq_pq_cross := by grind only
   b_eq_rs_cross := by grind only [Int.mul_ediv_add_emod args.m args.n]
-  v_eq_one_of_q_eq_zero := by decide
+
+namespace LoopState
+
+variable {args : Arguments} (st : LoopState args)
 
 /-- Condition guarding iteration of the while loop. -/
 @[expose] public def loopCondition := 0 < st.b ∧ st.q + st.a / st.b * st.s ≤ args.limit
 
-/-- The state transition resulting from execution of the loop body. -/
+/-- The loop condition is decidable. -/
+public instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
+
+/--
+The state resulting from execution of the loop body on a state satisfying the loop
+condition.
+-/
 @[expose] public def nextLoopState (hst : st.loopCondition) : LoopState args where
   a := st.b
   b := st.a % st.b
@@ -109,54 +97,37 @@ public theorem as_add_bq_eq_n : st.a * st.s + st.b * st.q = args.n := by
   a_eq_pq_cross := by grind only [st.b_eq_rs_cross]
   b_eq_rs_cross := by
     grind only [st.a_eq_pq_cross, st.b_eq_rs_cross, Int.mul_ediv_add_emod st.a st.b]
-  v_eq_one_of_q_eq_zero := by grind only [st.s_pos]
 
-/-- The termination measure for the loop: `max(a, 0)`, as a `Nat`. -/
+/-- The termination measure for the loop: `a` as a `Nat`. -/
 public def loopMeasure : Nat := st.a.toNat
 
-/-- The measure strictly decreases with each iteration of the loop. -/
+/-- `nextLoopState` reduces the measure. -/
 theorem loopMeasure_decreasing (hst : st.loopCondition) :
     (st.nextLoopState hst).loopMeasure < st.loopMeasure :=
   (Int.toNat_lt_toNat (Int.lt_of_le_of_lt st.b_nonneg st.b_lt_a)).mpr st.b_lt_a
 
-/-! ## Execution of the loop -/
+/-! ## Additional loop invariants -/
 
-/-- The loop condition is decidable. -/
-public instance : Decidable st.loopCondition := by unfold loopCondition; infer_instance
+/-- `v` must be either `1` or `-1`. -/
+public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
+  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.det)
 
-/-- Starting from a given state, run the loop to completion. -/
-@[expose] public def runLoop (st : LoopState args) : LoopState args :=
-  if h : st.loopCondition then runLoop (st.nextLoopState h) else st
-termination_by st.loopMeasure
-decreasing_by exact st.loopMeasure_decreasing h
-
-/-- On exit of the loop, the loop condition is false. -/
-public theorem runLoop_loopCondition_false : ¬ st.runLoop.loopCondition := by
-  fun_induction runLoop st <;> trivial
+/-- In particular, `v` is nonzero. -/
+public theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
 
 end LoopState
 
 /-! # On exit from the loop -/
 
 /-
-A `PostLoopState` is a `LoopState` whose loop condition has gone false. The loop's own
-`r/s`, the *pure* candidate, and a second endpoint `t/u`, the *mixed* candidate built
-from `p/q` and `r/s`, bracket the target fraction `m/n`. Both have denominator at most
-`limit`, but `s + u > limit`, so everything strictly between them has denominator
-exceeding `limit`: every candidate lies outside the bracket, or at one of its endpoints.
-
-The field `v` represents the orientation of the bracket, and from `bracket_det` it must
-be either `1` or `-1`. If `v = 1` then we have
-
-    r/s ≤ m/n < t/u
-
-and if `v = -1` then we have
-
-    t/u < m/n ≤ r/s
+Here we build the post-loop quantities, in particular the *mixed* candidate `t/u` that
+provides our second bracket endpoint (alongside the *pure* candidate `r/s` from the
+loop).
 -/
 
-/-- State on exiting the loop: a loop state whose loop condition has gone false. -/
+/-- `PostLoopState` represents the state on exiting the loop. -/
 public structure PostLoopState (args : Arguments) extends LoopState args where
+  /-- Proof that the loop condition is false. -/
   exited : ¬ toLoopState.loopCondition
 
 namespace PostLoopState
@@ -187,7 +158,7 @@ public theorem u_le_limit : st.u ≤ args.limit := by
   grind only [k, u, Int.ediv_mul_le (args.limit - st.q) (Int.ne_of_gt st.s_pos)]
 
 /--
-From the definition of `k` we have `limit - q < (k + 1)s`, giving `limit < s + u`.
+From the definition of `k` we have `limit - q < ks + s`, giving `limit < s + u`.
 -/
 public theorem limit_lt_s_add_u : args.limit < st.s + st.u := by
   grind only [k, u, Int.lt_ediv_mul (args.limit - st.q) st.s_pos]
@@ -198,18 +169,26 @@ public theorem u_pos : 0 < st.u := by grind only [st.s_le_limit, st.limit_lt_s_a
 /-- The mixed candidate `t/u`, packaged as a `Candidate`. -/
 public abbrev tu : Candidate args := ⟨st.t, st.u, st.u_pos, st.u_le_limit⟩
 
+/-! ## The residual `c` and post-loop identities -/
+
+/-- `c` is defined to be `a` reduced by `k` copies of `b`. -/
+public def c := st.a - st.k * st.b
+
 /-- The loop's own `det`, carried into the bracket basis. -/
 public theorem bracket_det : (st.t * st.s - st.r * st.u) * st.v = 1 := by
   grind only [t, u, st.det]
 
-/-- `v` must be either `1` or `-1`. -/
-public theorem v_cases : st.v = 1 ∨ st.v = -1 :=
-  Int.eq_one_or_neg_one_of_mul_eq_one (Int.mul_comm _ st.v ▸ st.bracket_det)
+/-- `c` is the cross-multiplied distance from `m/n` to `t/u`, oriented by `v`. -/
+public theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
+  grind only [c, t, u, st.a_eq_pq_cross, st.b_eq_rs_cross]
 
-/-- In particular, `v` is nonzero. -/
-public theorem v_nonzero : st.v ≠ 0 := by grind only [st.v_cases]
+/-- Recovery of `m` from `b` and `c`. -/
+public theorem bt_add_cr_eq_m : st.b * st.t + st.c * st.r = args.m := by
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
 
-/-! ## The residual `c` -/
+/-- Recovery of `n` from `b` and `c`. -/
+public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
+  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
 
 /--
 If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
@@ -224,26 +203,11 @@ theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
       (by grind only [k, u, LoopState.loopCondition, st.exited, st.u_le_limit]))
   · grind only [st.b_lt_a, st.b_nonneg]
 
-/-- `c` is defined to be `a` reduced by `k` copies of `b`. -/
-public def c := st.a - st.k * st.b
-
-/-- `c` is the cross-multiplied distance from `m/n` to `t/u`, oriented by `v`. -/
-public theorem c_eq_tu_cross : (st.t * args.n - args.m * st.u) * st.v = st.c := by
-  grind only [c, t, u, st.a_eq_pq_cross, st.b_eq_rs_cross]
-
 /-- Since `(k + 1)b ≤ a`, we have `b ≤ c`. -/
 public theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
 
 /-- `c` is positive: follows from `0 ≤ b ≤ c`, `b < a` and the definition of `c`. -/
 public theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]
-
-/-- Recovery of `m` from `b` and `c`. -/
-public theorem bt_add_cr_eq_m : st.b * st.t + st.c * st.r = args.m := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
-
-/-- Recovery of `n` from `b` and `c`. -/
-public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
-  grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
 
 /-! ## The return value -/
 
@@ -253,13 +217,27 @@ public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
 
 end PostLoopState
 
-/-! # End to end -/
+/-! # End-to-end execution; definition of `limitDenominator` -/
+
+namespace LoopState
+
+/-- Run the loop to completion from a given state. -/
+@[expose] public def runLoop {args : Arguments} (st : LoopState args) :
+    PostLoopState args :=
+  if h : st.loopCondition then runLoop (st.nextLoopState h) else ⟨st, h⟩
+termination_by st.loopMeasure
+decreasing_by exact st.loopMeasure_decreasing h
+
+end LoopState
+
+namespace Arguments
+
+variable (args : Arguments)
 
 /-- The state on exit from the loop, run from the initial state. -/
-@[expose] public def Arguments.postLoopState (args : Arguments) : PostLoopState args :=
-  let loopState := LoopState.initialLoopState args
-  ⟨loopState.runLoop, loopState.runLoop_loopCondition_false⟩
+@[expose] public def postLoopState : PostLoopState args := args.initialLoopState.runLoop
 
 /-- The full algorithm, end to end. -/
-@[expose] public def Arguments.limitDenominator (args : Arguments) : Candidate args :=
-  args.postLoopState.rv
+@[expose] public def limitDenominator : Candidate args := args.postLoopState.rv
+
+end Arguments

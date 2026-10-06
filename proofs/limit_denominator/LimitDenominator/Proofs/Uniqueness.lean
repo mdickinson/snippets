@@ -119,20 +119,21 @@ theorem endpoints_eq_floor_pair :
       st.bracket_det, st.consequences_of_ambiguity hamb,
       args.floor_eq_of_half_integer (w := st.t)]
 
-/-- In the ambiguous case, `v = 1`. -/
-theorem v_eq_one : st.v = 1 := by
-  -- `as + bq` and `bu + cs` are both `n`. With `s = u = 1` and `b = c` that reads
-  -- `a + bq = 2b`, so `(1 - q)b = a - b` is positive, so `q < 1`, and `q = 0`.
-  have : 0 < (1 - st.q) * st.b := by grind only [st.b_lt_a, st.as_add_bq_eq_n,
-    st.bu_add_cs_eq_n, st.bu_eq_cs hamb, st.s_eq_one_and_u_eq_one hamb]
-  exact st.v_eq_one_of_q_eq_zero
-    (by grind only [st.q_nonneg, st.b_nonneg, Int.mul_pos_iff.mp this])
+/--
+In the ambiguous case, `q = 0`.
 
-/-- In the ambiguous case `⌊m/n⌋` is returned. -/
-theorem rv_eq_floor : st.rv = args.floor := by
-  have : st.rv = st.rs :=
-    st.rv_eq_ite_bu_le_cs ▸ ite_eq_left (Int.le_of_eq (st.bu_eq_cs hamb))
-  grind only [st.v_eq_one hamb, st.endpoints_eq_floor_pair hamb]
+Proof sketch: we have `as + bq = n = 2bu`, which rearranges to give
+`(a - b)s = b(2u - q - s)`. But `a - b` and `s` are positive and `b` is nonnegative, so
+`2u - q - s` is also positive. With `s = u = 1` and `q` nonnegative, that leaves `q = 0`
+as the only possibility.
+-/
+theorem q_eq_zero : st.q = 0 := by
+  have : (st.a - st.b) * st.s = st.b * (2 * st.u - st.q - st.s) := by grind only [
+    st.bu_add_cs_eq_n, st.bu_eq_cs hamb, st.a_eq_pq_cross, st.b_eq_rs_cross, st.det]
+  have : 0 < st.b * (2 * st.u - st.q - st.s) :=
+    this ▸ Int.mul_pos (Int.sub_pos.mpr st.b_lt_a) st.s_pos
+  grind only [
+    Int.mul_pos_iff.mp this, st.b_nonneg, st.s_eq_one_and_u_eq_one hamb, st.q_nonneg]
 
 end PostLoopState
 
@@ -140,8 +141,10 @@ end PostLoopState
 
 namespace Arguments
 
+variable {args : Arguments}
+
 /-- Outside the ambiguous case, any two best approximations are equal. -/
-public theorem non_ambiguous_best (args : Arguments) (not_amb : ¬ args.ambiguous)
+public theorem non_ambiguous_best (not_amb : ¬ args.ambiguous)
     {ef gh : Candidate args} (hef : ef.best) (hgh : gh.best) : ef = gh := by
   let st := args.postLoopState
   cases st.eq_rs_or_eq_tu_of_best hef <;> cases st.eq_rs_or_eq_tu_of_best hgh
@@ -150,15 +153,30 @@ public theorem non_ambiguous_best (args : Arguments) (not_amb : ¬ args.ambiguou
 /--
 In the ambiguous case, the best approximations are exactly `⌊m/n⌋` and `⌊m/n⌋ + 1`.
 -/
-public theorem ambiguous_best (args : Arguments) (hamb : args.ambiguous)
+public theorem ambiguous_best (hamb : args.ambiguous)
     {yz : Candidate args} : yz.best ↔ yz = args.floor ∨ yz = args.floorAddOne := by
   let st := args.postLoopState
   grind only [st.rs_best_and_tu_best hamb, st.endpoints_eq_floor_pair hamb,
     st.eq_rs_or_eq_tu_of_best]
 
-/-- In the ambiguous case, `⌊m/n⌋` is returned. -/
-public theorem limitDenominator_ambiguous_case (args : Arguments)
-    (hamb : args.ambiguous) : args.limitDenominator = args.floor :=
-  args.postLoopState.rv_eq_floor hamb
+/-- If `q = 0` in the post-loop state then `v = 1`. -/
+theorem v_eq_one_of_q_eq_zero :
+    args.postLoopState.q = 0 → args.postLoopState.v = 1 := by
+  apply LoopState.runLoop.induct_unfolding (
+    fun st pst => (st.q = 0 → st.v = 1) → (pst.q = 0 → pst.v = 1))
+  · intro st; grind only [st.s_pos, LoopState.nextLoopState]
+  · grind only
+  · grind only [initialLoopState]
+
+/-- In the ambiguous case `⌊m/n⌋` is returned. -/
+public theorem limitDenominator_ambiguous_case
+    (hamb : args.ambiguous) : args.limitDenominator = args.floor := by
+  let st := args.postLoopState
+  grind only [
+    limitDenominator,
+    st.endpoints_eq_floor_pair hamb,
+    st.rv_eq_ite_bu_le_cs ▸ ite_eq_left (Int.le_of_eq (st.bu_eq_cs hamb)),
+    args.v_eq_one_of_q_eq_zero (st.q_eq_zero hamb)
+  ]
 
 end Arguments

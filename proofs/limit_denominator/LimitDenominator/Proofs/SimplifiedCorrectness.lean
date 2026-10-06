@@ -106,7 +106,7 @@ theorem loopBody_of_not_loopCondition {args : Arguments} {st : LoopState args}
 /-- The `do` block's loop, run to exhaustion, is `runLoop`. -/
 theorem forIn_eq_runLoop {args : Arguments} (st : LoopState args) :
     forIn Lean.Loop.mk (loopTuple st) (loopBody args.limit) =
-      pure (loopTuple st.runLoop) := by
+      pure (loopTuple st.runLoop.toLoopState) := by
   fun_induction LoopState.runLoop st with
   | case1 st hst ih => rw [forIn_loop_peel _ (loopBody_of_loopCondition hst), ih]
   | case2 st hst => exact forIn_loop_done _ (loopBody_of_not_loopCondition hst)
@@ -126,7 +126,7 @@ theorem limitDenominatorSimplified_eq (args : Arguments) :
     limitDenominatorSimplified args.m args.n args.limit =
       pure (args.limitDenominator.num, args.limitDenominator.den) := by
   rw [limitDenominatorSimplified_fold args.n_pos (by have := args.one_le_limit; omega)]
-  show forIn Lean.Loop.mk (loopTuple (LoopState.initialLoopState args)) _ >>= _ = _
+  show forIn Lean.Loop.mk (loopTuple args.initialLoopState) _ >>= _ = _
   rw [forIn_eq_runLoop, pure_bind]
   exact afterLoop_eq args.postLoopState
 

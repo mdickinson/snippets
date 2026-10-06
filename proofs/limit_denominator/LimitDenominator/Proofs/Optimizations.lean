@@ -78,10 +78,9 @@ Proved by running the loop on from `st`: were `b` zero it would stay zero to exi
 -/
 public theorem b_pos {args : Arguments} (st : LoopState args)
     (hgcd : Int.gcd args.m args.n = 1) (hlim : args.limit < args.n) : 0 < st.b := by
-  let pst : PostLoopState args := ⟨st.runLoop, st.runLoop_loopCondition_false⟩
-  refine Int.lt_iff_le_and_ne.mpr ⟨st.b_nonneg, ?_⟩; intro
-  grind only [pst.s_le_limit,
-    pst.mn_eq_rs_of_b_eq_zero hgcd (by grind only [st.runLoop_b_eq_zero])]
+  refine Int.lt_iff_le_and_ne.mpr ⟨st.b_nonneg, fun hb => ?_⟩
+  grind only [st.runLoop.s_le_limit,
+    st.runLoop.mn_eq_rs_of_b_eq_zero hgcd (st.runLoop_b_eq_zero hb.symm)]
 
 /--
 For a reduced target whose denominator exceeds the limit, the loop condition's `0 < b`

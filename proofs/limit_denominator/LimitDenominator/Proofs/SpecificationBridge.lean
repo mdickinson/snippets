@@ -19,8 +19,9 @@ mention the specification; this is where the two meet.
 -/
 public theorem best_iff_isBestApproximation {args : Arguments} (ef : Candidate args) :
     ef.best ↔ isBestApproximation args.m args.n args.limit ef.num ef.den :=
-  ⟨fun hbest => ⟨ef.den_pos, ef.den_limited, fun y z h => hbest ⟨y, z, h.1, h.2⟩⟩,
-    fun ⟨_, _, hall⟩ gh => hall gh.num gh.den ⟨gh.den_pos, gh.den_limited⟩⟩
+  ⟨fun hbest =>
+      ⟨ef.den_pos, ef.den_le_limit, fun y z h => hbest ⟨y, z, h.1, h.2⟩⟩,
+    fun ⟨_, _, hall⟩ gh => hall gh.num gh.den ⟨gh.den_pos, gh.den_le_limit⟩⟩
 
 /-- `Arguments.ambiguous` is the specification's `isAmbiguous`, formula for formula. -/
 public theorem ambiguous_iff_isAmbiguous (args : Arguments) :

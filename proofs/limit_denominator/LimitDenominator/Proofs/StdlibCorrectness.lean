@@ -124,7 +124,7 @@ where `b` is positive, which is what brings the target's hypotheses in here.
 theorem forIn_eq_runLoop_stdlib {args : Arguments} (hgcd : Int.gcd args.m args.n = 1)
     (hlim : args.limit < args.n) (st : LoopState args) :
     forIn Lean.Loop.mk (stdlibTuple st) (stdlibLoopBody args.limit) =
-      pure (stdlibTuple st.runLoop) := by
+      pure (stdlibTuple st.runLoop.toLoopState) := by
   fun_induction LoopState.runLoop st with
   | case1 st hst ih => rw [forIn_loop_peel _ (stdlibLoopBody_of_loopCondition hst), ih]
   | case2 st hst =>
@@ -152,7 +152,7 @@ theorem limitDenominatorStdlib_eq (args : Arguments)
       ite_eq_right (by omega), ite_eq_left hfast]
   rw [limitDenominatorStdlib_fold hl hlim,
     forIn_loop_peel _ (stdlibLoopBody_initial args.n_pos hl)]
-  show forIn Lean.Loop.mk (stdlibTuple (LoopState.initialLoopState args)) _ >>= _ = _
+  show forIn Lean.Loop.mk (stdlibTuple args.initialLoopState) _ >>= _ = _
   rw [forIn_eq_runLoop_stdlib hgcd hlim, pure_bind]
   exact stdlibAfterLoop_eq args.postLoopState
 

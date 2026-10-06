@@ -46,7 +46,7 @@ theorem lev_rs_or_tu_lev (yz : Candidate args) :
   have lc : 0 < (1 - (st.t * yz.den - yz.num * st.u) * st.v) * st.s
       + (1 - (yz.num * st.s - st.r * yz.den) * st.v) * st.u := by
     grind only [
-      Int.eq_mul_pos yz.den_pos st.bracket_det, st.limit_lt_s_add_u, yz.den_limited]
+      Int.eq_mul_pos yz.den_pos st.bracket_det, st.limit_lt_s_add_u, yz.den_le_limit]
   cases Int.pos_or_pos_of_lincomb_pos st.s_pos st.u_pos lc <;> grind only [lev]
 
 /-! ## Distances -/

@@ -19,7 +19,7 @@ public structure Candidate (args : Arguments) where
   /-- Denominator of the candidate fraction. -/
   den : Int
   den_pos : 0 < den
-  den_limited : den ≤ args.limit
+  den_le_limit : den ≤ args.limit
 
 namespace Candidate
 
