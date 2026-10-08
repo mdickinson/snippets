@@ -191,20 +191,18 @@ public theorem bu_add_cs_eq_n : st.b * st.u + st.c * st.s = args.n := by
   grind only [st.b_eq_rs_cross, st.c_eq_tu_cross, st.bracket_det]
 
 /--
-If `0 < b`, then the loop exit condition means that we stopped short of a full Euclidean
-algorithm step, so `k < a/b`. Proof: we have `q + ks ≤ limit` from the definition of
-`k`, and `limit < q + ⌊a/b⌋s` from the loop exit condition, so `k < ⌊a/b⌋`.
+`c = a - kb` falls short of a full Euclidean reduction of `a` by `b`, so `b ≤ c`.
 
-In both this case and the `b = 0` case we have `(k + 1)b ≤ a`.
+Proof: if `0 < b`, the loop exit condition gives `limit < q + ⌊a/b⌋s`, while
+`q + ks = u ≤ limit`, so `k < ⌊a/b⌋`, that is `(k + 1)b ≤ a`. If `b = 0` then `c = a`,
+and `b < a`.
 -/
-theorem k_upper : (st.k + 1) * st.b ≤ st.a := by
-  rcases Int.lt_or_eq_of_le st.b_nonneg with hlt | heq
-  · exact (Int.le_ediv_iff_mul_le hlt).mp (Int.lt_of_lt_mul_pos st.s_pos
-      (by grind only [k, u, LoopState.loopCondition, st.exited, st.u_le_limit]))
-  · grind only [st.b_lt_a, st.b_nonneg]
-
-/-- Since `(k + 1)b ≤ a`, we have `b ≤ c`. -/
-public theorem b_le_c : st.b ≤ st.c := by grind only [c, st.k_upper]
+public theorem b_le_c : st.b ≤ st.c := by
+  rcases Int.lt_or_eq_of_le st.b_nonneg with hb | hb
+  · have : st.k < st.a / st.b := Int.lt_of_lt_mul_pos st.s_pos
+      (by grind only [u, LoopState.loopCondition, st.exited, st.u_le_limit])
+    grind only [c, (Int.le_ediv_iff_mul_le hb).mp this]
+  · grind only [c, st.b_lt_a]
 
 /-- `c` is positive: follows from `0 ≤ b ≤ c`, `b < a` and the definition of `c`. -/
 public theorem c_pos : 0 < st.c := by grind only [st.b_nonneg, c, st.b_le_c, st.b_lt_a]

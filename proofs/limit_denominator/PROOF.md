@@ -304,11 +304,11 @@ and both are reduced, `bracket_det` being a Bézout identity for each of them
 identity into a gcd of one). That determinant is the proof's whole route to
 coprimality.
 
-For `b ≤ c` and `0 < c`, first `(k + 1)·b ≤ a` (`k_upper`), by splitting on how the loop
-exited. If `b = 0` it is `0 ≤ a`, from `0 ≤ b < a`. Otherwise `0 < b` and
-`l < q + ⌊a/b⌋·s`, so `⌊(l − q)/s⌋ < ⌊a/b⌋`, that is `k + 1 ≤ ⌊a/b⌋`; then
-`(k+1)·b ≤ ⌊a/b⌋·b ≤ a`. So `b ≤ a − k·b = c` (`b_le_c`), and `0 < c` (`c_pos`): if
-`0 < b` then `c ≥ b`, and if `b = 0` then `c = a > b = 0`.
+For `b ≤ c` and `0 < c`, first `(k + 1)·b ≤ a`, by splitting on how the loop exited.
+If `b = 0` it is `0 ≤ a`, from `0 ≤ b < a`. Otherwise `0 < b` and `l < q + ⌊a/b⌋·s`,
+so `⌊(l − q)/s⌋ < ⌊a/b⌋`, that is `k + 1 ≤ ⌊a/b⌋`; then `(k+1)·b ≤ ⌊a/b⌋·b ≤ a`. So
+`b ≤ a − k·b = c` (`b_le_c`), and `0 < c` (`c_pos`): if `0 < b` then `c ≥ b`, and if
+`b = 0` then `c = a > b = 0`.
 
 Finally, `0 ≤ b = (m·s − r·n)·v` and `0 < c = (t·n − m·u)·v` say precisely that the
 target lies between the two candidates: `r/s ≤ m/n < t/u` when `v = 1`, and
