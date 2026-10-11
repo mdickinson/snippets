@@ -33,13 +33,6 @@ info: 'isCorrectLimitDenominator_simplified' depends on axioms:
 #print axioms isCorrectLimitDenominator_simplified
 
 /--
-info: 'limitDenominatorSimplified_raises_of_denominator_nonpos' depends on axioms:
-  [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs (whitespace := lax) in
-#print axioms limitDenominatorSimplified_raises_of_denominator_nonpos
-
-/--
 info: 'limitDenominatorSimplified_total' depends on axioms:
   [propext, Classical.choice, Quot.sound]
 -/

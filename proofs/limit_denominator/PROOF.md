@@ -6,7 +6,10 @@ It follows the informal proof in [python/cpython#95723][issue], which is the ori
 source and is worth reading for its own account of the same argument.
 
 [README.md](README.md) covers the code being proved correct, how to check the proof, and
-what a reader has to trust. This file assumes you have read the algorithm listing there.
+what a reader has to trust. This file assumes you have read the simplified listing,
+which
+[`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean)
+quotes beside its translation.
 
 The mathematics lives in
 [`BaseAnalysis.lean`](LimitDenominator/Proofs/BaseAnalysis.lean), the bracket and why
@@ -155,16 +158,6 @@ about the specification builds an `Arguments` from `0 < n` and `1 ≤ l`, the la
 `0 < s ≤ l` or from `l = 1`, translates its hypotheses across the bridge, applies the
 proof's result, and translates back.
 
-The behaviour for `n ≤ 0` is not left unspecified: the listing tests for it and raises a
-`ValueError`, which is what lets `limitDenominatorSimplified_total` state that every
-input either raises one of the two `ValueError`s or returns the best approximation.
-Python cannot produce such a target, because a `Fraction`'s denominator is always
-positive, so that check is a promise this project invents rather than one it records.
-The alternative is worse: every line below assumes `0 < n`, so without the check a
-negative denominator returns a wrong answer with no indication that anything went wrong.
-The three statements about the specification carry `0 < n` as a hypothesis for the same
-reason: each needs an `Arguments` to hand the proof, and there is none without it.
-
 ## The orientation in the state
 
 The informal proof carries a seventh variable `v`, alternating between `1` and `−1`, and
@@ -176,9 +169,8 @@ invariant clause could equally be written as the plain disjunction
 p·s − r·q = 1  or  p·s − r·q = −1
 ```
 
-with no extra variable. Nothing is lost either way, and the listing in
-[README.md](README.md) carries `v` as the issue's does, which leaves the two enforced
-preconditions as the only way the two listings differ.
+with no extra variable. Nothing is lost either way, and the translation carries `v` as
+the listing does.
 
 The Lean state carries it too, and records the informal proof's equation verbatim as the
 invariant `det`,
@@ -485,8 +477,8 @@ composed with `isBestApproximation_limitDenominator`, the bridge's form of
 For the simplified listing
 ([`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean)),
 `loopBody` and `afterLoop` name the two halves of the `do` block, and
-`limitDenominatorSimplified_fold` folds the listing onto them: past the two guards and
-the initial state's two divisions, which `0 < n` makes safe, the rest is `rfl`, since
+`limitDenominatorSimplified_fold` folds the listing onto them: past the guard and the
+initial state's two divisions, which `0 < n` makes safe, the rest is `rfl`, since
 they are what the `do` block desugars to. Two lemmas reduce the body: with `b = 0`
 Python's `and` short-circuits and the loop exits (`loopBody_of_zero`), and with `0 < b`
 the divisions succeed and the exit test is the Python condition (`loopBody_of_pos`).

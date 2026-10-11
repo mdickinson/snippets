@@ -49,8 +49,8 @@ theorem limitDenominatorSimplified_fold {m n l : Int} (hn : 0 < n) (hl : 0 < l) 
     limitDenominatorSimplified m n l =
       forIn Lean.Loop.mk (n, m % n, 1, 0, m / n, 1, 1) (loopBody l)
         >>= afterLoop n l := by
-  rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_right (by omega),
-    pyMod_ok_bind hn, pyFloordiv_ok_bind hn]
+  rw [limitDenominatorSimplified, ite_eq_right (by omega), pyMod_ok_bind hn,
+    pyFloordiv_ok_bind hn]
   rfl
 
 /-! ## Reducing the loop body -/
@@ -136,7 +136,7 @@ raises the same `ValueError` as CPython, and for a target with positive denomina
 the best approximation.
 -/
 public theorem isCorrectLimitDenominator_simplified :
-    isCorrectLimitDenominator (fun _ n => 0 < n) limitDenominatorSimplified := by
+    isCorrectLimitDenominator isValidSimplified limitDenominatorSimplified := by
   refine ⟨?_, ?_⟩
   · -- A nonpositive limit: the first guard raises, short-circuiting the `do` block.
     intro m n l hl
@@ -147,16 +147,6 @@ public theorem isCorrectLimitDenominator_simplified :
     let args : Arguments := ⟨m, n, l, hn, by omega⟩
     exact ⟨_, _, limitDenominatorSimplified_eq args,
       args.isBestApproximation_limitDenominator⟩
-
-/--
-A target denominator that is not positive raises a `ValueError`. The denominator limit is
-checked first, so this needs the limit to have passed its own check.
--/
-public theorem limitDenominatorSimplified_raises_of_denominator_nonpos {m n l : Int}
-    (hn : n ≤ 0) (hl : 0 < l) :
-    raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive") := by
-  rw [limitDenominatorSimplified, ite_eq_right (by omega), ite_eq_left hn]
-  rfl
 
 /--
 In the ambiguous case the two best approximations are `⌊m/n⌋` and `⌊m/n⌋ + 1`, and
@@ -172,21 +162,18 @@ public theorem limitDenominatorSimplified_returns_floor_of_ambiguous {m n l : In
   rfl
 
 /--
-Every input is accounted for: the function raises one of its two `ValueError`s or returns the
-best approximation, and nothing else can happen. In particular no input receives a wrong answer.
+Every input with a positive target denominator is accounted for: the function raises its
+`ValueError` or returns the best approximation, and nothing else can happen.
 
-Which of the three cases applies is settled by `isCorrectLimitDenominator_simplified` and
-`limitDenominatorSimplified_raises_of_denominator_nonpos`; this theorem adds only that the cases
-are exhaustive.
+Which of the two cases applies is settled by `isCorrectLimitDenominator_simplified`;
+this theorem adds only that the cases are exhaustive.
 -/
-public theorem limitDenominatorSimplified_total (m n l : Int) :
+public theorem limitDenominatorSimplified_total (m : Int) {n : Int} (l : Int)
+    (hn : 0 < n) :
     raises (limitDenominatorSimplified m n l) (.valueError "max_denominator should be at least 1")
-    ∨ raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive")
     ∨ ∃ r s, returns (limitDenominatorSimplified m n l) (r, s)
         ∧ isBestApproximation m n l r s := by
   obtain ⟨hraises, hreturns⟩ := isCorrectLimitDenominator_simplified
   rcases (by omega : l ≤ 0 ∨ 0 < l) with hl | hl
   · exact .inl (hraises hl)
-  rcases (by omega : n ≤ 0 ∨ 0 < n) with hn | hn
-  · exact .inr (.inl (limitDenominatorSimplified_raises_of_denominator_nonpos hn hl))
-  · exact .inr (.inr (hreturns hn hl))
+  · exact .inr (hreturns hn hl)

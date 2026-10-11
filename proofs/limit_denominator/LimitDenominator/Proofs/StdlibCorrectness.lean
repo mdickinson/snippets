@@ -163,7 +163,7 @@ denominator — which is every target a `Fraction` can hold — it returns the b
 approximation.
 -/
 public theorem isCorrectLimitDenominator_stdlib :
-    isCorrectLimitDenominator (fun m n => 0 < n ∧ Int.gcd m n = 1) limitDenominatorStdlib := by
+    isCorrectLimitDenominator isValidStdlib limitDenominatorStdlib := by
   refine ⟨?_, ?_⟩
   · -- A nonpositive limit: the first guard raises, short-circuiting the `do` block.
     intro m n l hl

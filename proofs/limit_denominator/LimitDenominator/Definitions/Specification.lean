@@ -52,6 +52,15 @@ equidistant from the target at the same denominator.
 -/
 def isAmbiguous (m n l : Int) : Prop := l = 1 ∧ ∃ w : Int, 2 * m = (2 * w + 1) * n
 
+/-- A target `m / n` valid for `limitDenominatorSimplified`: `n` is positive. -/
+def isValidSimplified (_m n : Int) : Prop := 0 < n
+
+/--
+A target `m / n` valid for `limitDenominatorStdlib`: `n` is positive and `m / n` is
+reduced.
+-/
+def isValidStdlib (m n : Int) : Prop := 0 < n ∧ Int.gcd m n = 1
+
 /--
 Statement that a function has the correct behaviour on `valid` targets: raises a
 `valueError` with the expected message when the denominator limit is not positive, and

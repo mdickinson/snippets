@@ -28,17 +28,6 @@ in its tuple, so this pins representatives: `(7, 5, 3)` returns the mixed candid
 #guard assertRaisesValueError "max_denominator should be at least 1"
   (limitDenominatorSimplified 22 7 (-1))
 
-#guard assertRaisesValueError "denominator should be positive"
-  (limitDenominatorSimplified 22 0 5)
-#guard assertRaisesValueError "denominator should be positive"
-  (limitDenominatorSimplified 22 (-7) 5)
-#guard assertRaisesValueError "denominator should be positive"
-  (limitDenominatorSimplified (-22) (-7) 5)
-
-/- The denominator limit is checked before the target, so its message wins when both are bad. -/
-#guard assertRaisesValueError "max_denominator should be at least 1"
-  (limitDenominatorSimplified 22 (-7) 0)
-
 /-! ## The specification, evaluated -/
 
 #guard specificationCheckGrid.all fun (m, n, l) =>

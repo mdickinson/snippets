@@ -2,246 +2,119 @@
 
 This Lean project provides a formal machine-verifiable proof of correctness of the
 algorithm underlying Python's `Fraction.limit_denominator`. It starts with a version of
-the algorithm written in Python, translates that into Lean, and then proves the translated
-version correct.
+the algorithm written in Python, translates that into Lean, and then proves the
+translated version correct.
 
 ## Overview
 
-[`Fraction.limit_denominator`][limit-denominator] finds the closest fraction to a given
-one with a bounded denominator:
+The [`Fraction.limit_denominator`][limit-denominator] method finds a best-possible
+approximation to a target fraction, under the constraint that the approximation must be
+a fraction whose denominator is no larger than a given bound:
 
 ```pycon
 >>> from fractions import Fraction
+>>> Fraction('3.141592653589793')
+Fraction(3141592653589793, 1000000000000000)
 >>> Fraction('3.141592653589793').limit_denominator(10)
 Fraction(22, 7)
 >>> Fraction('3.141592653589793').limit_denominator(100)
 Fraction(311, 99)
 ```
 
-Why it works is not obvious. The comments in the CPython source appeal to the theory of
-continued fractions — convergents and semiconvergents, best upper and lower
-approximations — and the standard references either state the relevant facts without proof
-or develop a chapter of theory to reach them. In 2022 the author of that code recorded a
-targeted proof, which needs none of that machinery, in
-[python/cpython#95723][issue]. This project formalises that proof.
+The [implementation][cpython-source] of the method is short — around 20 lines of Python
+— but its correctness is not immediately obvious. The comments in the source appeal to
+the theory of continued fractions. References that are readily available either
+state the relevant facts without proof or develop a chapter of theory to reach them.
+However, it is possible to give a short, targeted proof of correctness from first
+principles that does not require any explicit mention of continued fractions. An
+informal proof along these lines is recorded in [python/cpython#95723][issue]. This
+project provides a formal, machine-checkable proof.
 
-The starting point is the three-argument integer function from the issue, which strips the
-`Fraction` wrapping and the fast path away from the standard library version and leaves the
-arithmetic:
+## What is proved
 
-```python
-def limit_denominator(m: int, n: int, l: int) -> tuple[int, int]:
-    """
-    Given a fraction m/n and a positive integer l, return integers r and s such
-    that r/s is the closest fraction to m/n with denominator bounded by l.
+The project defines two functions in Lean: `limitDenominatorStdlib` and
+`limitDenominatorSimplified`. The first is an almost line-for-line translation of the
+`Fraction.limit_denominator` Python source into the Lean programming language. The
+second is a similarly faithful line-by-line translation of the simplified listing in
+the issue. Those two translations can be found at
+[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean)
+and
+[`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean),
+respectively.
 
-    m/n need not be in lowest terms. Raises ValueError if l is less than one, or
-    if n is not positive.
+Both Lean functions are then proved correct. Saying exactly what correctness means
+needs a definition first. Given a denominator limit $\ell$, say that a fraction $r / s$
+is a **best** approximation to a target fraction $m / n$ if:
 
-    On return, 0 < s <= l and gcd(r, s) = 1.
-    """
-    if l < 1:
-        raise ValueError("max_denominator should be at least 1")
-    if n <= 0:
-        raise ValueError("denominator should be positive")
+- $0 < s \le \ell$
+- for any fraction $y / z$ with $0 < z \le \ell$, reduced or not, either
+  - $y / z$ is further away from $m / n$ than $r / s$ is, or
+  - $y / z$ and $r / s$ are equidistant from $m / n$, and $s \le z$
 
-    a, b, p, q, r, s, v = n, m % n, 1, 0, m // n, 1, 1
-    while 0 < b and q + a // b * s <= l:
-        a, b, p, q, r, s, v = b, a % b, r, s, p + a // b * r, q + a // b * s, -v
-    k = (l - q) // s
-    t, u = p + k * r, q + k * s
-    return (r, s) if 2 * b * u <= n else (t, u)
-```
+An implementation of the algorithm is then **correct** if:
 
-This is the issue's listing with one change, the two guards. The issue states a positive
-`l` and a positive `n` as preconditions in its docstring and tests neither; here both
-are enforced, which is what lets the proof say that *every* input either gets a correct
-answer or an exception. Without the `n` check, a negative `n` returns a
-plausible-looking wrong answer: `m = 22, n = -7, l = 5` gives `-4/1`, which is out by
-`6/7`, where the best approximation to `22/-7` with denominator at most `5` is `-16/5`,
-out by `2/35`. The message for the `n` guard is this project's own; the `l` guard's is
-CPython's, verbatim.
+- for a nonpositive limit, a `ValueError` exception is raised with CPython's message
+- for a positive limit and a _valid_ target fraction, the returned approximation
+  fraction is a best approximation
 
-The relationship between this listing and the body of `Fraction.limit_denominator` in
-`Lib/fractions.py` is close but not line-for-line: the standard library version operates
-on an already-reduced fraction, has a fast path for fractions whose denominator is already
-within the limit, uses `while True` with a `break` from the middle rather than a test at
-the top, and names its variables `p0, q0, p1, q1` rather than `p, q, r, s`. The issue
-discusses those differences. Both listings are translated into Lean, both are proved
-correct against one shared specification, and the two are proved to agree — see
-[Scope](#scope) for where the proof stops.
+The meaning of "valid" is different for the two listings. The project does not define
+a `Fraction` type in Lean, so both translations take a pair of integers (numerator and
+denominator) in place of the target `Fraction`. For `limitDenominatorStdlib`, a valid
+target has relatively prime numerator and denominator, and a positive denominator. For
+`limitDenominatorSimplified` coprimality is not needed for correctness, so a valid
+target is any with a positive denominator. The two conditions are `isValidStdlib` and
+`isValidSimplified` in
+[`Specification.lean`](LimitDenominator/Definitions/Specification.lean), alongside the
+definitions of best approximation and of correctness.
+
+The two correctness theorems are `isCorrectLimitDenominator_stdlib` and
+`isCorrectLimitDenominator_simplified`, and those theorems and their proofs can be found
+in [`StdlibCorrectness`](LimitDenominator/Proofs/StdlibCorrectness.lean) and
+[`SimplifiedCorrectness`](LimitDenominator/Proofs/SimplifiedCorrectness.lean)
+respectively.
+
+What is proved correct is the arithmetic. The `Fraction` wrapping that the shipped
+method puts around it is not: the default value of `max_denominator`, the
+`Fraction(self)` that the fast path returns, and `Fraction._from_coprime_ints`, which
+the translation replaces with the numerator/denominator pair itself.
+
+## What's in the project
+
+The main goal of the project is to provide the translations of the two versions of the
+algorithm into Lean and correctness proofs for those two translations. The project
+contains some other bits and pieces, described below.
+
+### Additional theorems
+
+This project proves some additional facts beyond the above correctness, namely:
+
+- that except in the case when $\ell = 1$ and $m / n$ is halfway between two consecutive
+  integers (the **ambiguous case**), there is a unique best approximation to $m / n$
+  with denominator bounded by $\ell$
+- that in the ambiguous case, there are _two_ best approximations to choose from, namely
+  the two integers neighboring $m/n$
+- that in the ambiguous case, both versions of the algorithm choose to return the floor
+  of $m / n$
+- that the returned fraction is always in lowest terms
+- that the two implementations agree on every target valid for the standard library
+  version
+
+### Prose proof
 
 [PROOF.md](PROOF.md) is the prose companion to the Lean proof: the whole argument in
 ordinary mathematical language, with pointers into the source.
+
+### Lean executable
 
 The Lean translation can be run as well as proved, and the project builds a small
 command-line executable around the simplified listing — see
 [Running the algorithm](#running-the-algorithm).
 
-## What is proved
+### Tests
 
-The specification is in
-[`Specification.lean`](LimitDenominator/Definitions/Specification.lean). It says that a
-returned `r / s` has `0 < s ≤ l`, and that against every candidate `y / z` with `0 < z ≤
-l` it is the better approximation: strictly closer to the target, or equally close with
-the smaller denominator:
-
-```lean
-def isBetterApproximation (m n r s y z : Int) : Prop :=
-  scaledDistance m n r s * z < scaledDistance m n y z * s
-  ∨ scaledDistance m n r s * z = scaledDistance m n y z * s ∧ s ≤ z
-
-def isBestApproximation (m n l r s : Int) : Prop :=
-  0 < s ∧ s ≤ l ∧ ∀ y z : Int, 0 < z ∧ z ≤ l → isBetterApproximation m n r s y z
-```
-
-`scaledDistance m n r s` is `|r * n - m * s|`, the distance `|r/s - m/n|` scaled by `n *
-s`, so each comparison is between distances scaled by `n * s * z`. Closeness and the
-tie-break are both promises CPython makes — the first in its documentation, the second
-in the algorithm notes in its source. Candidates are not required to be reduced,
-so the result has to beat reducible competitors too.
-
-CPython makes two further promises, and both are deliberately absent from the
-specification.
-
-One is that the result *is* reduced. That follows from the tie-break rather than
-having to be asked for: a reducible pair is beaten by its own reduction, which is the
-same value at the same distance but with a smaller denominator. That is
-[`isBestApproximation.gcd_eq_one`](LimitDenominator/Proofs/SpecificationBridge.lean), and it is
-why the specification pins down the representation and not merely the value.
-
-The other is which answer comes back when the specification does not decide. It decides
-in all but one case: when the limit is `1` and the target is midway between two
-integers, the floor and the floor plus one both satisfy it, being equidistant at the
-same denominator. `isAmbiguous`, beside `isBestApproximation`, names that case, and two
-theorems say that it is the only one, in
-[`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean):
-`isBestApproximation_unique_of_not_ambiguous`, that outside it at most one pair
-satisfies the specification, and `isBestApproximation_iff_of_ambiguous`, that inside it
-exactly those two do. CPython promises the floor there. Which of two equally good
-answers comes back is a fact about an implementation, not about what "best" means, so
-that promise is stated of each listing separately, below, rather than written into the
-specification.
-
-### The simplified listing
-
-The theorem, at the bottom of
-[`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean), is:
-
-```lean
-theorem isCorrectLimitDenominator_simplified :
-    isCorrectLimitDenominator (fun _ n => 0 < n) limitDenominatorSimplified
-```
-
-where `isCorrectLimitDenominator valid f` says that `f` raises `ValueError` with CPython's
-message whenever the denominator limit is not positive, and otherwise returns a best
-approximation. The `valid` parameter carries the precondition: here, that the target's
-denominator is positive.
-
-A target denominator that is not positive is rejected rather than left unspecified:
-
-```lean
-theorem limitDenominatorSimplified_raises_of_denominator_nonpos {m n l : Int}
-    (hn : n ≤ 0) (hl : 0 < l) :
-    raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive")
-```
-
-Python cannot produce such a target — a `Fraction`'s denominator is always positive — so this
-is a promise the project invents rather than one it records, which is why the message is not
-CPython's. It earns its place by making the behaviour exhaustive:
-
-```lean
-theorem limitDenominatorSimplified_total (m n l : Int) :
-    raises (limitDenominatorSimplified m n l) (.valueError "max_denominator should be at least 1")
-    ∨ raises (limitDenominatorSimplified m n l) (.valueError "denominator should be positive")
-    ∨ ∃ r s, returns (limitDenominatorSimplified m n l) (r, s)
-        ∧ isBestApproximation m n l r s
-```
-
-Every division after the two guards is provably safe — `a // b` is protected by the loop
-condition, `(l - q) // s` by `0 < s` — so those two `ValueError`s are the only exceptions
-reachable, and there is no input for which the function quietly returns something that is not
-the best approximation.
-
-One more statement, about the tie-break the specification leaves open:
-
-```lean
-theorem limitDenominatorSimplified_returns_floor_of_ambiguous {m n l : Int}
-    (hn : 0 < n) (hamb : isAmbiguous m n l) :
-    returns (limitDenominatorSimplified m n l) (m / n, 1)
-```
-
-In the ambiguous case, where the floor and the floor plus one are both best, this
-listing returns the floor. That is CPython's promise, as a statement about the listing.
-
-### The standard library listing
-
-The body of `Fraction.limit_denominator` as shipped is translated in
-[`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean) and
-proved against the same specification, at the bottom of
-[`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean):
-
-```lean
-theorem isCorrectLimitDenominator_stdlib :
-    isCorrectLimitDenominator (fun m n => 0 < n ∧ Int.gcd m n = 1) limitDenominatorStdlib
-```
-
-Here `valid` carries two conditions rather than one. Being a method, the shipped code reads
-its target off a `Fraction`, which keeps its denominator positive and its ratio reduced.
-The shipped code tests neither, and neither does the translation.
-
-Those hypotheses are load-bearing, on both of the listing's paths. On the fast path a
-reducible target comes back as it stands:
-`limitDenominatorStdlib 2 4 5` returns `2/4`, which `1/2` beats on the tie-break. On
-the loop path such a target can drive the loop's `b` to zero, and with no `0 < b` in the
-shipped loop condition the next iteration divides by it: `limitDenominatorStdlib 2 4 3`
-raises `ZeroDivisionError`, where the simplified listing returns `1/2`. So the shipped
-listing has no counterpart to `limitDenominatorSimplified_total` above — outside `valid`
-there is nothing to promise. Within it, the argument that the missing test costs nothing
-is in [PROOF.md](PROOF.md#what-the-stdlib-listing-adds).
-
-The tie-break is pinned for this listing too:
-
-```lean
-theorem limitDenominatorStdlib_returns_floor_of_ambiguous {m n l : Int}
-    (hn : 0 < n) (hgcd : Int.gcd m n = 1) (hamb : isAmbiguous m n l) :
-    returns (limitDenominatorStdlib m n l) (m / n, 1)
-```
-
-### The two listings agree
-
-On every target the shipped listing accepts, the two listings are the same function, in
-[`Agreement.lean`](LimitDenominator/Proofs/Agreement.lean):
-
-```lean
-theorem limitDenominatorStdlib_eq_limitDenominatorSimplified {m n l : Int}
-    (hn : 0 < n) (hgcd : Int.gcd m n = 1) :
-    limitDenominatorStdlib m n l = limitDenominatorSimplified m n l
-```
-
-The same `ValueError` for a limit below one, and the same pair otherwise. The proof does
-not look inside either listing: it follows from the theorems above alone. Each listing
-is correct, so outside the ambiguous case `isBestApproximation_unique_of_not_ambiguous`
-makes their answers equal, and inside it the two `returns_floor_of_ambiguous` theorems
-make both the floor. So the specification and the tie-break together determine the
-behaviour on valid targets, and the listings' agreement is a consequence of that rather
-than of anything they share in shape.
-
-## Scope
-
-What is proved is the arithmetic: both listings, as functions from integers to integers or an
-exception. What is not proved is the `Fraction` wrapping that the shipped method puts around
-that arithmetic — the `max_denominator=1000000` default, the `Fraction(self)` the fast path
-returns, and `Fraction._from_coprime_ints`, CPython's *unchecked* constructor, which the
-translation replaces with the numerator/denominator pair itself.
-
-Nor is the invariant a `Fraction` maintains proved here — that is its constructor's job, not
-this algorithm's. A positive denominator and a reduced ratio are hypotheses of
-`isCorrectLimitDenominator_stdlib`, not conclusions. Bundling them into a Lean type instead
-would put a coprimality proof in the definitions layer, the one layer a reader is asked to
-read: `_from_coprime_ints` verifies nothing, so a proof field of that shape could only be
-filled at the return sites by proving there what this project proves elsewhere. A visible
-hypothesis is better than one hidden inside a type.
+The project has a suite of executable tests, run as part of the build, checking the
+translations against CPython's answers and evaluating the specification itself over a
+grid of targets — see [Testing](#testing).
 
 ## Project structure
 
@@ -323,36 +196,39 @@ reader has to think to verify.
 
 ## Running the algorithm
 
-Lean is a programming language as well as a proof assistant, so the translated algorithm can
-be run. [`Main.lean`](Main.lean) wraps the simplified listing in a command-line executable
-that takes a target `m n l` and prints the closest fraction as `r/s`:
+Lean is a programming language as well as a proof assistant, so the translated algorithm
+can be run. [`Main.lean`](Main.lean) wraps the simplified listing in a command-line
+executable that takes a target `m n l` and prints the closest fraction as `r/s`:
 
 ```console
 $ lake exe limit_denominator 3141592653589793 1000000000000000 100
 311/99
 ```
 
-Bad input gets the algorithm's own `ValueError`, on stderr and with a nonzero exit status:
+A limit below one gets the algorithm's own `ValueError`, on stderr and with a nonzero
+exit status:
 
 ```console
-$ lake exe limit_denominator 22 0 5
-ValueError: denominator should be positive
+$ lake exe limit_denominator 22 7 0
+ValueError: max_denominator should be at least 1
 ```
 
-The executable calls `limitDenominatorSimplified` rather than reimplementing it, so what runs
-is the proved function; parsing the arguments and formatting the answer are all that
-`Main.lean` adds. It also *uses* the proof.
-[`limitDenominatorSimplified_total`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) says
-those two `ValueError`s are the only exceptions reachable, and that is what lets `Main.lean`
-dismiss `ZeroDivisionError` as impossible instead of inventing behaviour for a case that
-cannot arise. Dismissing it is a proof obligation, so `lake build` checks it; the proof is
-then erased from the compiled binary.
+The executable calls `limitDenominatorSimplified` rather than reimplementing it, so what
+runs is the proved function; parsing and checking the arguments and formatting the
+answer are all that `Main.lean` adds. It also *uses* the proof.
+[`limitDenominatorSimplified_total`](LimitDenominator/Proofs/SimplifiedCorrectness.lean)
+says that on a positive target denominator the limit's `ValueError` is the only
+exception reachable, and that is what lets `Main.lean` dismiss `ZeroDivisionError` as
+impossible instead of inventing behaviour for a case that cannot arise. Dismissing it is
+a proof obligation, so `lake build` checks it; the proof is then erased from the
+compiled binary.
 
 ## What do I need to trust?
 
-The goal is to convince a reader that the Python listing in the overview is correct. A
-successful `lake build` says every proof Lean checked is valid. Joining those two things
-up requires confidence in:
+The goal is to convince a reader that both the simplified Python listing in the issue
+and the method implementation in Python's source are correct. A successful `lake build`
+says every proof Lean checked is valid. Joining those two things up requires confidence
+in:
 
 - **The faithfulness of the Python-to-Lean translation.** If the Lean function runs a
   different algorithm from the Python listing, its correctness says little about the Python.
@@ -361,7 +237,7 @@ up requires confidence in:
     [`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean)
     and
     [`LimitDenominatorStdlib.lean`](LimitDenominator/Definitions/LimitDenominatorStdlib.lean),
-    the latter of which quotes the shipped Python beside the Lean;
+    each of which quotes the Python it translates beside the Lean;
   - the Python primitives — the Lean versions of `//` and `%` — in
     [`PythonPrimitives.lean`](LimitDenominator/Definitions/PythonPrimitives.lean), and
     Python's `and`, which is core's `andM`, under
@@ -370,10 +246,10 @@ up requires confidence in:
     [`Exceptions.lean`](LimitDenominator/Definitions/Exceptions.lean).
 - **The statements of correctness** in
   [`Specification.lean`](LimitDenominator/Definitions/Specification.lean), in particular
-  `scaledDistance`, `isBetterApproximation`, `isBestApproximation`, `isAmbiguous` and
-  `isCorrectLimitDenominator`. A specification that is too weak would be easy to satisfy
-  and would prove nothing interesting. Three checks on that are proved rather than
-  argued, in
+  `scaledDistance`, `isBetterApproximation`, `isBestApproximation`, `isAmbiguous`,
+  `isValidSimplified`, `isValidStdlib` and `isCorrectLimitDenominator`. A specification
+  that is too weak would be easy to satisfy and would prove nothing interesting. Three
+  checks on that are proved rather than argued, in
   [`SpecificationBridge.lean`](LimitDenominator/Proofs/SpecificationBridge.lean):
   `isBestApproximation_unique_of_not_ambiguous` and
   `isBestApproximation_iff_of_ambiguous` together say exactly how far the specification
@@ -386,11 +262,10 @@ up requires confidence in:
   `n < 0` Lean's `m / n` is not the floor, so the characterisation would name the wrong
   pair. A target denominator that is not positive is outside what the project promises
   anything about, and the hypothesis says so.
-- **That `lake build` really checks the proofs** of the statements above: the four at
+- **That `lake build` really checks the proofs** of the statements above: the three at
   the bottom of
   [`SimplifiedCorrectness.lean`](LimitDenominator/Proofs/SimplifiedCorrectness.lean) —
   `isCorrectLimitDenominator_simplified`,
-  `limitDenominatorSimplified_raises_of_denominator_nonpos`,
   `limitDenominatorSimplified_returns_floor_of_ambiguous` and
   `limitDenominatorSimplified_total` — the two at the bottom of
   [`StdlibCorrectness.lean`](LimitDenominator/Proofs/StdlibCorrectness.lean) —
@@ -427,8 +302,6 @@ simplified listing:
 def limitDenominatorSimplified (m n l : Int) : PyExcept (Int × Int) := do
   if l < 1 then
     throw <| .valueError "max_denominator should be at least 1"
-  if n ≤ 0 then
-    throw <| .valueError "denominator should be positive"
 
   let mut (a, b, p, q, r, s, v) := (n, ← m % n, 1, 0, ← m // n, 1, 1)
   while ← pure (0 < b : Bool) <&&> (do return q + (← a // b) * s ≤ l) do
@@ -585,10 +458,9 @@ and its integer targets exit the loop immediately with `b = 0`, so the short-cir
 is what stops the division by zero there. The shipped listing's adds the fast path, on its
 boundary and one below.
 
-The exception cases sit beside each listing's other checks rather than in the vectors, which
-hold returned values only: both `ValueError`s for the simplified listing, including which
-message wins when the limit and the target are both bad, and for the shipped listing the
-limit's alone, that being the only exception a valid target can provoke.
+The exception cases sit beside each listing's other checks rather than in the vectors,
+which hold returned values only: the limit's `ValueError`, for each listing, that being
+the only exception a valid target can provoke.
 
 **The specification, evaluated.** Expected-value vectors barely exercise a specification
 whose substance is a `∀`-quantified optimality condition, so
@@ -615,8 +487,9 @@ is what closes the gap `--wfail` leaves, since an outright `axiom` earns no warn
 Each theorem is checked in its own right rather than leaning on the trichotomy to cover
 the other two, so reworking one proof cannot quietly narrow what is checked.
 
-Separately from Lean, the Python listing at the top of this README was
-differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in
+Separately from Lean, the simplified Python listing, as quoted in
+[`LimitDenominatorSimplified.lean`](LimitDenominator/Definitions/LimitDenominatorSimplified.lean),
+was differential-tested against `Fraction.limit_denominator` over 150,696 cases (`n` in
 1…39, `m` in −80…80, `l` in 1…24) with no mismatches, asserting `gcd(r, s) = 1` and
 `0 < s ≤ l` throughout. `limitDenominatorStdlib` was differential-tested against the same
 function in the same way, over 94,207 cases: reduced targets with `1 ≤ n ≤ 40`,
@@ -624,6 +497,7 @@ function in the same way, over 94,207 cases: reduced targets with `1 ≤ n ≤ 4
 identical output throughout.
 
 [batteries]: https://github.com/leanprover-community/batteries
+[cpython-source]: https://github.com/python/cpython/blob/d220409a13b77de7a6c30abe16ea90db01528edc/Lib/fractions.py#L384-L439
 [do-unchained]: https://lean-lang.org/papers/do.pdf
 [elan]: https://github.com/leanprover/elan
 [elan-installation]: https://github.com/leanprover/elan?tab=readme-ov-file#installation
