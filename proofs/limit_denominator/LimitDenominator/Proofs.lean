@@ -16,5 +16,6 @@ import LimitDenominator.Proofs.IntLemmas
 import LimitDenominator.Proofs.WhileLoop
 
 /-!
-Aggregator module for the proofs component — the correctness theorem and its supporting lemmas.
+Aggregator module for the proofs component: the correctness theorems and their supporting
+lemmas.
 -/

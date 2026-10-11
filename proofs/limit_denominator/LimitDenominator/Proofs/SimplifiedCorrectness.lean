@@ -80,7 +80,7 @@ theorem loopBody_of_pos {l a b p q r s v : Int} (hb : 0 < b) :
 
 /-! ## Driving the loop -/
 
-/-- The six numbers a loop state carries, as the tuple the `do` block threads. -/
+/-- The seven numbers a loop state carries, as the tuple the `do` block threads. -/
 def loopTuple {args : Arguments} (st : LoopState args) : LoopTuple :=
   (st.a, st.b, st.p, st.q, st.r, st.s, st.v)
 

@@ -182,8 +182,8 @@ invariant `det`,
 Over the integers that single equation says both that `v` is a unit and that it agrees
 with the determinant. `v_cases` reads `v = 1` or `v = −1` off it, and `v_nonzero`
 follows. After the loop the same equation holds with the mixed candidate `t/u` in place
-of `p/q` (`bracket_det`, § "After the loop"), extending having changed neither the
-determinant nor the orientation.
+of `p/q` (`bracket_det`, § "After the loop"): the step to the mixed candidate changes
+neither the determinant nor the orientation.
 
 What naming `v` buys is that the two sides of the bracket are handled by one statement
 each. The proof's order relation `lev` is orientation-aware: `st.lev ef gh` is the
