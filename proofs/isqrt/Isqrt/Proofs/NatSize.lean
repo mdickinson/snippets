@@ -11,5 +11,5 @@ public def Nat.size (n : Nat) : Nat := if n = 0 then 0 else n.log2 + 1
 public theorem Nat.size_le {n k : Nat} : n.size ≤ k ↔ n < 2 ^ k := by
   unfold Nat.size
   cases n with
-  | zero => rw [if_pos rfl]; grind only [Nat.pow_pos, Nat.zero_le k]
-  | succ => rw [if_neg (by omega)]; grind only [Nat.log2_lt]
+  | zero => rw [ite_eq_left rfl]; grind only [Nat.pow_pos, Nat.zero_le k]
+  | succ => rw [ite_eq_right (by omega)]; grind only [Nat.log2_lt]

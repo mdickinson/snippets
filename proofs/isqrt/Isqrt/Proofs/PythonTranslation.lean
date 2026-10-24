@@ -14,23 +14,23 @@ open scoped Python
 /-- For a positive divisor, `a // b` returns `.ok (a / b)`. -/
 public theorem pyFloordiv_ok_bind {α : Type} {a b : Int} (hb : 0 < b) (f : Int → PyExcept α) :
     (a // b >>= f) = f (a / b) := by
-  rw [pyFloordiv, if_neg (by omega), Int.fdiv_eq_ediv_of_nonneg _ (by omega)]; rfl
+  rw [pyFloordiv, ite_eq_right (by omega), Int.fdiv_eq_ediv_of_nonneg _ (by omega)]; rfl
 
 /-- For a `Nat` shift count `k`, `n << ↑k` returns `.ok (n <<< k)`. -/
 public theorem pyLshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
     (n << ↑k >>= f) = f (n <<< k) := by
-  rw [pyLshift, if_neg (by omega)]; rfl
+  rw [pyLshift, ite_eq_right (by omega)]; rfl
 
 /-- For a `Nat` shift count `k`, `n >> ↑k` returns `.ok (n >>> k)`. -/
 public theorem pyRshift_ok_bind {α : Type} {n : Int} {k : Nat} (f : Int → PyExcept α) :
     (n >> ↑k >>= f) = f (n >>> k) := by
-  rw [pyRshift, if_neg (by omega)]; rfl
+  rw [pyRshift, ite_eq_right (by omega)]; rfl
 
 /-- For a Nat `m`, `bitLength` and `size` match. -/
 public theorem Int.bitLength_natCast (m : Nat) : (m : Int).bitLength = m.size := by
   unfold Int.bitLength; rcases m.eq_zero_or_pos with rfl | hm_pos
-  · rw [if_pos (by rfl), Nat.size_zero]; rfl
-  · rw [if_neg (by omega)]; norm_cast
+  · rw [ite_eq_left (by rfl), Nat.size_zero]; rfl
+  · rw [ite_eq_right (by omega)]; norm_cast
     show m.log2 + 1 = m.size
     apply Nat.le_antisymm
     · apply Nat.succ_le_of_lt; rw [Nat.log2_lt (by omega), ← Nat.size_le]; omega

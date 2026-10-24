@@ -25,7 +25,7 @@ theorem nsqrtRecursive_base {p : SizedProblem} (hp : p.irreducible) :
   unfold nsqrtRecursive
   have hc_neg : p.c ≤ (0 : Int) :=
     Int.natCast_nonpos_iff.mpr (SizedProblem.irreducible_iff.mp hp)
-  rw [if_pos hc_neg]; rfl
+  rw [ite_eq_left hc_neg]; rfl
 
 /--
 One unfolding at `0 < c`, in raw shift form: a successful subcall on the descended value
@@ -38,7 +38,7 @@ theorem nsqrtRecursive_succ_shift
     nsqrtRecursive (descend n k) ↑(c / 2) = .ok a →
     nsqrtRecursive n ↑c = .ok (newtonLift n k a) := by
   intro k h_sub
-  rw [nsqrtRecursive, if_neg (by omega)]
+  rw [nsqrtRecursive, ite_eq_right (by omega)]
   rw [pyFloordiv_ok_bind (by decide)]
   rw [show (2 * (((c : Int) - 1) / 2) + 2) = (2 * k + 2 : Nat) by omega]
   rw [pyRshift_ok_bind]
@@ -89,7 +89,7 @@ raises the same `ValueError` as CPython.
 public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := by
   refine ⟨?_, ?_⟩ <;> intro n hn
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
-    rw [isqrtRecursive, if_pos hn]; rfl
+    rw [isqrtRecursive, ite_eq_left hn]; rfl
   · -- Nonnegative `n`: the recursion runs, never raises, and returns `⌊√n⌋`.
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
@@ -98,7 +98,7 @@ public theorem isCorrectIsqrt_isqrtRecursive : isCorrectIsqrt isqrtRecursive := 
       obtain ⟨a, ha_eq, a_near⟩ := nsqrtRecursive_correctness (.ofPos hpos)
       simp only [SizedProblem.ofPos_n, SizedProblem.c_eq] at ha_eq a_near
       have hred : isqrtRecursive n = .ok (if n < a * a then a - 1 else a) := by
-        rw [isqrtRecursive, if_neg (by omega), if_neg (by omega)]
+        rw [isqrtRecursive, ite_eq_right (by omega), ite_eq_right (by omega)]
         rw [half_dec_bitLength hpos, ha_eq]
         rfl
       exact ⟨_, hred, isIntegerSquareRoot_of_isNearSquareRoot a_near⟩
