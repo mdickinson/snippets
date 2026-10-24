@@ -110,13 +110,13 @@ raises the same `ValueError` as CPython.
 public theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt isqrtIterative := by
   refine ⟨?_, ?_⟩ <;> intro n hn
   · -- Negative `n`: the first guard raises, short-circuiting the `do` block.
-    rw [isqrtIterative, if_pos hn]; rfl
+    rw [isqrtIterative, ite_eq_left hn]; rfl
   · -- Nonnegative `n`: the loop runs, never raises, and returns `⌊√n⌋`.
     rcases (Int.lt_or_eq_of_le hn).symm with rfl | hpos
     · -- n = 0: special-cased to 0.
       exact ⟨0, rfl, by unfold isIntegerSquareRoot; decide⟩
     · -- 0 < n: the loop runs and never raises.
-      rw [isqrtIterative, if_neg (by omega), if_neg (by omega)]
+      rw [isqrtIterative, ite_eq_right (by omega), ite_eq_right (by omega)]
       rw [half_dec_bitLength hpos, Int.bitLength_natCast]
       let p : SizedProblem := .ofPos hpos
       obtain ⟨y, hy_eq, hy_inv⟩ := forIn_reverse_range_invariant p.height (1, 0)
