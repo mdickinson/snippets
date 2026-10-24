@@ -118,7 +118,7 @@ build` will still pass (with warnings) if there are incomplete proofs, marked by
 
 An incomplete proof isn't the only way a theorem can be hollow: an axiom asserted
 outright produces no warning at all. So the build also pins the axioms that each
-correctness theorem and each definition depends on, in
+correctness theorem, and each of the definitions it is about, depends on, in
 [`Isqrt/Tests/Axioms.lean`](Isqrt/Tests/Axioms.lean), which is where those sets are
 recorded and explained. Any change to one fails the build, so this is checked on every
 run rather than being something a reader has to think to verify.
@@ -169,8 +169,8 @@ needs to have confidence in:
   correctness statement. That proof lives right at the bottom of
   [`Isqrt.Proofs.IterativeCorrectness`](Isqrt/Proofs/IterativeCorrectness.lean). The
   statement is simply: `theorem isCorrectIsqrt_isqrtIterative : isCorrectIsqrt
-  isqrtIterative := ...` That it is proved rather than asserted needn't be taken on trust
-  either: its axiom set is [pinned by the build](#building-the-project).
+  isqrtIterative := ...`. That it is proved rather than asserted needn't be taken on
+  trust either: its axiom set is [pinned by the build](#building-the-project).
 - The Lean toolchain itself, including the compiler and standard library. It's
   conceivable (but highly unlikely) that Lean itself has bugs that mean that it reports
   validity of a proof that is actually invalid.

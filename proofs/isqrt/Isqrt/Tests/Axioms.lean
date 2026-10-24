@@ -6,21 +6,25 @@ meta import Isqrt.Proofs.RecursiveCorrectness
 /-!
 The axioms the correctness theorems and the definitions they are about rest on, pinned.
 
-`lake build --wfail` already rejects an incomplete proof, since `sorry` emits a warning. It does
-not reject an axiom introduced deliberately, and nothing else records what the theorems depend
-on, so each one's axiom set is asserted here: `propext`, `Classical.choice` and `Quot.sound` are
-Lean's own three, and any addition fails the build.
+`lake build --wfail` already rejects an incomplete proof, since `sorry` emits a warning.
+It does not reject an axiom introduced deliberately, and nothing else records what the
+theorems depend on, so each one's axiom set is asserted here: `propext`,
+`Classical.choice` and `Quot.sound` are Lean's own three, and any addition fails the
+build. The two theorems are independent of each other, so each is pinned on its own.
 
-Each theorem is checked separately rather than relying on one to cover the other transitively,
-so that a change to one proof cannot quietly narrow what is checked.
+The three definitions are pinned as well, and they are where the sets differ.
+`isqrtIterative` needs `propext` alone — it reaches even that only because `ForIn` is
+derived from `ForIn'`, whose membership invariant is a propositional equality it never
+uses. The two recursive definitions add `Quot.sound` as the price of well-founded
+recursion, which equation compilation pays whether or not the recursion is hard to
+justify. Neither needs `Classical.choice`: the termination proof is `omega`, and a
+tactic's proof term is part of the definition, so a tactic that reasons classically
+would show up here.
 
-The three definitions are pinned as well, and they are where the sets differ. `isqrtIterative`
-needs `propext` alone — it reaches even that only because `ForIn` is derived from `ForIn'`, whose
-membership invariant is a propositional equality it never uses. The two recursive definitions add
-`Quot.sound` as the price of well-founded recursion, which equation compilation pays whether or
-not the recursion is hard to justify. Neither needs `Classical.choice`: the termination proof is
-`omega`, and a tactic's proof term is part of the definition, so a tactic that reasons
-classically would show up here.
+These three sets sit below Lean's full trio, so a toolchain upgrade that changes how
+core derives `ForIn` or compiles well-founded recursion will move them and fail this
+build. That is the intent: re-measure and update the pins deliberately rather than let
+them drift.
 -/
 
 /--
