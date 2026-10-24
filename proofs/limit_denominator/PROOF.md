@@ -208,11 +208,11 @@ of that type is a state together with the proof that it is a valid one:
 | `q_nonneg` | `0 ≤ q` |
 | `s_pos`, `s_le_limit` | `0 < s ≤ l` |
 
-`det` and the four inequalities are the informal proof's. In place of its two identities
-recovering the target, `a·r + b·p = m` and `a·s + b·q = n`, the state carries the two
-residual identities: `a` and `b` are the cross-multiplied distances from the target to
-`p/q` and to `r/s`, each oriented by `v`. Given `det`, either pair follows from the
-other. Expanding `m` and `n` in the residual and collapsing with `det`,
+All six are the informal proof's. The two residual identities say that `a` and `b` are
+the cross-multiplied distances from the target to `p/q` and to `r/s`, each oriented by
+`v`. The two identities recovering the target, `a·r + b·p = m` and `a·s + b·q = n`, are
+not carried but follow: given `det`, either pair follows from the other. Expanding `m`
+and `n` in the residual and collapsing with `det`,
 
 ```
 (p·n − m·q)·v = p(a·s + b·q)v − (a·r + b·p)qv = (p·s − r·q)·v·a = a
@@ -244,13 +244,12 @@ listing to the algorithm"); everything in between is about it alone.
 
 ### The loop's history
 
-The informal proof's tie-breaking argument reasons about the *history* of the loop: "an
-examination of the while loop shows that the only time `q = 0` is before entry to the
-while loop", and hence that the orientation is `+1` there. That is a statement about
-which states are reachable, and it is not implied by the loop invariants — a state with
-`q = 0`, `s = 1`, `p = −1` and `v = −1` satisfies all of them, and an algorithm
-reaching it would return the *wrong* answer on a halfway tie, returning the upper bound
-instead of the lower one.
+The informal proof's tie-breaking argument reasons about the *history* of the loop: `q`
+is nonzero after every iteration of the loop body, so it is zero only when the loop has
+not run, and the orientation is `+1` there. That is a statement about which states are
+reachable, and it is not implied by the loop invariants — a state with `q = 0`, `s = 1`,
+`p = −1` and `v = −1` satisfies all of them, and an algorithm reaching it would return
+the *wrong* answer on a halfway tie, returning the upper bound instead of the lower one.
 
 So it is proved about the run of the loop rather than about an arbitrary
 `PostLoopState`: `v_eq_one_of_q_eq_zero` says that the state the algorithm reaches
@@ -531,7 +530,7 @@ is reduced with `l < n`, and then `b` is never zero (`b_pos`). Were it zero at
 some state, it would stay zero to the exit, since `b = 0` fails the loop condition
 (`runLoop_b_eq_zero`); and at the exit `mn_eq_rs_of_b_eq_zero` gives `n = s ≤ l`, which
 `l < n` denies. So the division is safe, and the loop condition is the shipped test
-alone (`loopCondition_iff`). This is the argument of the issue's § "Optimization".
+alone (`loopCondition_iff`). This is the argument of the issue's § "Optimizations".
 
 ## The two listings agree
 
@@ -547,12 +546,5 @@ and uniqueness makes those pairs equal; inside it each returns the floor, by its
 tie-break theorem. So the agreement is a consequence of the specification determining
 the answer, and of the two listings making the same choice where it does not, and not of
 anything the listings share in shape.
-
-## What the informal proof needs that this one does not
-
-The informal proof establishes `2·b·q < n` at every point of the calculation and uses it
-in its tie-breaking argument, to force `q < u` and hence `q = 0`. The route above
-reaches `q = 0` from `s = u = 1` and `b = c` instead (§ "The ambiguous case"), so
-`2·b·q < n` never appears in the Lean proof.
 
 [issue]: https://github.com/python/cpython/issues/95723

@@ -15,7 +15,7 @@ Here's the Python code that we'll translate. It is the listing from cpython#9572
 
         m/n need not be in lowest terms, but n must be positive.
 
-        On return, 0 < s ≤ l and gcd(r, s) = 1.
+        On return, 0 < s <= l and gcd(r, s) = 1.
         """
         if l < 1:
             raise ValueError("max_denominator should be at least 1")
