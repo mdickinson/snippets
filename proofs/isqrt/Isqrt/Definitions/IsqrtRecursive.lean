@@ -56,7 +56,7 @@ def nsqrtRecursive (n c : Int) : PyExcept Int := do
     let a ← nsqrtRecursive (← n >> 2 * k + 2) (c / 2)
     return (← a << k) + (← (← n >> k + 2) // a)
 termination_by c.toNat
-decreasing_by grind only
+decreasing_by omega
 
 /-- Return the integer part of the square root of the input. -/
 def isqrtRecursive (n : Int) : PyExcept Int := do
